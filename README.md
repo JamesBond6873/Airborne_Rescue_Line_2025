@@ -1,10 +1,10 @@
 # Airborne_Rescue_Line_2025
-
-New repository for Rescue Line 2025 (Software Only) !!
+**
+New repository for Rescue Line 2025 (Software Only) !!**
 
 :)
 
-Lista de Tarefas a realizar (editar mas nunca apagar):
+**Lista de Tarefas a realizar** (editar mas nunca apagar):
 
 -> Começar com Engineering Journal no Overleaf (editor de LateX)
 
