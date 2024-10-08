@@ -1,0 +1,53 @@
+
+** Important ** :  mySerialReadString() changed to timeout in 1msec (instead of the previous 10msec)
+
+
+-- putty, typed "<" (test "<" is working)
+<
+id=0 t=112324
+id=1 t=112325
+id=2 t=112325
+
+-- putty, pasted "L1" ("L1" copied from elsewhere and then right mouse click in putty)
+L1
+Ok. L1
+
+-- putty, pasted "L2" (a number of seconds later)
+L2
+Ok. L2
+
+-- putty, pasted "L3" (a number of seconds later)
+L3
+u there?
+
+-- putty, typed "<" (a number of seconds later)
+<
+id=0 t=112324
+id=1 t=112325
+id=2 t=112325
+id=101 t=112326	<- nice, about 2msec delay
+
+id=0 t=133797
+id=1 t=133798
+id=2 t=133798
+id=11 t=133799
+id=12 t=133799
+id=13 t=133799	<- nice, about 2msec delay
+
+id=0 t=137869
+id=1 t=137871
+id=2 t=137871
+id=21 t=137871
+id=22 t=137871
+id=23 t=137871	<- nice, about 2msec delay
+
+id=0 t=141723
+id=1 t=141724
+id=2 t=141724
+id=31 t=141724
+id=32 t=141724
+id=33 t=141724	<- nice, about 1msec delay (this was a lucky case ;)
+
+id=0 t=146533
+id=1 t=146534
+id=2 t=146534
