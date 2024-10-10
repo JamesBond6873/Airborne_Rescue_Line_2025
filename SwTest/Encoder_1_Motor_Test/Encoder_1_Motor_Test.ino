@@ -1,31 +1,20 @@
 #include <Servo.h>
 #include "Motor.h"
 
-//Servo ESC1;
-//Servo ESC2;
-//Servo ESC3;
-//Servo ESC4;
-
 const int enc1A = 9;
 const int enc1B = 8;
-const int enc2A = 7;
-const int enc2B = 6;
-const int enc3A = 2;
-const int enc3B = 3;
-const int enc4A = 5;
-const int enc4B = 4;
+
 
 int value;
 
 unsigned long t0; // control sampling rate (period ini)
 unsigned long t1; // control sampling rate (period end)
-long timeInterval = 500; // 10ms per loop = 100Hz
+long timeInterval = 0.5; // 10ms per loop = 100Hz
 
 Motor Motor1(18, enc1A, enc1B);
 
 void setup() {
   // put your setup code here, to run once:
-
   Serial.begin(115200);
 
   Motor1.getReady();
@@ -50,6 +39,8 @@ void loop() {
     Serial.print(millis());
     Serial.print("\t2: ");
     Serial.print(Motor1.encoderStateA());
+    Serial.print("\t3: ");
+    Serial.print(Motor1.encoderStateB());
     Serial.print("\t1: ");
     Serial.println(Motor1.getEncoderCount());
 
@@ -94,13 +85,6 @@ String mySerialReadString() {
 void kickESC2(int val) {
   //Serial.println(val);
 
-  //ESC1.writeMicroseconds(val);
-  //ESC2.writeMicroseconds(val);
-  //ESC3.writeMicroseconds(val);
-  //ESC4.writeMicroseconds(val);
-
   Motor1.controlMotor(val);
-  /*Motor2.controlMotor(val);
-  Motor3.controlMotor(val);
-  Motor4.controlMotor(val);*/
+
 }
