@@ -7,25 +7,23 @@ class Motor {
 public:
     Motor(int pwmPin, int encoderPinA, int encoderPinB);
     void getReady();
-    void setSpeed(int Speed);
-    void updateCounter();
     void controlMotor(int pulse);
-    int encoderStateA();
-    int encoderStateB();
-    int getEncoderPinA() const;
-    int getEncoderPinB() const;
     int getEncoderCount() const;
+
+    static void encoderA_ISR();
+    static void encoderB_ISR();
 
 private:
     Servo _ESC;
-    int _Speed;
-    int _currentSpeed;
     int _pwmPin;
     int _encoderPinA;
     int _encoderPinB;
+    volatile int _encoderCount;
     int _lastEncoderStateA;
     int _lastEncoderStateB;
-    int _encoderCount;
+
+    static Motor* instances[4];  // Static array to hold motor instances
+    static int instanceIndex;    // Index for tracking motors
 };
 
 #endif
