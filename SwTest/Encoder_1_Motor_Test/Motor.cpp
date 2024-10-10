@@ -41,12 +41,8 @@ void Motor::updateCounter() {
 // Main file
 
 void Motor::controlMotor(int pulse) {
-    Serial.print("Control Motor with pulse: ");
-    Serial.println(pulse);
-
     if (pulse >= 1000 && pulse <= 2000) {
         _ESC.writeMicroseconds(pulse);  // Control ESC2 globally
-        Serial.println("Motor controlled successfully");
     } else {
         Serial.println("Invalid pulse value");
     }

@@ -9,7 +9,7 @@ int value;
 
 unsigned long t0; // control sampling rate (period ini)
 unsigned long t1; // control sampling rate (period end)
-long timeInterval = 0.5; // 10ms per loop = 100Hz
+long timeInterval = 0.1; // 10ms per loop = 100Hz
 
 Motor Motor1(18, enc1A, enc1B);
 
@@ -35,14 +35,18 @@ void loop() {
 
     Motor1.updateCounter();
 
-    Serial.print("1: ");
+    Serial.print(Motor1.encoderStateA());
+    Serial.print(",");
+    Serial.println(Motor1.encoderStateB());
+
+    /*Serial.print("1: ");
     Serial.print(millis());
     Serial.print("\t2: ");
     Serial.print(Motor1.encoderStateA());
     Serial.print("\t3: ");
     Serial.print(Motor1.encoderStateB());
     Serial.print("\t1: ");
-    Serial.println(Motor1.getEncoderCount());
+    Serial.println(Motor1.getEncoderCount());*/
 
     // Wait for the next cycle
     while (millis() <= t1) {
