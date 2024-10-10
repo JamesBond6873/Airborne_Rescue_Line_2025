@@ -22,9 +22,6 @@ unsigned long t1; // control sampling rate (period end)
 long timeInterval = 500; // 10ms per loop = 100Hz
 
 Motor Motor1(18, enc1A, enc1B);
-Motor Motor2(21, enc2A, enc2B);
-Motor Motor3(20, enc3A, enc3B);
-Motor Motor4(16, enc4A, enc4B);
 
 void setup() {
   // put your setup code here, to run once:
@@ -32,9 +29,6 @@ void setup() {
   Serial.begin(115200);
 
   Motor1.getReady();
-  Motor2.getReady();
-  Motor3.getReady();
-  Motor4.getReady();
 
   t0 = millis();
 }
@@ -51,21 +45,13 @@ void loop() {
     }
 
     Motor1.updateCounter();
-    Motor2.updateCounter();
-    Motor3.updateCounter();
-    Motor4.updateCounter();
 
     Serial.print("1: ");
     Serial.print(millis());
     Serial.print("\t2: ");
     Serial.print(Motor1.encoderStateA());
     Serial.print("\t1: ");
-    Serial.print(Motor1.getEncoderCount());
-    Serial.print("\t2: ");
-    Serial.print(Motor2.getEncoderCount());
-    Serial.print("\t3: ");
-    Serial.println(Motor3.getEncoderCount());
-
+    Serial.println(Motor1.getEncoderCount());
 
     // Wait for the next cycle
     while (millis() <= t1) {
@@ -114,7 +100,7 @@ void kickESC2(int val) {
   //ESC4.writeMicroseconds(val);
 
   Motor1.controlMotor(val);
-  Motor2.controlMotor(val);
+  /*Motor2.controlMotor(val);
   Motor3.controlMotor(val);
-  Motor4.controlMotor(val);
+  Motor4.controlMotor(val);*/
 }
