@@ -10,8 +10,9 @@ public:
     void controlMotor(int pulse);
     int getEncoderCount() const;
 
-    static void encoderA_ISR();
-    static void encoderB_ISR();
+    void encoderISR();  // Non-static, handles interrupts for this motor
+    float getRPS();     // Return revolutions per second
+    float getRPM();     // Return revolutions per minute
 
 private:
     Servo _ESC;
@@ -19,11 +20,12 @@ private:
     int _encoderPinA;
     int _encoderPinB;
     volatile int _encoderCount;
-    int _lastEncoderStateA;
-    int _lastEncoderStateB;
+    unsigned long _lastUpdate;  // Track the last time the encoder was updated
+    float _timeElapsed;         // Time between encoder changes
 
-    static Motor* instances[4];  // Static array to hold motor instances
-    static int instanceIndex;    // Index for tracking motors
+    static const int pulsesPerRevolution = 360;  // Change this according to your encoder
+    static Motor* instances[4];  // Optional for global ISR management
+    static int instanceIndex;
 };
 
 #endif

@@ -1,32 +1,30 @@
 #include <Servo.h>
 #include "Motor.h"
 
-const int enc1A = 9;
-const int enc1B = 8;
-const int enc2A = 7;
-const int enc2B = 6;
-const int enc3A = 2;
-const int enc3B = 3;
-const int enc4A = 5;
-const int enc4B = 4;
+// Define motor pins individually (no list usage)
+const int enc1A = 9, enc1B = 8, pwm1 = 18;
+const int enc2A = 7, enc2B = 6, pwm2 = 21;
+const int enc3A = 2, enc3B = 3, pwm3 = 20;
+const int enc4A = 5, enc4B = 4, pwm4 = 16;
 
 int value;
-unsigned long t0;  // control sampling rate (period ini)
-unsigned long t1;  // control sampling rate (period end)
+unsigned long t0;
+unsigned long t1;
 long timeInterval = 10;  // 10ms per loop = 100Hz
 
-Motor Motor1(18, enc1A, enc1B);
-Motor Motor2(21, enc2A, enc2B);
-Motor Motor3(20, enc3A, enc3B);
-Motor Motor4(16, enc4A, enc4B);
+Motor motors[4] = {
+  Motor(pwm1, enc1A, enc1B),
+  Motor(pwm2, enc2A, enc2B),
+  Motor(pwm3, enc3A, enc3B),
+  Motor(pwm4, enc4A, enc4B)
+};
 
 void setup() {
   Serial.begin(115200);
 
-  Motor1.getReady();
-  Motor2.getReady();
-  Motor3.getReady();
-  Motor4.getReady();
+  for (int i = 0; i < 4; i++) {
+    motors[i].getReady();
+  }
 
   t0 = millis();
 }
@@ -37,25 +35,29 @@ void loop() {
   // Read value from Serial input (simulating the RPi input)
   value = mySerialReadString().toInt();
 
-  // Send continuous control signals to Motor1 based on input value
+  // Control Motor1 (extend to other motors as needed)
   if (value != 0) {
-    Motor1.controlMotor(value);  // Example control on Motor1, you can extend to others
+    motors[0].controlMotor(value);
   }
 
-  // Print encoder count for each motor
-  Serial.print("Motor1 Encoder: ");
-  Serial.println(Motor1.getEncoderCount());
+  // Print encoder count and speed (RPM and RPS) for each motor
+  for (int i = 0; i < 4; i++) {
+    Serial.print("Motor ");
+    Serial.print(i + 1);
+    Serial.print(" Encoder: ");
+    Serial.println(motors[i].getEncoderCount());
+    
+    Serial.print(" Motor ");
+    Serial.print(i + 1);
+    Serial.print(" Speed (RPM): ");
+    Serial.println(motors[i].getRPM());
 
-  /*Serial.print("Motor2 Encoder: ");
-  Serial.println(Motor2.getEncoderCount());
+    Serial.print(" Motor ");
+    Serial.print(i + 1);
+    Serial.print(" Speed (RPS): ");
+    Serial.println(motors[i].getRPS());
+  }
 
-  Serial.print("Motor3 Encoder: ");
-  Serial.println(Motor3.getEncoderCount());
-
-  Serial.print("Motor4 Encoder: ");
-  Serial.println(Motor4.getEncoderCount());*/
-
-  // Wait for the next cycle
   while (millis() <= t1) {
     delay(1);
   }

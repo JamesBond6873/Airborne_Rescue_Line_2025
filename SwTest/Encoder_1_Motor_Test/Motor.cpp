@@ -1,87 +1,65 @@
 #include "Motor.h"
 
-// Static pointer array for mapping interrupts to motor instances
 Motor* Motor::instances[4] = {nullptr, nullptr, nullptr, nullptr};
 int Motor::instanceIndex = 0;
 
 // Constructor
-Motor::Motor(int pwmPin, int encoderPinA, int encoderPinB) {
-    _pwmPin = pwmPin;
-    _encoderPinA = encoderPinA;
-    _encoderPinB = encoderPinB;
-    _encoderCount = 0;
-
-    _lastEncoderStateA = 0;
-    _lastEncoderStateB = 0;
-
-    // Store this instance in the instances array
+Motor::Motor(int pwmPin, int encoderPinA, int encoderPinB) 
+  : _pwmPin(pwmPin), _encoderPinA(encoderPinA), _encoderPinB(encoderPinB), _encoderCount(0), _lastUpdate(0) {
     instances[instanceIndex++] = this;
 }
 
 void Motor::getReady() {
-    // Attach Motor Pin
     _ESC.attach(_pwmPin);
 
-    // Setup Input mode for Encoder
     pinMode(_encoderPinA, INPUT);
     pinMode(_encoderPinB, INPUT);
 
-    // Attach interrupts to encoder pins
-    attachInterrupt(digitalPinToInterrupt(_encoderPinA), Motor::encoderA_ISR, CHANGE);
-    attachInterrupt(digitalPinToInterrupt(_encoderPinB), Motor::encoderB_ISR, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(_encoderPinA), []() { Motor::instances[0]->encoderISR(); }, CHANGE);
 
-    // Arm Motor
-    controlMotor(2000); // Start with max pulse for ESC
+    controlMotor(2000);
     delay(50);
-    controlMotor(1500); // Bring to neutral position
+    controlMotor(1500);
     delay(50);
-    controlMotor(1520); // Stop motor
+    controlMotor(1520); 
 }
 
 void Motor::controlMotor(int pulse) {
     if (pulse >= 1000 && pulse <= 2000) {
-        _ESC.writeMicroseconds(pulse);  // Control ESC with pulse width
+        _ESC.writeMicroseconds(pulse);
     } else {
         Serial.println("Invalid pulse value");
     }
 }
 
-// Static ISR for encoder A
-void Motor::encoderA_ISR() {
-    for (int i = 0; i < instanceIndex; i++) {
-        if (digitalRead(instances[i]->_encoderPinA) == digitalRead(instances[i]->_encoderPinB)) {
-            instances[i]->_encoderCount++;  // Moving forward
-        } else {
-            instances[i]->_encoderCount--;  // Moving backward
-        }
-    }
-}
+void Motor::encoderISR() {
+    int stateA = digitalRead(_encoderPinA);
+    int stateB = digitalRead(_encoderPinB);
 
-// Static ISR for encoder B
-void Motor::encoderB_ISR() {
-    for (int i = 0; i < instanceIndex; i++) {
-        if (digitalRead(instances[i]->_encoderPinA) == digitalRead(instances[i]->_encoderPinB)) {
-            instances[i]->_encoderCount++;  // Moving forward
-        } else {
-            instances[i]->_encoderCount--;  // Moving backward
-        }
+    if (stateA == stateB) {
+        _encoderCount++;
+    } else {
+        _encoderCount--;
     }
+
+    // Calculate speed (based on time intervals)
+    unsigned long currentTime = millis();
+    if (_lastUpdate > 0) {
+        _timeElapsed = (currentTime - _lastUpdate) / 1000.0;  // Convert ms to seconds
+    }
+    _lastUpdate = currentTime;
 }
 
 int Motor::getEncoderCount() const {
     return _encoderCount;
 }
 
-/*
-int Motor::encoderStateA() {
-    return digitalRead(_encoderPinA);
+float Motor::getRPS() {
+    // Return revolutions per second
+    return (_encoderCount / float(pulsesPerRevolution)) / _timeElapsed;
 }
 
-int Motor::encoderStateB() {
-    return digitalRead(_encoderPinB);
+float Motor::getRPM() {
+    // Return revolutions per minute
+    return getRPS() * 60;
 }
-
-int Motor::getEncoderCount() const {
-    return _encoderCount;
-}
-*/
