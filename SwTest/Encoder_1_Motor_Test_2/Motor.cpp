@@ -1,94 +1,94 @@
 #include "Motor.h"
 
-Motor* Motor::instances[4];  // Array to hold motor instances
-int Motor::instanceIndex = 0;
+// Static array to hold pointers to motor instances for interrupt handling
+Motor* Motor::motorInstances[Motor::MAX_MOTORS] = {nullptr};
+int Motor::motorCount = 0;
 
-// Constructor
-Motor::Motor(int pwmPin, int encoderPinA, int encoderPinB) {
-    _pwmPin = pwmPin;
-    _encoderPinA = encoderPinA;
-    _encoderPinB = encoderPinB;
-    _encoderCount = 0;
-    _lastSpeedCalc = 0;
-    _currentRPM = 0;
-    _lastUpdate = 0;
-
-    instances[instanceIndex++] = this;
+Motor::Motor(int pwmPin, int encPinA, int encPinB)
+    : _pwmPin(pwmPin), encPinA(encPinA), encPinB(encPinB), encoderCount(0),
+      currentRPM(0), targetRPM(0), Kp(0.2), Ki(0.01), Kd(0.1),
+      integral(0), previousError(0), lastUpdateTime(0) {
+    if (motorCount < MAX_MOTORS) {
+        motorInstances[motorCount++] = this; // Register this instance
+    }
 }
 
-void Motor::getReady() {
-    // Attach Motor Pin
+void Motor::initialize() {
     _ESC.attach(_pwmPin);
 
-    // Setup Input mode for Encoder
-    pinMode(_encoderPinA, INPUT);
-    pinMode(_encoderPinB, INPUT);
+    pinMode(encPinA, INPUT);
+    pinMode(encPinB, INPUT);
 
-    // Attach interrupts to encoder pins
-    attachInterrupt(digitalPinToInterrupt(_encoderPinA), Motor::encoderA_ISR, CHANGE);
-    attachInterrupt(digitalPinToInterrupt(_encoderPinB), Motor::encoderB_ISR, CHANGE);
+    // Attach the static interrupt handler, passing in the encoder pin as a parameter
+    attachInterrupt(digitalPinToInterrupt(encPinA), Motor::encoderInterruptHandler, RISING);
 
-    // Arm Motor
-    controlMotor(2000);  // Max pulse for ESC
+    // Initial motor calibration to neutral position using analogWrite
+    controlMotor(2000);
     delay(50);
-    controlMotor(1500);  // Neutral position
+    controlMotor(1500);
     delay(50);
-    controlMotor(1520);  // Stop motor
+    controlMotor(1520);
 }
 
 void Motor::controlMotor(int pulse) {
     if (pulse >= 1000 && pulse <= 2000) {
-        _ESC.writeMicroseconds(pulse);  // Control ESC with pulse width
+        //_ESC.writeMicroseconds(pulse);
     } else {
         Serial.println("Invalid pulse value");
     }
 }
 
-float Motor::getRPS() {
-    unsigned long currentTime = millis();
-    float timeElapsed;  // Declare the missing timeElapsed variable
-
-    if (currentTime - _lastSpeedCalc >= speedSampleInterval) {
-        timeElapsed = (currentTime - _lastUpdate) / 1000.0;  // Convert ms to seconds
-
-        if (timeElapsed > 0) {
-            _currentRPM = (_encoderCount / float(pulsesPerRevolution)) / timeElapsed;
-        } else {
-            _currentRPM = 0;  // Avoid inf or invalid values
+// Static interrupt handler function
+void Motor::encoderInterruptHandler() {
+    // Loop through motor instances to find which motor's encoder was triggered
+    for (int i = 0; i < motorCount; ++i) {
+        if (motorInstances[i] != nullptr) {
+            motorInstances[i]->handleEncoderInterrupt(); // Call the instance-specific handler
         }
-
-        _lastSpeedCalc = currentTime;  // Update the last speed calculation time
-        _encoderCount = 0;             // Reset encoder count for next interval
     }
+}
 
-    return _currentRPM;  // Return stored value from last valid calculation
+void Motor::handleEncoderInterrupt() {
+    encoderCount++;
+}
+
+void Motor::calculateRPM() {
+    unsigned long currentTime = millis();
+    unsigned long elapsedTime = currentTime - lastUpdateTime;
+    int COUNTS_PER_REVOLUTION = 11;
+    if (elapsedTime > 0) {
+        currentRPM = (encoderCount / (float)elapsedTime) * 60000 / COUNTS_PER_REVOLUTION;
+        encoderCount = 0; // Reset the count after RPM calculation
+        lastUpdateTime = currentTime;
+    }
+}
+
+void Motor::updateSpeed() {
+    calculateRPM();
+
+    float error = targetRPM - currentRPM;
+    integral += error * (millis() - lastUpdateTime);
+    float derivative = (error - previousError) / (millis() - lastUpdateTime);
+    float output = Kp * error + Ki * integral + Kd * derivative;
+
+    output = constrain(output, 1500, 2000); // Ensure PWM value is within range
+    Serial.print("Output: ");
+    Serial.println(output);
+    //analogWrite(pwmPin, output);
+
+    controlMotor(output);
+
+    previousError = error;
+}
+
+long Motor::getEncoderCount() {
+    return encoderCount;
 }
 
 float Motor::getRPM() {
-    return getRPS() * 60;  // Convert RPS to RPM
+    return currentRPM;
 }
 
-// Encoder Interrupt Service Routines (ISR)
-void Motor::encoderA_ISR() {
-    for (int i = 0; i < instanceIndex; i++) {
-        if (digitalRead(instances[i]->_encoderPinA) == digitalRead(instances[i]->_encoderPinB)) {
-            instances[i]->_encoderCount++;  // Moving forward
-        } else {
-            instances[i]->_encoderCount--;  // Moving backward
-        }
-    }
-}
-
-void Motor::encoderB_ISR() {
-    for (int i = 0; i < instanceIndex; i++) {
-        if (digitalRead(instances[i]->_encoderPinA) == digitalRead(instances[i]->_encoderPinB)) {
-            instances[i]->_encoderCount++;  // Moving forward
-        } else {
-            instances[i]->_encoderCount--;  // Moving backward
-        }
-    }
-}
-
-int Motor::getEncoderCount() const {
-    return _encoderCount;
+void Motor::setTargetRPM(float rpm) {
+    targetRPM = rpm;
 }

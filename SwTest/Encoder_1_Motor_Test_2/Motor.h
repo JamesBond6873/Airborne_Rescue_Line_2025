@@ -1,35 +1,39 @@
-#ifndef Motor_h
-#define Motor_h
+#ifndef MOTOR_H
+#define MOTOR_H
 
+#include <Arduino.h>
 #include <Servo.h>
 
 class Motor {
 public:
-    Motor(int pwmPin, int encoderPinA, int encoderPinB);
-    void getReady();
+    Motor(int pwmPin, int encPinA, int encPinB);
+    void initialize();
     void controlMotor(int pulse);
-    int getEncoderCount() const;
-    float getRPS();   // Revolutions per second
-    float getRPM();   // Revolutions per minute
-
-    static void encoderA_ISR();
-    static void encoderB_ISR();
+    void updateSpeed();
+    void setTargetRPM(float rpm);
+    float getRPM();
+    long getEncoderCount();
 
 private:
     Servo _ESC;
-    int _pwmPin;
-    int _encoderPinA;
-    int _encoderPinB;
-    volatile int _encoderCount;
-    
-    unsigned long _lastSpeedCalc;  // Last time speed was calculated
-    unsigned long _lastUpdate;     // Last update for speed calculation
-    float _currentRPM;
-    const unsigned long speedSampleInterval = 100;  // Time interval (ms) for calculating speed
-    const int pulsesPerRevolution = 20;  // Number of pulses per motor revolution
 
-    static Motor* instances[4];  // Static array to hold motor instances
-    static int instanceIndex;    // Index for tracking motors
+    static const int MAX_MOTORS = 4;               // Maximum number of motor instances
+    static Motor* motorInstances[MAX_MOTORS];      // Array to hold motor instances
+    static int motorCount;                       // Counter for registered motors
+
+    int _pwmPin;
+    int encPinA;
+    int encPinB;
+    volatile long encoderCount;
+    float currentRPM;
+    float targetRPM;
+    float Kp, Ki, Kd; // PID constants
+    float integral, previousError;
+    unsigned long lastUpdateTime;
+
+    static void encoderInterruptHandler();         // Static interrupt handler
+    void handleEncoderInterrupt();                 // Instance-specific interrupt handler
+    void calculateRPM();
 };
 
 #endif
