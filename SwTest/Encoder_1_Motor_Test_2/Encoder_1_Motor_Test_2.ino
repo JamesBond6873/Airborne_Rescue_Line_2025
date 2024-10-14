@@ -1,16 +1,15 @@
 #include <Servo.h>
 #include "Motor.h"
 
-// Define motor pins individually (no list usage)
 const int enc1A = 9, enc1B = 8, pwm1 = 18;
 const int enc2A = 7, enc2B = 6, pwm2 = 21;
 const int enc3A = 2, enc3B = 3, pwm3 = 20;
 const int enc4A = 5, enc4B = 4, pwm4 = 16;
 
 int value;
-unsigned long t0;
+unsigned long t0;  
 unsigned long t1;
-long timeInterval = 10;  // 10ms per loop = 100Hz
+long timeInterval = 10;  // Sampling rate: 100Hz
 
 Motor motors[4] = {
   Motor(pwm1, enc1A, enc1B),
@@ -32,32 +31,30 @@ void setup() {
 void loop() {
   t1 = t0 + timeInterval;
 
-  // Read value from Serial input (simulating the RPi input)
+  // Read value from Serial input (simulating RPi input)
   value = mySerialReadString().toInt();
 
-  // Control Motor1 (extend to other motors as needed)
-  if (value != 0) {
-    motors[0].controlMotor(value);
-  }
-
-  // Print encoder count and speed (RPM and RPS) for each motor
+  // Control each motor with the same input value
   for (int i = 0; i < 4; i++) {
-    Serial.print("Motor ");
-    Serial.print(i + 1);
-    Serial.print(" Encoder: ");
-    Serial.println(motors[i].getEncoderCount());
-    
-    Serial.print(" Motor ");
-    Serial.print(i + 1);
-    Serial.print(" Speed (RPM): ");
-    Serial.println(motors[i].getRPM());
-
-    Serial.print(" Motor ");
-    Serial.print(i + 1);
-    Serial.print(" Speed (RPS): ");
-    Serial.println(motors[i].getRPS());
+    if (value != 0) {
+      motors[i].controlMotor(value);  // Apply control to all motors
+    }
   }
 
+  // Print encoder counts and RPM for all motors in one line with tabs
+  Serial.print("Motor Encoders: ");
+  for (int i = 0; i < 4; i++) {
+    Serial.print(motors[i].getEncoderCount());
+    Serial.print("\t");
+  }
+  Serial.print("Motor RPM: ");
+  for (int i = 0; i < 4; i++) {
+    Serial.print(motors[i].getRPM());
+    Serial.print("\t");
+  }
+  Serial.println();
+
+  // Wait for the next cycle
   while (millis() <= t1) {
     delay(1);
   }
