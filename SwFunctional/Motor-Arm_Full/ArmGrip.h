@@ -3,7 +3,7 @@
 
 #include <Wire.h>
 #include <Adafruit_PWMServoDriver.h>
-#include "Servo.h"
+#include "myServo.h"
 
 class ArmGrip {
 public:
@@ -24,10 +24,10 @@ public:
 private:
   Adafruit_PWMServoDriver& pwm;
 
-  Servo _RightHandServo;
-  Servo _LeftHandServo;
-  Servo _RightArmServo;
-  Servo _LeftArmServo;
+  myServo _RightHandServo;
+  myServo _LeftHandServo;
+  myServo _RightArmServo;
+  myServo _LeftArmServo;
 
   // Hand Vars
   int _defPosRH = 180;
@@ -42,8 +42,8 @@ private:
   int _deadPosLH = 8;
 
   // Arm Vars
-  int _defPosRA = 0;
-  int _defPosLA = 180;
+  int _defPosRA = 5;
+  int _defPosLA = 175;
   int _upPosRA = 180;
   int _upPosLA = 0;
 

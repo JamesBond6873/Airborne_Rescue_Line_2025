@@ -3,9 +3,9 @@
 
 #include <Adafruit_PWMServoDriver.h>
 
-class Servo {
+class myServo {
 public:
-    Servo(int channel, Adafruit_PWMServoDriver& pwmDriver);
+    myServo(int channel, Adafruit_PWMServoDriver& pwmDriver);
     void setAngle(int angle);
     void setDefault(int defaultValue);
     void moveDefault();
