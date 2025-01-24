@@ -1,4 +1,5 @@
 #include "Motor.h"
+#include <Arduino.h>
 
 Motor* Motor::instances[4] = {nullptr, nullptr, nullptr, nullptr};
 int Motor::instanceIndex = 0;
@@ -12,8 +13,8 @@ Motor::Motor(int pwmPin, int encoderPinA, int encoderPinB)
 void Motor::getReady() {
     _ESC.attach(_pwmPin);
 
-    pinMode(_encoderPinA, INPUT);
-    pinMode(_encoderPinB, INPUT);
+    //pinMode(_encoderPinA, INPUT);
+    //pinMode(_encoderPinB, INPUT);
 
     //attachInterrupt(digitalPinToInterrupt(_encoderPinA), []() { Motor::instances[0]->encoderISR(); }, CHANGE);
 

@@ -3,18 +3,18 @@
 
 const int enc1A = 2;
 const int enc1B = 3;
-const int enc2A = 14;
-const int enc2B = 15;
-const int enc3A = 8;
-const int enc3B = 9;
-const int enc4A = 20;
-const int enc4B = 21;
+const int enc2A = 12;
+const int enc2B = 13;
+const int enc3A = 21;
+const int enc3B = 22;
+const int enc4A = 14;
+const int enc4B = 15;
 
 Motor motors[4] = {
-    Motor(19, enc1A, enc1B),
-    Motor(16, enc2A, enc2B),
-    Motor(18, enc3A, enc3B),
-    Motor(17, enc4A, enc4B)
+    Motor(10, enc1A, enc1B),
+    Motor(11, enc2A, enc2B),
+    Motor(20, enc3A, enc3B),
+    Motor(19, enc4A, enc4B)
 };
 
 int value;

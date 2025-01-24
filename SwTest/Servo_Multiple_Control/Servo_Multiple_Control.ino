@@ -25,9 +25,9 @@ int clPosLH = 50;   // Close position for left servo
 
 void setup() {
   Serial.begin(9600);
-  //Wire.setSDA(16); // Set SDA to GPIO 16
-  //Wire.setSCL(17); // Set SCL to GPIO 17
-  Wire.begin();    // Initialize I2C with the specified pins
+  //Wire.setSDA(2); // Set SDA to GPIO 16
+  //Wire.setSCL(3); // Set SCL to GPIO 17
+  Wire.begin();    // Initialize I2C with the specified pins on GPIO 4 and 5
   pwm.begin();
   pwm.setPWMFreq(60);  // Analog servos run at ~60 Hz updates
 
@@ -118,4 +118,3 @@ void loop() {
     }
   }
 }
-
