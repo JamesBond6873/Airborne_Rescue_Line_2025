@@ -84,8 +84,14 @@ void loop() {
   else if (message == "PA") { Grip.pickAlive(); }  // Pick Alive Victim Sequence Command | Pick Alive
   else if (message == "PD") { Grip.pickDead(); }  // Pick Dead Victim Sequence Command | Pick Dead
 
+  else if (message == "CL") { cameraLine(); }  // Point Camera Down for Line Following Command | Camera Line
+  else if (message == "CE") { cameraDead(); }  // Point Camera Forward for Evactuation Zone Victim Rescue Command | Camera Evacuation
+
   else if (message == "DA") { dropAlive(); }  // Drop Alive Victims Command | Drop Alive
   else if (message == "DD") { dropAlive(); }  // Drop Dead Victims Command | Drop Dead
+
+  else if (message == "LD") { collectToFData(); }  // Collect ToF Data from All Sensors | Laser Data
+  else if (message == "LX") { collectToFDataX(); }  // Collect ToF Data from X Sensor | Laser X - LX,X
 
   else if (message == "HO") { Grip.openHand(); }  // Open Hand Command | Hand Open
   else if (message == "HC") { Grip.closeHand(); }  // Close Hand Command | Hand Close
@@ -136,7 +142,7 @@ String readSerial() {
 
 
 // --------------------------------------------------------------
-// Function to control Motors | Command: ControlMotor
+// Function to control Motors | Command: ControlMotor | M(X,X)
 void ControlMotor(String input) {
   // Interpret Motor Controls | Update values list with motor speeds
 
@@ -172,6 +178,22 @@ void ControlMotor(String input) {
 
 
 // --------------------------------------------------------------
+// Function to Control Servo to Point Camera Down for Line Following | Command: cameraLine
+void cameraLine() {
+  // Sill Empty
+  // Pass
+}
+
+
+// --------------------------------------------------------------
+// Function to Control Servo to Camera Forward for Evactuation Zone Victim Rescue Command | Command: cameraEvactuation
+void cameraEvacuation() {
+  // Sill Empty
+  // Pass
+}
+
+
+// --------------------------------------------------------------
 // Function to Control Ball Storage Servo and Drop Alive Victims | Command: dropAlive
 void dropAlive() {
   // Sill Empty
@@ -188,7 +210,23 @@ void dropDead() {
 
 
 // --------------------------------------------------------------
-// Function to Control Single Servo | Command: ServoControl
+// Function to Collect Distance Measurements from ALL Time of Flights | Command: collectToFData
+void collectToFData() {
+  // Sill Empty
+  // Pass
+}
+
+
+// --------------------------------------------------------------
+// Function to Collect Distance Measurements from One Specific Time of Flight | Command: collectToFDataX | LX,X
+void collectToFDataX() {
+  // Sill Empty
+  // Pass
+}
+
+
+// --------------------------------------------------------------
+// Function to Control Single Servo | Command: ServoControl | SC,X,Angle
 void servoControlMessage(String Input) {
   // Parse the command for individual servo control
   int commaIndex1 = input.indexOf(',');
