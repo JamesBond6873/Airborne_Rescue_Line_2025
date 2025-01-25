@@ -75,8 +75,9 @@ void setup() {
 
   //Get The Servos Ready
   Grip.begin();
-  //Grip.defaultPosition(); // Get the Grip to its default/storage Position
-  //
+  Grip.defaultPosition(); // Get the Grip to its default/storage Position
+  camServo.lineFollowing(); // Get the Camera to point down for line following
+  ballStorageServo.close(); // Close Ball Storage
 
 
   pinMode(LED_BUILTIN, OUTPUT);
@@ -105,11 +106,12 @@ void loop() {
   else if (message == "PA") { Grip.pickAlive(); }  // Pick Alive Victim Sequence Command | Pick Alive
   else if (message == "PD") { Grip.pickDead(); }  // Pick Dead Victim Sequence Command | Pick Dead
 
-  else if (message == "CL") { cameraLine(); }  // Point Camera Down for Line Following Command | Camera Line
-  else if (message == "CE") { cameraEvacuation(); }  // Point Camera Forward for Evactuation Zone Victim Rescue Command | Camera Evacuation
+  else if (message == "CL") { camServo.lineFollowing(); }  // Point Camera Down for Line Following Command | Camera Line
+  else if (message == "CE") { camServo.EvacuationZone(); }  // Point Camera Forward for Evactuation Zone Victim Rescue Command | Camera Evacuation
 
-  else if (message == "DA") { dropAlive(); }  // Drop Alive Victims Command | Drop Alive
-  else if (message == "DD") { dropAlive(); }  // Drop Dead Victims Command | Drop Dead
+  else if (message == "DA") { ballStorageServo.dropAlive(); }  // Drop Alive Victims Command | Drop Alive
+  else if (message == "DD") { ballStorageServo.dropDead();}  // Drop Dead Victims Command | Drop Dead
+  else if (message == "BC") { ballStorageServo.close();} // Close Ball Storage Command | Ball Close
 
   else if (message == "LD") { collectToFData(); }  // Collect ToF Data from All Sensors | Laser Data
   else if (message == "LX") { collectToFDataX(); }  // Collect ToF Data from X Sensor | Laser X - LX,X
@@ -199,38 +201,6 @@ void ControlMotor(String input) {
     motors[i].controlMotor(values[i]);
   }
 
-}
-
-
-// --------------------------------------------------------------
-// Function to Control Servo to Point Camera Down for Line Following | Command: cameraLine
-void cameraLine() {
-  // Sill Empty
-  // Pass
-}
-
-
-// --------------------------------------------------------------
-// Function to Control Servo to Camera Forward for Evactuation Zone Victim Rescue Command | Command: cameraEvactuation
-void cameraEvacuation() {
-  // Sill Empty
-  // Pass
-}
-
-
-// --------------------------------------------------------------
-// Function to Control Ball Storage Servo and Drop Alive Victims | Command: dropAlive
-void dropAlive() {
-  // Sill Empty
-  // Pass
-}
-
-
-// --------------------------------------------------------------
-// Function to Control Ball Storage Servo and Drop Dead Victims | Command: dropDead
-void dropDead() {
-  // Sill Empty
-  // Pass
 }
 
 

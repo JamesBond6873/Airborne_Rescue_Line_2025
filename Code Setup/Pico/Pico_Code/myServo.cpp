@@ -17,6 +17,31 @@ void myServo::moveDefault() {
     setAngle(_defaultAngle);
 }
 
+void myServo::lineFollowing() {
+    //Empty
+    //Place Holder
+}
+
+void myServo::EvacuationZone() {
+    //Empty
+    //Place Holder
+}
+
+void myServo::close() {
+    //Empty
+    //Place Holder
+}
+
+void myServo::dropAlive() {
+    //Empty
+    //Place Holder
+}
+
+void myServo::dropDead() {
+    //Empty
+    //Place Holder
+}
+
 int myServo::getAngle() const {
     return _angle;
 }

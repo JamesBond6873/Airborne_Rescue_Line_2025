@@ -9,6 +9,11 @@ public:
     void setAngle(int angle);
     void setDefault(int defaultValue);
     void moveDefault();
+    void lineFollowing();
+    void EvacuationZone();
+    void close();
+    void dropAlive();
+    void dropDead();
     int getAngle() const;
     int getChannel() const;
 

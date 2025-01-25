@@ -190,3 +190,8 @@ void ArmGrip::pickDead() {
   // Release the Ball
   openHand();
 }
+
+void ArmGrip::defaultPosition() {
+  //Empty - Place holder
+  //Pass
+}

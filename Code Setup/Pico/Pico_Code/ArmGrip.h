@@ -20,6 +20,7 @@ public:
   void moveUp();
   void pickAlive();
   void pickDead();
+  void defaultPosition();
 
 private:
   Adafruit_PWMServoDriver& pwm;
