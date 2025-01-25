@@ -1,5 +1,10 @@
 #include <Servo.h>
+#include "myServo.h"
 #include "Motor.h"
+#include <Adafruit_PWMServoDriver.h>
+#include "ArmGrip.h"
+
+// --------------------------- Motor Vars ---------------------------
 
 const int enc1A = 2;
 const int enc1B = 3;
@@ -18,10 +23,35 @@ Motor motors[4] = {
 };
 
 int value;
-int values[4];
+int startMotorSpeed = 1520; // Default speed for just launched code
+int values[4] = {startMotorSpeed,startMotorSpeed,startMotorSpeed,startMotorSpeed};
+
+
+// --------------------------- Arm Vars ---------------------------
+
+const int leftHandServo = 0; // Channel 0 for the left hand servo
+const int rightHandServo = 1; // Channel 1 for the right hand servo
+const int leftArmServo = 2; // Channel 2 for the left arm servo
+const int rightArmServo = 3; // Channel 3 for the right arm servo
+
+// Create the PCA9685 object
+Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
+
+// Create the ArmGrip object with specified channels for servos
+ArmGrip Grip(pwm, rightHandServo, leftHandServo, rightArmServo, leftArmServo);
+
+
+// --------------------------- Time Vars ---------------------------
+
 unsigned long t0;  // control sampling rate (period ini)
 unsigned long t1;  // control sampling rate (period end)
 long timeInterval = 10;  // 10ms per loop = 100Hz
+
+
+
+// ----------------------------------------------------------------
+// -----------------  <<<<<<<<  Setup  >>>>>>>>  ------------------
+// --------------------------- ----- ------------------------------
 
 void setup() {
   // put your setup code here, to run once:
@@ -34,55 +64,55 @@ void setup() {
   t0 = millis();
 }
 
+
+
+// ---------------------------------------------------------------
+// -----------------  <<<<<<<<  Loop  >>>>>>>>  ------------------
+// --------------------------- ----- -----------------------------
+
+String message = "";
 void loop() {
   t1 = t0 + timeInterval;
 
-  updateValuesFromSerial();
 
-  Serial.print("Motors Values: ");
-  for (int i = 0; i < 4; i++) {
-    Serial.print(values[i]);
-    if (i < 3) Serial.print(", ");
-  }
-  Serial.println();
+  // Read Serial Port
+  message = readSerial(); 
 
-  for (int i = 0; i < 4; i++) {
-    motors[i].controlMotor(values[i]);
-  }
+  // Act According Message:
+  if (message.startsWith("M(") && message.endsWith(")")) { ControlMotor(message); }  // Motor Command | M(x,x)
+
+  else if (message == "PA") { Grip.pickAlive(); }  // Pick Alive Victim Sequence Command | Pick Alive
+  else if (message == "PD") { Grip.pickDead(); }  // Pick Dead Victim Sequence Command | Pick Dead
+
+  else if (message == "DA") { dropAlive(); }  // Drop Alive Victims Command | Drop Alive
+  else if (message == "DD") { dropAlive(); }  // Drop Dead Victims Command | Drop Dead
+
+  else if (message == "HO") { Grip.openHand(); }  // Open Hand Command | Hand Open
+  else if (message == "HC") { Grip.closeHand(); }  // Close Hand Command | Hand Close
+  else if (message == "HA") { Grip.moveAlive(); }  // Move Hand to Alive Position Command | Hand Alive
+  else if (message == "HD") { Grip.moveDead(); }  // Move Hand to Dead Position Command | Hand Dead
+
+  else if (message == "AD") { Grip.moveDown(); }  // Move Arm Down Command (Catch Position) | Arm Down
+  else if (message == "AU") { Grip.moveUp(); }  // Move Arm Up Command (Storage Position) | Arm Up
+
+  else if (message.startsWith("SC,")) { servoControlMessage(message); } // Control Single Servo Command | servoControl
+  
 
   while (millis() <= t1) {
     delay(1);
   }
-
-
   t0 = t1;
 }
 
 
-// Function to read serial input and update the list
-void updateValuesFromSerial() {
-  String input = readSerial();
 
-  if (input.startsWith("M(") && input.endsWith(")")) {
-    input = input.substring(2, input.length() - 1);
-
-    int commaIndex = input.indexOf(',');
-    if (commaIndex != -1) {
-
-      // Get values a and b from the string
-      int a = input.substring(0, commaIndex).toInt();
-      int b = input.substring(commaIndex + 1).toInt();
-
-      // Update the list with [a, a, b, b]
-      values[0] = a;
-      values[1] = a;
-      values[2] = b;
-      values[3] = b;
-    } 
-  }
-}
+// --------------------------------------------------------------
+// --------------  <<<<<<<<  Functions  >>>>>>>>  ---------------
+// --------------------------- ----- ----------------------------
 
 
+// --------------------------------------------------------------
+// Function to read the serial port
 String readSerial() {
   int c;
   String str = "";
@@ -103,3 +133,86 @@ String readSerial() {
 
   return str;
 }
+
+
+// --------------------------------------------------------------
+// Function to control Motors | Command: ControlMotor
+void ControlMotor(String input) {
+  // Interpret Motor Controls | Update values list with motor speeds
+
+  input = input.substring(2, input.length() - 1);
+
+  int commaIndex = input.indexOf(',');
+  if (commaIndex != -1) {
+    // Get values a and b from the string
+    int a = input.substring(0, commaIndex).toInt();
+    int b = input.substring(commaIndex + 1).toInt();
+
+    // Update the list with [a, a, b, b]
+    values[0] = a;
+    values[1] = a;
+    values[2] = b;
+    values[3] = b;
+
+  }
+
+  // Send Motor Control
+  /*Serial.print("Motors Values: ");
+  for (int i = 0; i < 4; i++) {
+    Serial.print(values[i]);
+    if (i < 3) Serial.print(", ");
+  }
+  Serial.println();*/
+
+  for (int i = 0; i < 4; i++) {
+    motors[i].controlMotor(values[i]);
+  }
+
+}
+
+
+// --------------------------------------------------------------
+// Function to Control Ball Storage Servo and Drop Alive Victims | Command: dropAlive
+void dropAlive() {
+  // Sill Empty
+  // Pass
+}
+
+
+// --------------------------------------------------------------
+// Function to Control Ball Storage Servo and Drop Dead Victims | Command: dropDead
+void dropDead() {
+  // Sill Empty
+  // Pass
+}
+
+
+// --------------------------------------------------------------
+// Function to Control Single Servo | Command: ServoControl
+void servoControlMessage(String Input) {
+  // Parse the command for individual servo control
+  int commaIndex1 = input.indexOf(',');
+  int commaIndex2 = input.indexOf(',', commaIndex1 + 1);
+
+  if (commaIndex1 != -1 && commaIndex2 != -1) {
+    String servoIdStr = input.substring(commaIndex1 + 1, commaIndex2);
+    String angleStr = input.substring(commaIndex2 + 1);
+    int servoId = servoIdStr.toInt();
+    int angle = angleStr.toInt();
+
+    // Validate the servo angle
+    if (angle >= 0 && angle <= 180) {
+      Serial.print("Set servo ");
+      Serial.print(servoId);
+      Serial.print(" to ");
+      Serial.print(angle);
+      Serial.println(" degrees");
+      Grip.customServoAngle(servoId, angle);
+    } else {
+      Serial.println("Invalid angle.");
+    }
+  } else {
+    Serial.println("Invalid command format. Use S4,R,Angle");
+  }
+}
+
