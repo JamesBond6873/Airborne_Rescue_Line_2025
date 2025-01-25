@@ -50,10 +50,14 @@ myServo ballStorageServo(ballStorageServoChannel, pwm, false, true);
 
 
 // --------------------------- LED Vars ---------------------------
+unsigned long ledT0;  // control sampling rate (period ini)
+unsigned long ledT1;  // control sampling rate (period end)
+long ledTimeInterval = 1000;  // 1s blinks
+
+bool ledState = true;
 
 
 // --------------------------- Time Vars ---------------------------
-
 unsigned long t0;  // control sampling rate (period ini)
 unsigned long t1;  // control sampling rate (period end)
 long timeInterval = 10;  // 10ms per loop = 100Hz
@@ -81,8 +85,9 @@ void setup() {
 
 
   pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, HIGH);
 
-
+  ledT0 = millis();
   t0 = millis();
 }
 
@@ -128,8 +133,7 @@ void loop() {
   
 
   // LED Blink
-
-
+  ledBlinkController(); //Blinks LED every Time Interval (ledTimeInterval = 1s)
 
   while (millis() <= t1) {
     delay(1);
@@ -249,3 +253,19 @@ void servoControlMessage(String input) {
   }
 }
 
+
+// --------------------------------------------------------------
+// Function to Control Single Servo | Command: ServoControl | SC,X,Angle
+void ledBlinkController() {
+  ledT1 = ledT0 + ledTimeInterval;
+  if (millis() >= ledT1) {
+    ledState = !ledState;
+    if (ledState == true) {
+      digitalWrite(LED_BUILTIN, HIGH);
+    }
+    else {
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+    ledT0 = ledT1;
+  }
+}
