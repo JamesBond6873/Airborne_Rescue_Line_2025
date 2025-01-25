@@ -1,5 +1,5 @@
-#ifndef Servo_h
-#define Servo_h
+#ifndef myServo_h
+#define myServo_h
 
 #include <Adafruit_PWMServoDriver.h>
 
