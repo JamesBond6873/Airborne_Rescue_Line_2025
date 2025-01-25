@@ -2,7 +2,7 @@
 
 // Corrected constructor definition
 ArmGrip::ArmGrip(Adafruit_PWMServoDriver& pwmDriver, int ServoChannelRH, int ServoChannelLH, int ServoChannelRA, int ServoChannelLA)
-  : pwm(pwmDriver), _RightHandServo(ServoChannelRH, pwmDriver), _LeftHandServo(ServoChannelLH, pwmDriver), _RightArmServo(ServoChannelRA, pwmDriver), _LeftArmServo(ServoChannelLA, pwmDriver) {}
+  : pwm(pwmDriver), _RightHandServo(ServoChannelRH, pwmDriver, false, false), _LeftHandServo(ServoChannelLH, pwmDriver, false, false), _RightArmServo(ServoChannelRA, pwmDriver, false, false), _LeftArmServo(ServoChannelLA, pwmDriver, false, false) {}
 
 void ArmGrip::begin() {
   Wire.begin();

@@ -41,6 +41,17 @@ Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
 ArmGrip Grip(pwm, rightHandServo, leftHandServo, rightArmServo, leftArmServo);
 
 
+// ----------------------- Other Servo Vars -----------------------
+const int camServoChannel = 4; // Channel 4 for the Camera Tilt Servo
+const int ballStorageServoChannel = 5; // Channel 5 for the Ball Storage Servo
+
+myServo camServo(camServoChannel, pwm, true, false);
+myServo ballStorageServo(ballStorageServoChannel, pwm, false, true);
+
+
+// --------------------------- LED Vars ---------------------------
+
+
 // --------------------------- Time Vars ---------------------------
 
 unsigned long t0;  // control sampling rate (period ini)
@@ -55,11 +66,21 @@ long timeInterval = 10;  // 10ms per loop = 100Hz
 
 void setup() {
   // put your setup code here, to run once:
+  Serial.begin(115200);
+
+  // Get Motors Ready
   for (int i = 0; i < 4; i++) {
     motors[i].getReady();
   }
 
-  Serial.begin(115200);
+  //Get The Servos Ready
+  Grip.begin();
+  //Grip.defaultPosition(); // Get the Grip to its default/storage Position
+  //
+
+
+  pinMode(LED_BUILTIN, OUTPUT);
+
 
   t0 = millis();
 }
@@ -85,7 +106,7 @@ void loop() {
   else if (message == "PD") { Grip.pickDead(); }  // Pick Dead Victim Sequence Command | Pick Dead
 
   else if (message == "CL") { cameraLine(); }  // Point Camera Down for Line Following Command | Camera Line
-  else if (message == "CE") { cameraDead(); }  // Point Camera Forward for Evactuation Zone Victim Rescue Command | Camera Evacuation
+  else if (message == "CE") { cameraEvacuation(); }  // Point Camera Forward for Evactuation Zone Victim Rescue Command | Camera Evacuation
 
   else if (message == "DA") { dropAlive(); }  // Drop Alive Victims Command | Drop Alive
   else if (message == "DD") { dropAlive(); }  // Drop Dead Victims Command | Drop Dead
@@ -103,6 +124,10 @@ void loop() {
 
   else if (message.startsWith("SC,")) { servoControlMessage(message); } // Control Single Servo Command | servoControl
   
+
+  // LED Blink
+
+
 
   while (millis() <= t1) {
     delay(1);
@@ -227,7 +252,7 @@ void collectToFDataX() {
 
 // --------------------------------------------------------------
 // Function to Control Single Servo | Command: ServoControl | SC,X,Angle
-void servoControlMessage(String Input) {
+void servoControlMessage(String input) {
   // Parse the command for individual servo control
   int commaIndex1 = input.indexOf(',');
   int commaIndex2 = input.indexOf(',', commaIndex1 + 1);

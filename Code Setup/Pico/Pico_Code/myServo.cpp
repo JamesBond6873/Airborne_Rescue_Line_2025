@@ -1,7 +1,7 @@
 #include "myServo.h"
 
-myServo::myServo(int channel, Adafruit_PWMServoDriver& pwmDriver)
-    : _channel(channel), _pwm(pwmDriver), _angle(0), _defaultAngle(0) {}
+myServo::myServo(int channel, Adafruit_PWMServoDriver& pwmDriver, bool camera, bool ballStorage)
+    : _channel(channel), _pwm(pwmDriver), _angle(0), _defaultAngle(0), _camera(camera), _ballStorage(ballStorage) {}
 
 void myServo::setAngle(int angle) {
     _angle = angle;
