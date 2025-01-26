@@ -32,18 +32,24 @@ void myServo::EvacuationZone() {
 }
 
 void myServo::close() {
+  if (_ballStorage == true) {
     //Empty
     //Place Holder
+  }
 }
 
 void myServo::dropAlive() {
+  if (_ballStorage == true) {
     //Empty
     //Place Holder
+  }
 }
 
 void myServo::dropDead() {
+  if (_ballStorage == true) {
     //Empty
     //Place Holder
+  }
 }
 
 int myServo::getAngle() const {
