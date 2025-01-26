@@ -23,9 +23,19 @@ private:
     int _defaultAngle;
     bool _camera;
     bool _ballStorage;
+
     Adafruit_PWMServoDriver& _pwm;
+
     const int SERVOMIN = 150;
     const int SERVOMAX = 600;
+
+    // default Position Vars
+    int _camLineFollowingAng = 0;
+    int _camEvacuationAng = 90;
+
+    int _ballStorageCloseAng = 90;
+    int _ballStorageAliveAng = 0;
+    int _ballStorageDeadAng = 180;
 };
 
 #endif
