@@ -18,13 +18,17 @@ void myServo::moveDefault() {
 }
 
 void myServo::lineFollowing() {
+  if (_camera == true) {
     //Empty
     //Place Holder
+  }
 }
 
 void myServo::EvacuationZone() {
+  if (_camera == true) {
     //Empty
     //Place Holder
+  }
 }
 
 void myServo::close() {
