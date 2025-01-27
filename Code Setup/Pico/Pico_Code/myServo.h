@@ -30,8 +30,8 @@ private:
     const int SERVOMAX = 600;
 
     // default Position Vars
-    int _camLineFollowingAng = 0;
-    int _camEvacuationAng = 90;
+    int _camLineFollowingAng = 0; // Facing Down
+    int _camEvacuationAng = 70; // Facing Forward
 
     int _ballStorageCloseAng = 90;
     int _ballStorageAliveAng = 150;
