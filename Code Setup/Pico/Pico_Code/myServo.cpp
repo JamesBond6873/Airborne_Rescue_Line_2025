@@ -22,6 +22,7 @@ void myServo::lineFollowing() {
     //Empty
     //Place Holder
   }
+  else { Serial.println("Error 404 - Not Camera Servo"); }
 }
 
 void myServo::EvacuationZone() {
@@ -29,6 +30,7 @@ void myServo::EvacuationZone() {
     //Empty
     //Place Holder
   }
+  else { Serial.println("Error 404 - Not Camera Servo"); }
 }
 
 void myServo::close() {
@@ -36,6 +38,7 @@ void myServo::close() {
     //Empty
     //Place Holder
   }
+  else { Serial.println("Error 404 - Not Ball Storage Servo"); }
 }
 
 void myServo::dropAlive() {
@@ -50,6 +53,7 @@ void myServo::dropDead() {
     //Empty
     //Place Holder
   }
+  else { Serial.println("Error 404 - Not Ball Storage Servo"); }
 }
 
 int myServo::getAngle() const {
