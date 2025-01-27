@@ -34,8 +34,8 @@ private:
     int _camEvacuationAng = 90;
 
     int _ballStorageCloseAng = 90;
-    int _ballStorageAliveAng = 0;
-    int _ballStorageDeadAng = 180;
+    int _ballStorageAliveAng = 150;
+    int _ballStorageDeadAng = 30;
 };
 
 #endif

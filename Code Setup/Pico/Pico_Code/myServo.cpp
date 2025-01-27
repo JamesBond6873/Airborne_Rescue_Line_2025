@@ -35,24 +35,21 @@ void myServo::EvacuationZone() {
 
 void myServo::close() {
   if (_ballStorage == true) {
-    //Empty
-    //Place Holder
+    setAngle(_ballStorageCloseAng);
   }
   else { Serial.println("Error 404 - Not Ball Storage Servo"); }
 }
 
 void myServo::dropAlive() {
   if (_ballStorage == true) {
-    //Empty
-    //Place Holder
+    setAngle(_ballStorageAliveAng);
   }
   else { Serial.println("Error 404 - Not Ball Storage Servo"); }
 }
 
 void myServo::dropDead() {
   if (_ballStorage == true) {
-    //Empty
-    //Place Holder
+    setAngle(_ballStorageDeadAng);
   }
   else { Serial.println("Error 404 - Not Ball Storage Servo"); }
 }

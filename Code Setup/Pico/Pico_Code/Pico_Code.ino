@@ -244,12 +244,15 @@ void servoControlMessage(String input) {
       Serial.print(" to ");
       Serial.print(angle);
       Serial.println(" degrees");
-      Grip.customServoAngle(servoId, angle);
+      if (servoId >= 0 && servoId <= 3) { Grip.customServoAngle(servoId, angle); } // Inside ArmGrip Class
+      else if (servoId == camServoChannel) { camServo.setAngle(angle); } // Camera Servo
+      else if (servoId == ballStorageServoChannel) { ballStorageServo.setAngle(angle); } // Ball Storage Servo
+      
     } else {
       Serial.println("Invalid angle.");
     }
   } else {
-    Serial.println("Invalid command format. Use S4,R,Angle");
+    Serial.println("Invalid command format. Use SC,R,Angle");
   }
 }
 
