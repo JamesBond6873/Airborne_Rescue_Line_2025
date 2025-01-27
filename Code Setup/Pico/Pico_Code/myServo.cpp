@@ -46,6 +46,7 @@ void myServo::dropAlive() {
     //Empty
     //Place Holder
   }
+  else { Serial.println("Error 404 - Not Ball Storage Servo"); }
 }
 
 void myServo::dropDead() {
