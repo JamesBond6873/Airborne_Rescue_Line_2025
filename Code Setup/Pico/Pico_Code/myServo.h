@@ -9,6 +9,7 @@ public:
     void setAngle(int angle);
     void setDefault(int defaultValue);
     void moveDefault();
+    void freeServo();
     void lineFollowing();
     void EvacuationZone();
     void close();

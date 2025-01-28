@@ -130,6 +130,8 @@ void loop() {
   else if (message == "AU") { Grip.moveUp(); }  // Move Arm Up Command (Storage Position) | Arm Up
 
   else if (message.startsWith("SC,")) { servoControlMessage(message); } // Control Single Servo Command | servoControl
+
+  else if (message.startsWith("SF,")) { servoFreeControl(message); } //Free a servo | Servo Free
   
   else if (message == "Alive") { Serial.println("Yes Alive"); }  // Check if Pico is still alive  | Alive
 
@@ -257,6 +259,36 @@ void servoControlMessage(String input) {
   }
 }
 
+
+// --------------------------------------------------------------
+// Function to Control Single Servo | Command: ServoControl | SC,X,Angle
+void servoFreeControl(String input) {
+  // Parse the command for individual servo control
+  int commaIndex1 = input.indexOf(',');
+  int commaIndex2 = input.indexOf(',', commaIndex1 + 1);
+
+  if (commaIndex1 != -1 && commaIndex2 != -1) {
+    String servoIdStr = input.substring(commaIndex1 + 1, commaIndex2);
+    String situationStr = input.substring(commaIndex2 + 1);
+    int servoId = servoIdStr.toInt();
+
+    // Validate the servo angle
+    if ( situationStr == "F") {
+      Serial.print("Set servo ");
+      Serial.print(servoId);
+      Serial.println(" to Free Mode");
+
+      /*if (servoId >= 0 && servoId <= 3) { Grip.customServoAngle(servoId, angle); } // Inside ArmGrip Class
+      else*/ if (servoId == camServoChannel) { camServo.freeServo(); } // Camera Servo
+      else if (servoId == ballStorageServoChannel) { ballStorageServo.freeServo(); } // Ball Storage Servo
+      
+    } else {
+      Serial.println("Invalid Mode (Only Free Available).");
+    }
+  } else {
+    Serial.println("Invalid command format. Use SC,R,Free");
+  }
+}
 
 // --------------------------------------------------------------
 // Function to Control Single Servo | Command: ServoControl | SC,X,Angle
