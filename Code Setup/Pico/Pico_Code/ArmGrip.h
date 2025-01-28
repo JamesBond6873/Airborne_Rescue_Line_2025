@@ -22,6 +22,8 @@ public:
   void pickAlive();
   void pickDead();
   void defaultPosition();
+  void freeAllServos();
+  void freeXServo(int servoChannel);
 
 private:
   Adafruit_PWMServoDriver& pwm;

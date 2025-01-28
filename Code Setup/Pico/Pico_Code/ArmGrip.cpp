@@ -209,10 +209,23 @@ void ArmGrip::pickDead() {
 }
 
 void ArmGrip::defaultPosition() {
-  //Empty - Place holder
-  //Pass
   _RightHandServo.moveDefault();
   _LeftHandServo.moveDefault();
   _RightArmServo.moveDefault();
   _LeftArmServo.moveDefault();
+}
+
+void ArmGrip::freeAllServos() {
+  _RightHandServo.freeServo();
+  _LeftHandServo.freeServo();
+  _RightArmServo.freeServo();
+  _LeftArmServo.freeServo();
+}
+
+void ArmGrip::freeXServo(int servoChannel) {
+  if (servoChannel == _RightHandServo.getChannel()) {_RightHandServo.freeServo();}
+  else if (servoChannel == _LeftHandServo.getChannel()) {_LeftHandServo.freeServo();}
+  else if (servoChannel == _RightArmServo.getChannel()) {_RightArmServo.freeServo();}
+  else if (servoChannel == _LeftArmServo.getChannel()) {_LeftArmServo.freeServo();}
+  else {Serial.println("Wrong Servo Channel!");}
 }

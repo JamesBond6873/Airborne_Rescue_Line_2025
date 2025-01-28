@@ -77,12 +77,13 @@ void setup() {
     motors[i].getReady();
   }
 
-  //Get The Servos Ready
+  //Get The Servos Ready - Correct Position
   Grip.begin();
   Grip.defaultPosition(); // Get the Grip to its default/storage Position
   camServo.lineFollowing(); // Get the Camera to point down for line following
   ballStorageServo.close(); // Close Ball Storage
 
+  
 
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH);
@@ -278,8 +279,9 @@ void servoFreeControl(String input) {
       Serial.print(servoId);
       Serial.println(" to Free Mode");
 
-      /*if (servoId >= 0 && servoId <= 3) { Grip.customServoAngle(servoId, angle); } // Inside ArmGrip Class
-      else*/ if (servoId == camServoChannel) { camServo.freeServo(); } // Camera Servo
+      if (servoId < 0) { Grip.freeAllServos(); } // -1
+      else if (servoId >= 0 && servoId <= 3) { Grip.freeXServo(servoId); } // Inside ArmGrip Class
+      else if (servoId == camServoChannel) { camServo.freeServo(); } // Camera Servo
       else if (servoId == ballStorageServoChannel) { ballStorageServo.freeServo(); } // Ball Storage Servo
       
     } else {
