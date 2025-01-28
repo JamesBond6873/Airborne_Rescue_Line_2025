@@ -131,6 +131,7 @@ void loop() {
 
   else if (message.startsWith("SC,")) { servoControlMessage(message); } // Control Single Servo Command | servoControl
   
+  else if (message == "Alive") { Serial.println("Yes Alive"); }  // Check if Pico is still alive  | Alive
 
   // LED Blink
   ledBlinkController(); //Blinks LED every Time Interval (ledTimeInterval = 1s)
