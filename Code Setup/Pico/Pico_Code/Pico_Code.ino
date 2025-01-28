@@ -77,14 +77,19 @@ void setup() {
     motors[i].getReady();
   }
 
-  //Get The Servos Ready - Correct Position
+  // Get The Servos Ready - Correct Position
   Grip.begin();
   Grip.defaultPosition(); // Get the Grip to its default/storage Position
   camServo.lineFollowing(); // Get the Camera to point down for line following
   ballStorageServo.close(); // Close Ball Storage
 
-  
+  // Let the Servos Stay Free - Avoid Shaking
+  delay(10);
+  Grip.freeAllServos();
+  camServo.freeServo();
+  ballStorageServo.freeServo();
 
+  // LED
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH);
 
