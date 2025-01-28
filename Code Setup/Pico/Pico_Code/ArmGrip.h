@@ -31,20 +31,20 @@ private:
   myServo _LeftArmServo;
 
   // Hand Vars
-  int _defPosRH = 180;
-  int _defPosLH = 8;
+  int _defPosRH = 170;
+  int _defPosLH = 10;
   int _PosRH = _defPosRH;
   int _PosLH = _defPosLH;
-  int _clPosRH = 130;
-  int _clPosLH = 50;
+  int _clPosRH = 125;
+  int _clPosLH = 55;
   int _alivePosRH = 170;
-  int _alivePosLH = 85;
-  int _deadPosRH = 87;
-  int _deadPosLH = 8;
+  int _alivePosLH = 95;
+  int _deadPosRH = 85;
+  int _deadPosLH = 10;
 
   // Arm Vars
-  int _defPosRA = 7;
-  int _defPosLA = 173;
+  int _defPosRA = 5;
+  int _defPosLA = 180;
   int _upPosRA = 180;
   int _upPosLA = 0;
 
