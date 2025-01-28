@@ -43,8 +43,8 @@ private:
   int _deadPosLH = 8;
 
   // Arm Vars
-  int _defPosRA = 5;
-  int _defPosLA = 175;
+  int _defPosRA = 7;
+  int _defPosLA = 173;
   int _upPosRA = 180;
   int _upPosLA = 0;
 
