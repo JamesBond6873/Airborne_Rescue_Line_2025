@@ -11,7 +11,8 @@ public:
   void begin();
   void info(int detail);
   void customServoAngle(int servoChannel, int angle);
-  void slowMove(int targetRH, int targetLH);
+  void slowMoveHand(int targetRH, int targetLH);
+  void slowMoveArm(int targetRA, int targetLA);
   void openHand();
   void closeHand();
   void moveAlive();
@@ -33,8 +34,8 @@ private:
   // Hand Vars
   int _defPosRH = 170;
   int _defPosLH = 10;
-  int _PosRH = _defPosRH;
-  int _PosLH = _defPosLH;
+  //int _PosRH = _defPosRH;
+  //int _PosLH = _defPosLH;
   int _clPosRH = 125;
   int _clPosLH = 55;
   int _alivePosRH = 170;
@@ -51,9 +52,13 @@ private:
   // Efficiency Vars
   int _movRH;
   int _movLH;
+  int _movRA;
+  int _movLA;
   int _maxMov;
   int _initRH;
   int _initLH;
+  int _initRA;
+  int _initLA;
 };
 
 #endif

@@ -10,6 +10,8 @@ void ArmGrip::begin() {
   pwm.setPWMFreq(60);
   _RightHandServo.setDefault(_defPosRH);
   _LeftHandServo.setDefault(_defPosLH);
+  _RightArmServo.setDefault(_upPosRA); // Up position should be default
+  _LeftArmServo.setDefault(_upPosLA); // Up position should be default
 }
 
 void ArmGrip::info(int detail) {
@@ -35,13 +37,17 @@ void ArmGrip::info(int detail) {
     Serial.print("Right Arm Servo - Channel: ");
     Serial.print(_RightArmServo.getChannel());
     Serial.print("\t Angle: ");
-    Serial.println(_RightArmServo.getAngle());
+    Serial.print(_RightArmServo.getAngle());
+    Serial.print("\t Move: ");
+    Serial.println(_movRA);
     
     // Left Arm
     Serial.print("Left Arm Servo - Channel: ");
     Serial.print(_LeftArmServo.getChannel());
     Serial.print("\t Angle: ");
-    Serial.println(_LeftArmServo.getAngle());
+    Serial.print(_LeftArmServo.getAngle());
+    Serial.print("\t Move: ");
+    Serial.println(_movLA);
   }
 }
 
@@ -53,7 +59,7 @@ void ArmGrip::customServoAngle(int servoChannel, int angle) {
   else {Serial.println("Wrong Servo Channel!");}
 }
 
-void ArmGrip::slowMove(int targetRH, int targetLH) {
+void ArmGrip::slowMoveHand(int targetRH, int targetLH) {
   // Get Initial Angle and Max Moving Servo
   _initRH = _RightHandServo.getAngle();
   _initLH = _LeftHandServo.getAngle();
@@ -72,11 +78,30 @@ void ArmGrip::slowMove(int targetRH, int targetLH) {
   }  
 }
 
+void ArmGrip::slowMoveArm(int targetRA, int targetLA) {
+  // Get Initial Angle and Max Moving Servo
+  _initRA = _RightArmServo.getAngle();
+  _initLA = _LeftArmServo.getAngle();
+
+  _movRA = targetRA - _initRA;
+  _movLA = targetLA - _initLA;
+  info(2);
+
+  _maxMov = max(abs(_movRA), abs(_movLA));
+
+  // Move servos slowly
+  for (int i = 0; i <= _maxMov; i++) {
+    _RightArmServo.setAngle(_initRA + (_movRA * i) / _maxMov);
+    _LeftArmServo.setAngle(_initLA + (_movLA * i) / _maxMov);
+    delay(5);
+  }  
+}
+
 void ArmGrip::openHand() {
   Serial.println("------Open Hand------");
 
   // Move slowly
-  slowMove(_defPosRH, _defPosLH);
+  slowMoveHand(_defPosRH, _defPosLH);
 
   // Make Sure you get There
   _RightHandServo.setAngle(_defPosRH);
@@ -88,7 +113,7 @@ void ArmGrip::closeHand() {
   Serial.println("------Close Hand------");
   
   // Move slowly
-  slowMove(_clPosRH, _clPosLH);
+  slowMoveHand(_clPosRH, _clPosLH);
 
   // Make Sure you get There
   _RightHandServo.setAngle(_clPosRH);
@@ -99,7 +124,7 @@ void ArmGrip::moveAlive() {
   Serial.println("------Move Alive------");
   
   // Move slowly
-  slowMove(_alivePosRH, _alivePosLH);
+  slowMoveHand(_alivePosRH, _alivePosLH);
   
   // Make Sure you get There
   _RightHandServo.setAngle(_alivePosRH);
@@ -110,7 +135,7 @@ void ArmGrip::moveDead() {
   Serial.println("------Move Dead------");
   
   // Move slowly
-  slowMove(_deadPosRH, _deadPosLH);
+  slowMoveHand(_deadPosRH, _deadPosLH);
 
   // Make Sure you get There
   _RightHandServo.setAngle(_deadPosRH);
@@ -122,12 +147,8 @@ void ArmGrip::moveDown() {
   
   info(2);
 
-  // Move Slowly
-  for (int i = 0; i <= _defPosLA; i++) {
-    _RightArmServo.setAngle(180 - i);
-    _LeftArmServo.setAngle(i);
-    delay(5);
-  }
+  // Move slowly
+  slowMoveArm(_defPosRA, _defPosLA);
 
   // Make Sure you get There
   _RightArmServo.setAngle(_defPosRA);
@@ -139,12 +160,8 @@ void ArmGrip::moveUp() {
 
   info(2);
 
-  // Move Slowly
-  for (int i = 0; i <= _upPosRA; i++) {
-    _RightArmServo.setAngle(i);
-    _LeftArmServo.setAngle(180 - i);
-    delay(5);
-  }
+  // Move slowly
+  slowMoveArm(_upPosRA, _upPosLA);
 
   // Make Sure you get There
   _RightArmServo.setAngle(_upPosRA);
@@ -194,4 +211,8 @@ void ArmGrip::pickDead() {
 void ArmGrip::defaultPosition() {
   //Empty - Place holder
   //Pass
+  _RightHandServo.moveDefault();
+  _LeftHandServo.moveDefault();
+  _RightArmServo.moveDefault();
+  _LeftArmServo.moveDefault();
 }
