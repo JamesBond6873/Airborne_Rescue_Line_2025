@@ -141,6 +141,7 @@ void loop() {
   
   else if (message == "Alive") { Serial.println("Yes Alive"); }  // Check if Pico is still alive  | Alive
 
+
   // LED Blink
   ledBlinkController(); //Blinks LED every Time Interval (ledTimeInterval = 1s)
 
