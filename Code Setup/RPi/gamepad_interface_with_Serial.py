@@ -10,7 +10,7 @@ SERIAL_PORT = '/dev/ttyACM0'
 BAUD_RATE = 115200
 
 # Constants for speed factors and motor default values
-delayTimeMS = 100
+delayTimeMS = 10
 MAX_DEFAULT_SPEED = 2000
 MIN_DEFAULT_SPEED = 1700
 SPEED_STEP = 25
