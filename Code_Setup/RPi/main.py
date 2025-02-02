@@ -12,7 +12,7 @@ BAUD_RATE = 115200
 # Constants for speed factors and motor default values
 delayTimeMS = 10
 MAX_DEFAULT_SPEED = 2000
-MIN_DEFAULT_SPEED = 1700
+MIN_DEFAULT_SPEED = 1600
 SPEED_STEP = 25
 FACTOR_STEP = 25
 MAX_SPEED_FACTOR_LIMIT = 500
@@ -74,7 +74,7 @@ def handleButtonPress(button):
     global speedFactor, defaultSpeed, maxSpeedFactor, reverseSpeedFactor
 
     printDebug(f"Button {button} pressed")
-    if button == 0:
+    if button == 9:
         printDebug(f"Shutting Down: Button {button} Pressed!")
         pygame.quit()
         sys.exit()
@@ -104,6 +104,12 @@ def handleButtonPress(button):
             maxSpeedFactor -= FACTOR_STEP
             reverseSpeedFactor += FACTOR_STEP
         printDebug(f"Max/Reverse Speed Factor Decreased: {maxSpeedFactor}/{reverseSpeedFactor}")
+    elif button == 0: # /_\ button
+        # Pick Motions
+        pass
+    elif button == 2: # X
+        # Drop Ball Storage
+        pass
 
 # Handles button releases to reset speed factor
 def handleButtonRelease(button):
@@ -157,6 +163,14 @@ def calculateMotorSpeeds(axes):
     # If speedFactor is zero, stop motors
     if speedFactor == 0:
         M1 = M2 = M3 = M4 = 1520
+
+def pickVictim(type):
+    # Pick Victim Function (takes "Alive" or "Dead")
+    pass
+
+def ballRelease(type):
+    # Drop Function (takes "Alive" or "Dead")
+    pass
 
 # Main loop for handling joystick input and updating motor speeds
 def mainLoop(joystick):
