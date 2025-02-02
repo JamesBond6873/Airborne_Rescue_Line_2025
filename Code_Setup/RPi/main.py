@@ -4,7 +4,7 @@ import serial
 import time
 
 # Is it DEBUG?
-DEBUG = False
+DEBUG = True
 
 SERIAL_PORT = '/dev/ttyACM0'
 BAUD_RATE = 115200
@@ -44,16 +44,32 @@ def initJoystick():
     joystick.init()
     return joystick
 
-def initSerial():
-    try:
-        ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
-        print(f"Connected to {SERIAL_PORT} at {BAUD_RATE} baud.")
-        time.sleep(2)
-        
-        return ser
-    except serial.SerialException as e:
-        print(f"Eror opening serial port: {e}")
-        sys.exit()
+def initSerial(timeout, debug):
+    initT0 = time.time()
+    t0 = initT0
+
+    while True:
+        t1 = t0 + 0.5
+
+        try:
+            ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
+            print(f"Connected to {SERIAL_PORT} at {BAUD_RATE} baud.")
+            time.sleep(2)
+            
+            return ser
+
+        except serial.SerialException as e:
+            print(f"Error opening serial port: {e}")
+            
+            if time.time() - initT0 >= timeout:
+                printDebug("EXITING - NO SERIAL PORT")
+                sys.exit()
+
+        while time.time() <= t1:
+            time.sleep(0.1)
+
+        t0 = t1
+
 
 # Function to handle joystick events and speed factor changes
 def handleEvents(joystick):
@@ -106,6 +122,7 @@ def handleButtonPress(button):
         printDebug(f"Max/Reverse Speed Factor Decreased: {maxSpeedFactor}/{reverseSpeedFactor}")
     elif button == 0: # /_\ button
         # Pick Motions
+        print(time.time())
         pass
     elif button == 2: # X
         # Drop Ball Storage
@@ -200,5 +217,5 @@ def mainLoop(joystick):
 
 if __name__ == "__main__":
     joystick = initJoystick()
-    ser = initSerial()
+    ser = initSerial(10, DEBUG) # 10 second timeout
     mainLoop(joystick)
