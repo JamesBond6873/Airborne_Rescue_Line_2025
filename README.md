@@ -6,12 +6,18 @@
 
 **Lista de Tarefas a realizar** (editar mas nunca apagar):
 
--> Começar com Engineering Journal no Overleaf (editor de LateX)
+-> Começar com Engineering Journal no Overleaf (editor de LateX) X
 
--> PCB Simples para Pico e ESCs
+-> PCB Simples para Pico e ESCs X
 
 -> Interpretar valores Encoder
 
--> Integrar Gamepad com RPI 5
+-> Integrar Gamepad com RPI 5 X
 
--> Planear Sessão no ginásio para avaliar movimentação do robô
+-> Planear Sessão no ginásio para avaliar movimentação do robô X
+
+-> Gamepad code with Arm/Ball Storage Functionality Functionality
+
+-> Buzzer and DIP Switch
+
+-> Possible Start.py
