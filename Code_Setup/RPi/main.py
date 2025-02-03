@@ -238,7 +238,8 @@ def calculateMotorSpeeds(axes):
 def pickVictim(type):
     # Pick Victim Function (takes "Alive" or "Dead")
     printDebug(f"Pick {type}")
-    sendSerial(f"A0", DEBUG)
+    sendSerial(f"AD", DEBUG)
+    time.sleep(0.5)
     sendSerial(f"P{type}", DEBUG)
     pass
 
@@ -246,6 +247,7 @@ def ballRelease(type):
     # Drop Function (takes "Alive" or "Dead")
     printDebug(f"Drop {type}")
     sendSerial(f"D{type}", DEBUG)
+    time.sleep(0.5)
     sendSerial(f"SF,5,F", DEBUG)
     pass
 
