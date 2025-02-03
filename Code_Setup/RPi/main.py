@@ -4,7 +4,7 @@ import serial
 import time
 
 # Is it DEBUG?
-DEBUG = True
+DEBUG = False
 
 SERIAL_PORT = '/dev/ttyACM0'
 BAUD_RATE = 115200
@@ -26,6 +26,10 @@ defaultSpeed = 1850
 # Motor variables
 M1, M2, M3, M4 = 0, 0, 0, 0
 speedFactor = 0
+
+# Gamepad Vars
+button0Pressed = False
+button2Pressed = False
 
 # Makes printDebug dependent on DEBUG flag
 def printDebug(text):
@@ -99,10 +103,10 @@ def handleEvents(joystick):
 
 # Handles button presses to adjust speed factor and default speed
 def handleButtonPress(button):
-    global speedFactor, defaultSpeed, maxSpeedFactor, reverseSpeedFactor
+    global speedFactor, defaultSpeed, maxSpeedFactor, reverseSpeedFactor, button0Pressed, button2Pressed
 
     printDebug(f"Button {button} pressed")
-    if button == 9:
+    if button == 8: # Select Quits Code
         printDebug(f"Shutting Down: Button {button} Pressed!")
         pygame.quit()
         sys.exit()
@@ -121,32 +125,70 @@ def handleButtonPress(button):
         defaultSpeed = max(defaultSpeed - SPEED_STEP, MIN_DEFAULT_SPEED)
         printDebug(f"Default Speed Decreased: {defaultSpeed}")
     elif button == 1:
+        if button0Pressed:
+            pickVictim("A")
+            time.sleep(2)
+        elif button2Pressed:
+            ballRelease("A")
+            time.sleep(2)
         # Increase both forward and reverse speed factors
         if maxSpeedFactor < MAX_SPEED_FACTOR_LIMIT:
             maxSpeedFactor += FACTOR_STEP
             reverseSpeedFactor -= FACTOR_STEP
         printDebug(f"Max/Reverse Speed Factor Increased: {maxSpeedFactor}/{reverseSpeedFactor}")
     elif button == 3:
+        if button0Pressed:
+            pickVictim("D")
+            time.sleep(2)
+        elif button2Pressed:
+            ballRelease("D")
+            time.sleep(2)
         # Decrease both forward and reverse speed factors
-        if maxSpeedFactor > MIN_SPEED_FACTOR_LIMIT:
+        elif maxSpeedFactor > MIN_SPEED_FACTOR_LIMIT:
             maxSpeedFactor -= FACTOR_STEP
             reverseSpeedFactor += FACTOR_STEP
         printDebug(f"Max/Reverse Speed Factor Decreased: {maxSpeedFactor}/{reverseSpeedFactor}")
     elif button == 0: # /_\ button
         # Pick Motions
-        print(time.time())
-        pass
+        button0Pressed = True
+        if button2Pressed:
+            sendSerial("BC",DEBUG)
+            time.sleep(2)
     elif button == 2: # X
         # Drop Ball Storage
-        pass
+        button2Pressed = True
 
 # Handles button releases to reset speed factor
 def handleButtonRelease(button):
-    global speedFactor
+    global speedFactor, button0Pressed, button2Pressed
     printDebug(f"Button {button} released")
     if button == 7 or button == 6:
         speedFactor = 0
         printDebug(f"Speed Factor: {speedFactor}")
+    elif button == 0: # /_\ button
+        # Pick Motions
+        button0Pressed = False
+    elif button == 2: # X
+        # Drop Ball Storage
+        button2Pressed = False
+
+def timeLoopEvents(duration):
+    initT0 = time.time()
+    t0 = initT0
+
+    while True:
+        t1 = t0 + 0.1
+        
+        handleEvents(joystick)
+        
+        if time.time() - initT0 >= duration:
+            printDebug("No Second Button")
+            return
+
+        while time.time() <= t1:
+            time.sleep(0.1)
+
+        t0 = t1
 
 # Function to calculate motor speeds based on joystick input
 def calculateMotorSpeeds(axes):
@@ -195,10 +237,14 @@ def calculateMotorSpeeds(axes):
 
 def pickVictim(type):
     # Pick Victim Function (takes "Alive" or "Dead")
+    printDebug(f"Pick {type}")
+    sendSerial(f"P{type}", DEBUG)
     pass
 
 def ballRelease(type):
     # Drop Function (takes "Alive" or "Dead")
+    printDebug(f"Drop {type}")
+    sendSerial(f"D{type}", DEBUG)
     pass
 
 # Main loop for handling joystick input and updating motor speeds
