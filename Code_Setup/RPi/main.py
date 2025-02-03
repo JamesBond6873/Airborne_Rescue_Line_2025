@@ -238,6 +238,7 @@ def calculateMotorSpeeds(axes):
 def pickVictim(type):
     # Pick Victim Function (takes "Alive" or "Dead")
     printDebug(f"Pick {type}")
+    sendSerial(f"A0", DEBUG)
     sendSerial(f"P{type}", DEBUG)
     pass
 
@@ -245,6 +246,7 @@ def ballRelease(type):
     # Drop Function (takes "Alive" or "Dead")
     printDebug(f"Drop {type}")
     sendSerial(f"D{type}", DEBUG)
+    sendSerial(f"SF,5,F", DEBUG)
     pass
 
 # Main loop for handling joystick input and updating motor speeds
