@@ -44,11 +44,15 @@ def initJoystick():
     joystick.init()
     return joystick
 
+# Initialize Serial
 def initSerial(timeout, debug):
     initT0 = time.time()
     t0 = initT0
 
     while True:
+        if debug == True: # Debugging Purposes, no serial, can be run off RPi
+            return None
+
         t1 = t0 + 0.5
 
         try:
@@ -70,7 +74,15 @@ def initSerial(timeout, debug):
 
         t0 = t1
 
-
+# Sends serials and allows for use with no serial port (debug = True)
+def sendSerial(message, debug):
+    if debug == True:
+        printDebug(f"Fake Sent: {message}")
+        return
+    
+    print(f"Sent to Serial: {message.strip()}")
+    ser.write(message.encode('utf-8'))
+    
 # Function to handle joystick events and speed factor changes
 def handleEvents(joystick):
     global speedFactor
@@ -202,11 +214,12 @@ def mainLoop(joystick):
             calculateMotorSpeeds(axes)
 
             # Print motor speeds for debugging
-            print(f"M({M2}, {M1})")
+            #print(f"M({M2}, {M1})")
             message = f"M({M2}, {M1})"
-            ser.write(message.encode('utf-8'))
+            sendSerial(message,DEBUG)
+            #ser.write(message.encode('utf-8'))
             
-            print(f"Sent to Serial: {message.strip()}")
+            #print(f"Sent to Serial: {message.strip()}")
             #print(f"M1: {M1}, M2: {M2}, M3: {M3}, M4: {M4}")
 
             pygame.time.delay(delayTimeMS)
