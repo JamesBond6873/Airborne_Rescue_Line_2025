@@ -267,7 +267,7 @@ def waitFor(response):
 
         received = readSerial(DEBUG)
 
-        printDebug(f"Received: {received}")
+        print(f"Received: {received}") # Needs to becomde printDebug
 
         if received == "Give Up":
             print(f"Giving Up On: {response}. Proceeding.")
