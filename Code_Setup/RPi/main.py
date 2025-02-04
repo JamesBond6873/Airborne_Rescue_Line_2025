@@ -235,8 +235,11 @@ def ballRelease(type):
 
 # Main loop for handling joystick input and updating motor speeds
 def mainLoop(joystick):
+    t0 = time.time()
     try:
         while True:
+            t1 = t0 + delayTimeMS * 0.001
+
             handleEvents(joystick)
 
             # Read joystick axes values
@@ -250,7 +253,10 @@ def mainLoop(joystick):
             message = f"M({M1}, {M2})"
             sendSerial(message,DEBUG)
 
-            pygame.time.delay(delayTimeMS)
+
+            while (time.time() <= t1):
+                time.sleep(0.001)
+            t0 = t1
 
     except KeyboardInterrupt:
         pygame.quit()
