@@ -95,7 +95,7 @@ def readSerial(debug):
     
     messageReceived = ""
 
-    if ser.in_waiting() > 0:
+    if ser.in_waiting > 0:
         return messageReceived
     
     while True:
@@ -105,9 +105,9 @@ def readSerial(debug):
 
         messageReceived = messageReceived + str(chr(c))
 
-        if ser.in_waiting() <= 0:
+        if ser.in_waiting <= 0:
             time.sleep(0.001)
-            if ser.in_waiting() <= 0:
+            if ser.in_waiting <= 0:
                 break
 
     return messageReceived
