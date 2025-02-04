@@ -66,7 +66,7 @@ void ArmGrip::slowMoveHand(int targetRH, int targetLH) {
 
   _movRH = targetRH - _initRH;
   _movLH = targetLH - _initLH;
-  info(1);
+  //info(1);
 
   _maxMov = max(abs(_movRH), abs(_movLH));
 
@@ -85,7 +85,7 @@ void ArmGrip::slowMoveArm(int targetRA, int targetLA) {
 
   _movRA = targetRA - _initRA;
   _movLA = targetLA - _initLA;
-  info(2);
+  //info(2);
 
   _maxMov = max(abs(_movRA), abs(_movLA));
 
@@ -145,7 +145,7 @@ void ArmGrip::moveDead() {
 void ArmGrip::moveDown() {
   Serial.println("------Move Down------");
   
-  info(2);
+  //info(2);
 
   // Move slowly
   slowMoveArm(_defPosRA, _defPosLA);
@@ -158,7 +158,7 @@ void ArmGrip::moveDown() {
 void ArmGrip::moveUp() {
   Serial.println("------Move Up------");
 
-  info(2);
+  //info(2);
 
   // Move slowly
   slowMoveArm(_upPosRA, _upPosLA);
