@@ -256,19 +256,19 @@ def calculateMotorSpeeds(axes):
 def pickVictim(type):
     # Pick Victim Function (takes "Alive" or "Dead")
     printDebug(f"Pick {type}")
-    sendSerialResponse(f"AD", DEBUG)
+    sendSerialResponse(f"AD", "Ok", DEBUG)
     #waitFor("Ok")
     #time.sleep(0.5)
-    sendSerialResponse(f"P{type}", DEBUG)
+    sendSerialResponse(f"P{type}", "Ok", DEBUG)
     #waitFor("Ok")
 
 def ballRelease(type):
     # Drop Function (takes "Alive" or "Dead")
     printDebug(f"Drop {type}")
-    sendSerialResponse(f"D{type}", DEBUG)
+    sendSerialResponse(f"D{type}", "Ok", DEBUG)
     #waitFor("Ok")
     #time.sleep(0.5)
-    sendSerialResponse(f"SF,5,F", DEBUG)
+    sendSerialResponse(f"SF,5,F", "Ok", DEBUG)
 
 def waitFor(response, timeoutMS):
     t0 = time.time()
