@@ -172,24 +172,6 @@ def handleButtonRelease(button):
         # Drop Ball Storage
         button2Pressed = False
 
-"""def timeLoopEvents(duration):
-    initT0 = time.time()
-    t0 = initT0
-
-    while True:
-        t1 = t0 + 0.1
-        
-        handleEvents(joystick)
-        
-        if time.time() - initT0 >= duration:
-            printDebug("No Second Button")
-            return
-
-        while time.time() <= t1:
-            time.sleep(0.1)
-
-        t0 = t1"""
-
 # Function to calculate motor speeds based on joystick input
 def calculateMotorSpeeds(axes):
     global M1, M2, M3, M4
@@ -265,12 +247,8 @@ def mainLoop(joystick):
 
             # Print motor speeds for debugging
             #print(f"M({M2}, {M1})")
-            message = f"M({M2}, {M1})"
+            message = f"M({M1}, {M2})"
             sendSerial(message,DEBUG)
-            #ser.write(message.encode('utf-8'))
-            
-            #print(f"Sent to Serial: {message.strip()}")
-            #print(f"M1: {M1}, M2: {M2}, M3: {M3}, M4: {M4}")
 
             pygame.time.delay(delayTimeMS)
 
