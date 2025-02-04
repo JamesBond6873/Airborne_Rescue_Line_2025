@@ -94,7 +94,8 @@ def sendSerialResponse(message, response, debug):
     
     print(f"Sent to Serial: {message.strip()}")
     while True:
-        ser.write(message.encode('utf-8'))
+        #ser.write(message.encode('utf-8'))
+        sendSerial(message, debug)
         if waitFor(response,100): # 100 Ms timeout
             break
 
