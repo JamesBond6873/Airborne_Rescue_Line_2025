@@ -86,7 +86,7 @@ def sendSerial(message, debug):
     
     print(f"Sent to Serial: {message.strip()}")
     ser.write(message.encode('utf-8'))
-    ser.flush()
+    ser.reset_output_buffer()
     
 def sendSerialResponse(message, response, retryTimeMS, debug):
     if debug == True:
