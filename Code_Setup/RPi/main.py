@@ -87,6 +87,31 @@ def sendSerial(message, debug):
     print(f"Sent to Serial: {message.strip()}")
     ser.write(message.encode('utf-8'))
     
+def readSerial(debug):
+    if debug == True:
+        printDebug(f"No Serial Port - Debug = True")
+        time.sleep(0.5)
+        return "Give Up"
+    
+    messageReceived = ""
+
+    if ser.in_waiting() > 0:
+        return messageReceived
+    
+    while True:
+        c = ser.read()
+        if c == 0 or c == 0x0A or c == 0x0D:
+            break
+
+        messageReceived = messageReceived + str(chr(c))
+
+        if ser.in_waiting() <= 0:
+            time.sleep(0.001)
+            if ser.in_waiting() <= 0:
+                break
+
+    return messageReceived
+
 # Function to handle joystick events and speed factor changes
 def handleEvents(joystick):
     global speedFactor
@@ -127,15 +152,15 @@ def handleButtonPress(button):
     elif button == 1:
         if button0Pressed:
             pickVictim("A")
-            time.sleep(2)
+            #time.sleep(2)
         elif button2Pressed:
             ballRelease("A")
-            time.sleep(2)
+            #time.sleep(2)
         # Increase both forward and reverse speed factors
-        if maxSpeedFactor < MAX_SPEED_FACTOR_LIMIT:
+        elif maxSpeedFactor < MAX_SPEED_FACTOR_LIMIT:
             maxSpeedFactor += FACTOR_STEP
             reverseSpeedFactor -= FACTOR_STEP
-        printDebug(f"Max/Reverse Speed Factor Increased: {maxSpeedFactor}/{reverseSpeedFactor}")
+            printDebug(f"Max/Reverse Speed Factor Increased: {maxSpeedFactor}/{reverseSpeedFactor}")
     elif button == 3:
         if button0Pressed:
             pickVictim("D")
@@ -147,7 +172,7 @@ def handleButtonPress(button):
         elif maxSpeedFactor > MIN_SPEED_FACTOR_LIMIT:
             maxSpeedFactor -= FACTOR_STEP
             reverseSpeedFactor += FACTOR_STEP
-        printDebug(f"Max/Reverse Speed Factor Decreased: {maxSpeedFactor}/{reverseSpeedFactor}")
+            printDebug(f"Max/Reverse Speed Factor Decreased: {maxSpeedFactor}/{reverseSpeedFactor}")
     elif button == 0: # /_\ button
         # Pick Motions
         button0Pressed = True
@@ -221,15 +246,43 @@ def pickVictim(type):
     # Pick Victim Function (takes "Alive" or "Dead")
     printDebug(f"Pick {type}")
     sendSerial(f"AD", DEBUG)
+    waitFor("Ok")
     #time.sleep(0.5)
     sendSerial(f"P{type}", DEBUG)
+    waitFor("Ok")
 
 def ballRelease(type):
     # Drop Function (takes "Alive" or "Dead")
     printDebug(f"Drop {type}")
     sendSerial(f"D{type}", DEBUG)
+    waitFor("Ok")
     #time.sleep(0.5)
     sendSerial(f"SF,5,F", DEBUG)
+
+def waitFor(response):
+    t0 = time.time()
+
+    while True:
+        t1 = t0 + delayTimeMS * 0.001
+
+        received = readSerial(DEBUG)
+
+        printDebug(f"Received: {received}")
+
+        if received == "Give Up":
+            print(f"Giving Up On: {response}. Proceeding.")
+            break
+
+        elif received == response:
+            print(f"Got the needed answer: {response}. Proceeding.")
+            break
+
+        while (time.time() <= t1):
+            time.sleep(0.001)
+        t0 = t1
+
+    return
+
 
 # Main loop for handling joystick input and updating motor speeds
 def mainLoop(joystick):
