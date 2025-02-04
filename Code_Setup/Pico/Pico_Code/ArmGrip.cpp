@@ -98,7 +98,7 @@ void ArmGrip::slowMoveArm(int targetRA, int targetLA) {
 }
 
 void ArmGrip::openHand() {
-  Serial.println("------Open Hand------");
+  //Serial.println("------Open Hand------");
 
   // Move slowly
   slowMoveHand(_defPosRH, _defPosLH);
@@ -110,7 +110,7 @@ void ArmGrip::openHand() {
 }
 
 void ArmGrip::closeHand() {
-  Serial.println("------Close Hand------");
+  //Serial.println("------Close Hand------");
   
   // Move slowly
   slowMoveHand(_clPosRH, _clPosLH);
@@ -121,7 +121,7 @@ void ArmGrip::closeHand() {
 }
 
 void ArmGrip::moveAlive() {
-  Serial.println("------Move Alive------");
+  //Serial.println("------Move Alive------");
   
   // Move slowly
   slowMoveHand(_alivePosRH, _alivePosLH);
@@ -132,7 +132,7 @@ void ArmGrip::moveAlive() {
 }
 
 void ArmGrip::moveDead() {
-  Serial.println("------Move Dead------");
+  //Serial.println("------Move Dead------");
   
   // Move slowly
   slowMoveHand(_deadPosRH, _deadPosLH);
@@ -143,7 +143,7 @@ void ArmGrip::moveDead() {
 }
 
 void ArmGrip::moveDown() {
-  Serial.println("------Move Down------");
+  //Serial.println("------Move Down------");
   
   //info(2);
 
@@ -156,7 +156,7 @@ void ArmGrip::moveDown() {
 }
 
 void ArmGrip::moveUp() {
-  Serial.println("------Move Up------");
+  //Serial.println("------Move Up------");
 
   //info(2);
 
@@ -169,8 +169,8 @@ void ArmGrip::moveUp() {
 }
 
 void ArmGrip::pickAlive() {
-  Serial.println("");
-  Serial.println("Picking Up Alive Victim \t");
+  //Serial.println("");
+  //Serial.println("Picking Up Alive Victim \t");
 
   // Pick Ball in the Middle
   closeHand();
@@ -189,8 +189,8 @@ void ArmGrip::pickAlive() {
 }
 
 void ArmGrip::pickDead() {
-  Serial.println("");
-  Serial.println("Picking Up Dead Victim \t");
+  //Serial.println("");
+  //Serial.println("Picking Up Dead Victim \t");
 
   // Pick Ball in the Middle
   closeHand();
