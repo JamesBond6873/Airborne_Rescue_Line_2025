@@ -273,7 +273,7 @@ def waitFor(response):
             print(f"Giving Up On: {response}. Proceeding.")
             break
 
-        elif received == response:
+        elif response in received:
             print(f"Got the needed answer: {response}. Proceeding.")
             break
 
