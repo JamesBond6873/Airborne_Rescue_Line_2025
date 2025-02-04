@@ -139,10 +139,10 @@ def handleButtonPress(button):
     elif button == 3:
         if button0Pressed:
             pickVictim("D")
-            time.sleep(2)
+            #time.sleep(2)
         elif button2Pressed:
             ballRelease("D")
-            time.sleep(2)
+            #time.sleep(2)
         # Decrease both forward and reverse speed factors
         elif maxSpeedFactor > MIN_SPEED_FACTOR_LIMIT:
             maxSpeedFactor -= FACTOR_STEP
@@ -221,17 +221,15 @@ def pickVictim(type):
     # Pick Victim Function (takes "Alive" or "Dead")
     printDebug(f"Pick {type}")
     sendSerial(f"AD", DEBUG)
-    time.sleep(0.5)
+    #time.sleep(0.5)
     sendSerial(f"P{type}", DEBUG)
-    pass
 
 def ballRelease(type):
     # Drop Function (takes "Alive" or "Dead")
     printDebug(f"Drop {type}")
     sendSerial(f"D{type}", DEBUG)
-    time.sleep(0.5)
+    #time.sleep(0.5)
     sendSerial(f"SF,5,F", DEBUG)
-    pass
 
 # Main loop for handling joystick input and updating motor speeds
 def mainLoop(joystick):
