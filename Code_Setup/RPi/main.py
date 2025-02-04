@@ -92,7 +92,7 @@ def sendSerialResponse(message, response, debug):
         printDebug(f"Fake Sent: {message}")
         return
     
-    print(f"Sent to Serial: {message.strip()}")
+    #print(f"Sent to Serial: {message.strip()}")
     while True:
         #ser.write(message.encode('utf-8'))
         sendSerial(message, debug)
@@ -107,7 +107,7 @@ def readSerial(debug):
     
     messageReceived = ""
 
-    if ser.in_waiting > 0:
+    if ser.in_waiting <= 0:
         return messageReceived
     
     while True:
@@ -280,7 +280,7 @@ def waitFor(response, timeoutMS):
 
         received = readSerial(DEBUG)
 
-        print(f"Received: {received}") # Needs to becomde printDebug
+        print(f"Received: {received}") # Needs to become printDebug
 
         if received == "Give Up":
             print(f"Giving Up On: {response}. Proceeding.")
