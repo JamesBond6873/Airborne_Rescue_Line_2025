@@ -87,6 +87,17 @@ def sendSerial(message, debug):
     print(f"Sent to Serial: {message.strip()}")
     ser.write(message.encode('utf-8'))
     
+def sendSerialResponse(message, response, debug):
+    if debug == True:
+        printDebug(f"Fake Sent: {message}")
+        return
+    
+    print(f"Sent to Serial: {message.strip()}")
+    while True:
+        ser.write(message.encode('utf-8'))
+        if waitFor(response,100): # 100 Ms timeout
+            break
+
 def readSerial(debug):
     if debug == True:
         printDebug(f"No Serial Port - Debug = True")
@@ -245,22 +256,23 @@ def calculateMotorSpeeds(axes):
 def pickVictim(type):
     # Pick Victim Function (takes "Alive" or "Dead")
     printDebug(f"Pick {type}")
-    sendSerial(f"AD", DEBUG)
-    waitFor("Ok")
+    sendSerialResponse(f"AD", DEBUG)
+    #waitFor("Ok")
     #time.sleep(0.5)
-    sendSerial(f"P{type}", DEBUG)
-    waitFor("Ok")
+    sendSerialResponse(f"P{type}", DEBUG)
+    #waitFor("Ok")
 
 def ballRelease(type):
     # Drop Function (takes "Alive" or "Dead")
     printDebug(f"Drop {type}")
-    sendSerial(f"D{type}", DEBUG)
-    waitFor("Ok")
+    sendSerialResponse(f"D{type}", DEBUG)
+    #waitFor("Ok")
     #time.sleep(0.5)
-    sendSerial(f"SF,5,F", DEBUG)
+    sendSerialResponse(f"SF,5,F", DEBUG)
 
-def waitFor(response):
+def waitFor(response, timeoutMS):
     t0 = time.time()
+    initT0 = t0
 
     while True:
         t1 = t0 + delayTimeMS * 0.001
@@ -276,12 +288,15 @@ def waitFor(response):
         elif response in received:
             print(f"Got the needed answer: {response}. Proceeding.")
             break
+        
+        if time.time() >= initT0 + timeoutMS * 0.001:
+            return False
 
         while (time.time() <= t1):
             time.sleep(0.001)
         t0 = t1
 
-    return
+    return True
 
 
 # Main loop for handling joystick input and updating motor speeds
