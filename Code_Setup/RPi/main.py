@@ -87,7 +87,7 @@ def sendSerial(message, debug):
     print(f"Sent to Serial: {message.strip()}")
     ser.write(message.encode('utf-8'))
     
-def sendSerialResponse(message, response, debug):
+def sendSerialResponse(message, response, retryTimeMS, debug):
     if debug == True:
         printDebug(f"Fake Sent: {message}")
         return
@@ -96,7 +96,7 @@ def sendSerialResponse(message, response, debug):
     while True:
         #ser.write(message.encode('utf-8'))
         sendSerial(message, debug)
-        if waitFor(response,100): # 100 Ms timeout
+        if waitFor(response, retryTimeMS): # 1000 Ms timeout
             break
 
 def readSerial(debug):
@@ -257,19 +257,19 @@ def calculateMotorSpeeds(axes):
 def pickVictim(type):
     # Pick Victim Function (takes "Alive" or "Dead")
     printDebug(f"Pick {type}")
-    sendSerialResponse(f"AD", "Ok", DEBUG)
+    sendSerialResponse(f"AD", "Ok", 250, DEBUG)
     #waitFor("Ok")
     #time.sleep(0.5)
-    sendSerialResponse(f"P{type}", "Ok", DEBUG)
+    sendSerialResponse(f"P{type}", "Ok", 1500, DEBUG)
     #waitFor("Ok")
 
 def ballRelease(type):
     # Drop Function (takes "Alive" or "Dead")
     printDebug(f"Drop {type}")
-    sendSerialResponse(f"D{type}", "Ok", DEBUG)
+    sendSerialResponse(f"D{type}", "Ok", 100, DEBUG)
     #waitFor("Ok")
     #time.sleep(0.5)
-    sendSerialResponse(f"SF,5,F", "Ok", DEBUG)
+    sendSerialResponse(f"SF,5,F", "Ok", 100, DEBUG)
 
 def waitFor(response, timeoutMS):
     t0 = time.time()

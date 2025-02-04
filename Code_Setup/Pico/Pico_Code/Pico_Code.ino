@@ -70,7 +70,8 @@ long timeInterval = 10;  // 10ms per loop = 100Hz
 
 void setup() {
   // put your setup code here, to run once:
-  Serial.begin(115200);
+  // Let Raspberry Pi Pico wake up
+  delay(5000);
 
   // Get Motors Ready
   for (int i = 0; i < 4; i++) {
@@ -93,6 +94,9 @@ void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH);
 
+  // Serial Communication with RPi
+  Serial.begin(115200);
+
   ledT0 = millis();
   t0 = millis();
 }
@@ -114,30 +118,30 @@ void loop() {
   // Act According Message:
   if (message.startsWith("M(") && message.endsWith(")")) { ControlMotor(message); }  // Motor Command | M(x,x)
 
-  else if (message == "PA") { Grip.pickAlive(); respondCommand("OK");}  // Pick Alive Victim Sequence Command | Pick Alive
-  else if (message == "PD") { Grip.pickDead(); respondCommand("OK");}  // Pick Dead Victim Sequence Command | Pick Dead
+  else if (message == "PA") { Grip.pickAlive(); respondCommand("Ok");}  // Pick Alive Victim Sequence Command | Pick Alive
+  else if (message == "PD") { Grip.pickDead(); respondCommand("Ok");}  // Pick Dead Victim Sequence Command | Pick Dead
 
-  else if (message == "CL") { camServo.lineFollowing(); respondCommand("OK");}  // Point Camera Down for Line Following Command | Camera Line
-  else if (message == "CE") { camServo.EvacuationZone(); respondCommand("OK");}  // Point Camera Forward for Evactuation Zone Victim Rescue Command | Camera Evacuation
+  else if (message == "CL") { camServo.lineFollowing(); respondCommand("Ok");}  // Point Camera Down for Line Following Command | Camera Line
+  else if (message == "CE") { camServo.EvacuationZone(); respondCommand("Ok");}  // Point Camera Forward for Evactuation Zone Victim Rescue Command | Camera Evacuation
 
-  else if (message == "DA") { ballStorageServo.dropAlive(); respondCommand("OK");}  // Drop Alive Victims Command | Drop Alive
-  else if (message == "DD") { ballStorageServo.dropDead(); respondCommand("OK");}  // Drop Dead Victims Command | Drop Dead
-  else if (message == "BC") { ballStorageServo.close(); respondCommand("OK");} // Close Ball Storage Command | Ball Close
+  else if (message == "DA") { ballStorageServo.dropAlive(); respondCommand("Ok");}  // Drop Alive Victims Command | Drop Alive
+  else if (message == "DD") { ballStorageServo.dropDead(); respondCommand("Ok");}  // Drop Dead Victims Command | Drop Dead
+  else if (message == "BC") { ballStorageServo.close(); respondCommand("Ok");} // Close Ball Storage Command | Ball Close
 
-  else if (message == "LD") { collectToFData(); respondCommand("OK");}  // Collect ToF Data from All Sensors | Laser Data
-  else if (message == "LX") { collectToFDataX(); respondCommand("OK");}  // Collect ToF Data from X Sensor | Laser X - LX,X
+  else if (message == "LD") { collectToFData(); respondCommand("Ok");}  // Collect ToF Data from All Sensors | Laser Data
+  else if (message == "LX") { collectToFDataX(); respondCommand("Ok");}  // Collect ToF Data from X Sensor | Laser X - LX,X
 
-  else if (message == "HO") { Grip.openHand(); respondCommand("OK");}  // Open Hand Command | Hand Open
-  else if (message == "HC") { Grip.closeHand(); respondCommand("OK");}  // Close Hand Command | Hand Close
-  else if (message == "HA") { Grip.moveAlive(); respondCommand("OK");}  // Move Hand to Alive Position Command | Hand Alive
-  else if (message == "HD") { Grip.moveDead(); respondCommand("OK");}  // Move Hand to Dead Position Command | Hand Dead
+  else if (message == "HO") { Grip.openHand(); respondCommand("Ok");}  // Open Hand Command | Hand Open
+  else if (message == "HC") { Grip.closeHand(); respondCommand("Ok");}  // Close Hand Command | Hand Close
+  else if (message == "HA") { Grip.moveAlive(); respondCommand("Ok");}  // Move Hand to Alive Position Command | Hand Alive
+  else if (message == "HD") { Grip.moveDead(); respondCommand("Ok");}  // Move Hand to Dead Position Command | Hand Dead
 
-  else if (message == "AD") { Grip.moveDown(); respondCommand("OK");}  // Move Arm Down Command (Catch Position) | Arm Down
-  else if (message == "AU") { Grip.moveUp(); respondCommand("OK");}  // Move Arm Up Command (Storage Position) | Arm Up
+  else if (message == "AD") { Grip.moveDown(); respondCommand("Ok");}  // Move Arm Down Command (Catch Position) | Arm Down
+  else if (message == "AU") { Grip.moveUp(); respondCommand("Ok");}  // Move Arm Up Command (Storage Position) | Arm Up
 
-  else if (message.startsWith("SC,")) { servoControlMessage(message); respondCommand("OK");} // Control Single Servo Command | servoControl
+  else if (message.startsWith("SC,")) { servoControlMessage(message); respondCommand("Ok");} // Control Single Servo Command | servoControl
 
-  else if (message.startsWith("SF,")) { servoFreeControl(message); respondCommand("OK");} //Free a servo | Servo Free
+  else if (message.startsWith("SF,")) { servoFreeControl(message); respondCommand("Ok");} //Free a servo | Servo Free
   
   else if (message == "Alive") { Serial.println("Yes Alive"); }  // Check if Pico is still alive  | Alive
 
