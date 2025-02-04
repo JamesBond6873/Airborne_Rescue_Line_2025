@@ -172,7 +172,7 @@ def handleButtonRelease(button):
         # Drop Ball Storage
         button2Pressed = False
 
-def timeLoopEvents(duration):
+"""def timeLoopEvents(duration):
     initT0 = time.time()
     t0 = initT0
 
@@ -188,7 +188,7 @@ def timeLoopEvents(duration):
         while time.time() <= t1:
             time.sleep(0.1)
 
-        t0 = t1
+        t0 = t1"""
 
 # Function to calculate motor speeds based on joystick input
 def calculateMotorSpeeds(axes):

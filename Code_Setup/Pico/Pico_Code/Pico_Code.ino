@@ -16,10 +16,10 @@ const int enc4A = 14;
 const int enc4B = 15;
 
 Motor motors[4] = {
-    Motor(10, enc1A, enc1B),
-    Motor(11, enc2A, enc2B),
-    Motor(20, enc3A, enc3B),
-    Motor(19, enc4A, enc4B)
+    Motor(20, enc1A, enc1B),
+    Motor(19, enc2A, enc2B),
+    Motor(10, enc3A, enc3B),
+    Motor(11, enc4A, enc4B)
 };
 
 int value;
