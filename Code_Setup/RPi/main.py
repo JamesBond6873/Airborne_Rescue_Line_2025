@@ -103,7 +103,7 @@ def readSerial(debug):
         if c == 0 or c == 0x0A or c == 0x0D:
             break
 
-        messageReceived = messageReceived + str(chr(c))
+        messageReceived = messageReceived + str(c.decode('utf-8'))
 
         if ser.in_waiting <= 0:
             time.sleep(0.001)
