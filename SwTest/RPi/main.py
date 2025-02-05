@@ -306,7 +306,7 @@ def mainLoop(joystick):
             if oldM1 != M1 or oldM2 != M2:
                 message = f"M({M1}, {M2})"
                 sendSerial(message,DEBUG)
-            print(f"Received Message: {readSerial()}")
+            print(f"Received Message: {readSerial(DEBUG)}")
 
             oldM1 = M1
             oldM2 = M2
