@@ -250,7 +250,7 @@ def pickVictim(type):
     # Pick Victim Function (takes "Alive" or "Dead")
     printDebug(f"Pick {type}")
     sendSerial(f"AD", DEBUG)
-    #time.sleep(0.5)
+    time.sleep(0.5)
     sendSerial(f"P{type}", DEBUG)
     pass
 
@@ -264,6 +264,9 @@ def ballRelease(type):
 
 # Main loop for handling joystick input and updating motor speeds
 def mainLoop(joystick):
+
+    notWaiting = True
+
     oldM1 = M1
     oldM2 = M2
     t0 = time.time()
@@ -294,6 +297,9 @@ def mainLoop(joystick):
             pygame.time.delay(delayTimeMS)"""
 
             t1 = t0 + delayTimeMS * 0.001
+
+            if notWaiting:
+                pass
 
             handleEvents(joystick)
 
