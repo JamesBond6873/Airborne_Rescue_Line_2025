@@ -114,30 +114,37 @@ void loop() {
   // Act According Message:
   if (message.startsWith("M(") && message.endsWith(")")) { ControlMotor(message); }  // Motor Command | M(x,x)
 
-  else if (message == "PA") { Grip.pickAlive(); }  // Pick Alive Victim Sequence Command | Pick Alive
-  else if (message == "PD") { Grip.pickDead(); }  // Pick Dead Victim Sequence Command | Pick Dead
+  else if (message == "GR") {   // Arm motors again | Get Ready
+    for (int i = 0; i < 4; i++) {
+      motors[i].getReady();
+    }
+    Serial.print("Ok\n");
+  }
 
-  else if (message == "CL") { camServo.lineFollowing(); }  // Point Camera Down for Line Following Command | Camera Line
-  else if (message == "CE") { camServo.EvacuationZone(); }  // Point Camera Forward for Evactuation Zone Victim Rescue Command | Camera Evacuation
+  else if (message == "PA") { Grip.pickAlive(); Serial.print("Ok\n"); }  // Pick Alive Victim Sequence Command | Pick Alive
+  else if (message == "PD") { Grip.pickDead(); Serial.print("Ok\n"); }  // Pick Dead Victim Sequence Command | Pick Dead
 
-  else if (message == "DA") { ballStorageServo.dropAlive(); }  // Drop Alive Victims Command | Drop Alive
-  else if (message == "DD") { ballStorageServo.dropDead();}  // Drop Dead Victims Command | Drop Dead
-  else if (message == "BC") { ballStorageServo.close();} // Close Ball Storage Command | Ball Close
+  else if (message == "CL") { camServo.lineFollowing(); Serial.print("Ok\n"); }  // Point Camera Down for Line Following Command | Camera Line
+  else if (message == "CE") { camServo.EvacuationZone(); Serial.print("Ok\n"); }  // Point Camera Forward for Evactuation Zone Victim Rescue Command | Camera Evacuation
 
-  else if (message == "LD") { collectToFData(); }  // Collect ToF Data from All Sensors | Laser Data
-  else if (message == "LX") { collectToFDataX(); }  // Collect ToF Data from X Sensor | Laser X - LX,X
+  else if (message == "DA") { ballStorageServo.dropAlive(); Serial.print("Ok\n"); }  // Drop Alive Victims Command | Drop Alive
+  else if (message == "DD") { ballStorageServo.dropDead(); Serial.print("Ok\n"); }  // Drop Dead Victims Command | Drop Dead
+  else if (message == "BC") { ballStorageServo.close(); Serial.print("Ok\n"); } // Close Ball Storage Command | Ball Close
 
-  else if (message == "HO") { Grip.openHand(); }  // Open Hand Command | Hand Open
-  else if (message == "HC") { Grip.closeHand(); }  // Close Hand Command | Hand Close
-  else if (message == "HA") { Grip.moveAlive(); }  // Move Hand to Alive Position Command | Hand Alive
-  else if (message == "HD") { Grip.moveDead(); }  // Move Hand to Dead Position Command | Hand Dead
+  else if (message == "LD") { collectToFData(); Serial.print("Ok\n"); }  // Collect ToF Data from All Sensors | Laser Data
+  else if (message == "LX") { collectToFDataX(); Serial.print("Ok\n"); }  // Collect ToF Data from X Sensor | Laser X - LX,X
 
-  else if (message == "AD") { Grip.moveDown(); }  // Move Arm Down Command (Catch Position) | Arm Down
-  else if (message == "AU") { Grip.moveUp(); }  // Move Arm Up Command (Storage Position) | Arm Up
+  else if (message == "HO") { Grip.openHand(); Serial.print("Ok\n"); }  // Open Hand Command | Hand Open
+  else if (message == "HC") { Grip.closeHand(); Serial.print("Ok\n"); }  // Close Hand Command | Hand Close
+  else if (message == "HA") { Grip.moveAlive(); Serial.print("Ok\n"); }  // Move Hand to Alive Position Command | Hand Alive
+  else if (message == "HD") { Grip.moveDead(); Serial.print("Ok\n"); }  // Move Hand to Dead Position Command | Hand Dead
 
-  else if (message.startsWith("SC,")) { servoControlMessage(message); } // Control Single Servo Command | servoControl
+  else if (message == "AD") { Grip.moveDown(); Serial.print("Ok\n"); }  // Move Arm Down Command (Catch Position) | Arm Down
+  else if (message == "AU") { Grip.moveUp(); Serial.print("Ok\n"); }  // Move Arm Up Command (Storage Position) | Arm Up
 
-  else if (message.startsWith("SF,")) { servoFreeControl(message); } //Free a servo | Servo Free
+  else if (message.startsWith("SC,")) { servoControlMessage(message); Serial.print("Ok\n"); } // Control Single Servo Command | servoControl
+
+  else if (message.startsWith("SF,")) { servoFreeControl(message); Serial.print("Ok\n"); } //Free a servo | Servo Free
   
   else if (message == "Alive") { Serial.println("Yes Alive"); }  // Check if Pico is still alive  | Alive
 
