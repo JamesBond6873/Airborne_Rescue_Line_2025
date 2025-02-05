@@ -87,7 +87,7 @@ def sendSerial(message, debug):
     print(f"Sent to Serial: {message.strip()}")
     ser.write(message.encode('utf-8'))
 
-
+"""
 def readSerial(debug):
     if debug == True:
         printDebug(f"No Serial Port - Debug = True")
@@ -110,6 +110,16 @@ def readSerial(debug):
             time.sleep(0.001)
             if ser.in_waiting <= 0:
                 break
+
+    return messageReceived
+"""
+def readSerial(debug):
+    if debug == True:
+        printDebug(f"No Serial Port - Debug = True")
+        time.sleep(0.5)
+        return "Give Up"
+    
+    messageReceived = ser.readline()
 
     return messageReceived
 
