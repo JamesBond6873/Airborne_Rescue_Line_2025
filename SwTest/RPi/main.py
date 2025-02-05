@@ -4,10 +4,16 @@ import serial
 import time
 
 # Is it DEBUG?
-DEBUG = False
+DEBUG = True
 
 SERIAL_PORT = '/dev/ttyACM0'
 BAUD_RATE = 115200
+
+
+# Loop Vars
+notWaiting = True
+waitingResponse = ""
+commandWaitingList = []
 
 # Constants for speed factors and motor default values
 delayTimeMS = 10
@@ -247,11 +253,18 @@ def calculateMotorSpeeds(axes):
         M1 = M2 = M3 = M4 = 1520
 
 def pickVictim(type):
+    global notWaiting
     # Pick Victim Function (takes "Alive" or "Dead")
     printDebug(f"Pick {type}")
-    sendSerial(f"AD", DEBUG)
+
+    notWaiting = False
+    commandWaitingList.append(f"AD")
+    commandWaitingList.append(f"P{type}")
+    print(f"Command List: {commandWaitingList}")
+
+    """sendSerial(f"AD", DEBUG)
     time.sleep(0.5)
-    sendSerial(f"P{type}", DEBUG)
+    sendSerial(f"P{type}", DEBUG)"""
     pass
 
 def ballRelease(type):
@@ -264,9 +277,7 @@ def ballRelease(type):
 
 # Main loop for handling joystick input and updating motor speeds
 def mainLoop(joystick):
-
-    notWaiting = True
-
+    global notWaiting
     oldM1 = M1
     oldM2 = M2
     t0 = time.time()
@@ -298,23 +309,31 @@ def mainLoop(joystick):
 
             t1 = t0 + delayTimeMS * 0.001
 
+            print(notWaiting)
+
             if notWaiting:
-                pass
+                handleEvents(joystick)
 
-            handleEvents(joystick)
+                # Read joystick axes values
+                axes = [joystick.get_axis(i) for i in range(joystick.get_numaxes())]
 
-            # Read joystick axes values
-            axes = [joystick.get_axis(i) for i in range(joystick.get_numaxes())]
+                # Calculate motor speeds
+                calculateMotorSpeeds(axes)
 
-            # Calculate motor speeds
-            calculateMotorSpeeds(axes)
+                if oldM1 != M1 or oldM2 != M2:
+                    message = f"M({M1}, {M2})"
+                    sendSerial(message,DEBUG)
 
-            # Print motor speeds for debugging
-            #print(f"M({M2}, {M1})")
-            if oldM1 != M1 or oldM2 != M2:
-                message = f"M({M1}, {M2})"
-                sendSerial(message,DEBUG)
-            print(f"Received Message: {readSerial(DEBUG)}")
+            receivedMessage = readSerial(DEBUG)
+            if "-Nothing-" not in receivedMessage:
+                print(f"Received Message: {receivedMessage}")
+            if "Ok" in receivedMessage:
+                print(f"Command List: {commandWaitingList}")
+                if len(commandWaitingList) == 0:
+                    notWaiting = True
+                else:
+                    sendSerial(commandWaitingList[0])
+                    commandWaitingList.pop(0)
 
             oldM1 = M1
             oldM2 = M2
