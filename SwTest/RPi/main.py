@@ -264,6 +264,7 @@ def ballRelease(type):
 def mainLoop(joystick):
     oldM1 = M1
     oldM2 = M2
+    t0 = time.time()
     try:
         while True:
             """handleEvents(joystick)
