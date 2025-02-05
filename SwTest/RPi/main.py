@@ -86,7 +86,34 @@ def sendSerial(message, debug):
     
     print(f"Sent to Serial: {message.strip()}")
     ser.write(message.encode('utf-8'))
+
+
+def readSerial(debug):
+    if debug == True:
+        printDebug(f"No Serial Port - Debug = True")
+        time.sleep(0.5)
+        return "Give Up"
     
+    messageReceived = ""
+
+    if ser.in_waiting <= 0:
+        return messageReceived
+    
+    while True:
+        c = ser.read()
+        if c == 0 or c == 0x0A or c == 0x0D:
+            break
+
+        messageReceived = messageReceived + str(c.decode('utf-8'))
+
+        if ser.in_waiting <= 0:
+            time.sleep(0.001)
+            if ser.in_waiting <= 0:
+                break
+
+    return messageReceived
+
+
 # Function to handle joystick events and speed factor changes
 def handleEvents(joystick):
     global speedFactor
@@ -239,7 +266,7 @@ def mainLoop(joystick):
     oldM2 = M2
     try:
         while True:
-            handleEvents(joystick)
+            """handleEvents(joystick)
 
             # Read joystick axes values
             axes = [joystick.get_axis(i) for i in range(joystick.get_numaxes())]
@@ -261,7 +288,32 @@ def mainLoop(joystick):
             oldM1 = M1
             oldM2 = M2
 
-            pygame.time.delay(delayTimeMS)
+            pygame.time.delay(delayTimeMS)"""
+
+            t1 = t0 + delayTimeMS * 0.001
+
+            handleEvents(joystick)
+
+            # Read joystick axes values
+            axes = [joystick.get_axis(i) for i in range(joystick.get_numaxes())]
+
+            # Calculate motor speeds
+            calculateMotorSpeeds(axes)
+
+            # Print motor speeds for debugging
+            #print(f"M({M2}, {M1})")
+            if oldM1 != M1 or oldM2 != M2:
+                message = f"M({M1}, {M2})"
+                sendSerial(message,DEBUG)
+            print(f"Received Message: {readSerial()}")
+
+            oldM1 = M1
+            oldM2 = M2
+
+            while (time.time() <= t1):
+                time.sleep(0.001)
+            t0 = t1
+            
 
     except KeyboardInterrupt:
         pygame.quit()
