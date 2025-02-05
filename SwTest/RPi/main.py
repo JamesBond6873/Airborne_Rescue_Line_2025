@@ -87,18 +87,20 @@ def sendSerial(message, debug):
     print(f"Sent to Serial: {message.strip()}")
     ser.write(message.encode('utf-8'))
 
-"""
+
 def readSerial(debug):
     if debug == True:
         printDebug(f"No Serial Port - Debug = True")
         time.sleep(0.5)
         return "Give Up"
     
-    messageReceived = ""
+    messageReceived = "-Test-"
 
     if ser.in_waiting <= 0:
         return messageReceived
     
+    messageReceived = ""
+
     while True:
         c = ser.read()
         if c == 0 or c == 0x0A or c == 0x0D:
@@ -121,7 +123,7 @@ def readSerial(debug):
     
     messageReceived = ser.readline()
 
-    return messageReceived
+    return messageReceived"""
 
 
 # Function to handle joystick events and speed factor changes
