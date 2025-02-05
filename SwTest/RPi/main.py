@@ -85,8 +85,8 @@ def initSerial(timeout, debug):
         t0 = t1
 
 # Sends serials and allows for use with no serial port (debug = True)
-def sendSerial(message, debug):
-    if debug == True:
+def sendSerial(message):
+    if DEBUG == True:
         printDebug(f"Fake Sent: {message}")
         return
     
@@ -187,7 +187,7 @@ def handleButtonPress(button):
         # Pick Motions
         button0Pressed = True
         if button2Pressed:
-            sendSerial("BC",DEBUG)
+            sendSerial("BC")
             time.sleep(2)
     elif button == 2: # X
         # Drop Ball Storage
@@ -261,19 +261,19 @@ def pickVictim(type):
     commandWaitingList.append(f"AD")
     commandWaitingList.append(f"P{type}")
     print(f"Command List: {commandWaitingList}")
-    sendSerial(commandWaitingList[0], DEBUG) # Test
+    sendSerial(commandWaitingList[0]) # Test
 
-    """sendSerial(f"AD", DEBUG)
+    """sendSerial(f"AD")
     time.sleep(0.5)
-    sendSerial(f"P{type}", DEBUG)"""
+    sendSerial(f"P{type}")"""
     pass
 
 def ballRelease(type):
     # Drop Function (takes "Alive" or "Dead")
     printDebug(f"Drop {type}")
-    sendSerial(f"D{type}", DEBUG)
+    sendSerial(f"D{type}")
     time.sleep(0.5)
-    sendSerial(f"SF,5,F", DEBUG)
+    sendSerial(f"SF,5,F")
     pass
 
 # Main loop for handling joystick input and updating motor speeds
@@ -323,7 +323,7 @@ def mainLoop(joystick):
 
                 if oldM1 != M1 or oldM2 != M2:
                     message = f"M({M1}, {M2})"
-                    sendSerial(message,DEBUG)
+                    sendSerial(message)
 
             receivedMessage = readSerial(DEBUG)
             if "-Nothing-" not in receivedMessage:
