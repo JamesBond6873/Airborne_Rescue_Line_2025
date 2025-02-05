@@ -162,10 +162,10 @@ def handleButtonPress(button):
     elif button == 1:
         if button0Pressed:
             pickVictim("A")
-            time.sleep(2)
+            #time.sleep(2)
         elif button2Pressed:
             ballRelease("A")
-            time.sleep(2)
+            #time.sleep(2)
         # Increase both forward and reverse speed factors
         if maxSpeedFactor < MAX_SPEED_FACTOR_LIMIT:
             maxSpeedFactor += FACTOR_STEP
@@ -174,10 +174,10 @@ def handleButtonPress(button):
     elif button == 3:
         if button0Pressed:
             pickVictim("D")
-            time.sleep(2)
+            #time.sleep(2)
         elif button2Pressed:
             ballRelease("D")
-            time.sleep(2)
+            #time.sleep(2)
         # Decrease both forward and reverse speed factors
         elif maxSpeedFactor > MIN_SPEED_FACTOR_LIMIT:
             maxSpeedFactor -= FACTOR_STEP
@@ -187,8 +187,8 @@ def handleButtonPress(button):
         # Pick Motions
         button0Pressed = True
         if button2Pressed:
-            sendSerial("BC")
-            time.sleep(2)
+            closeBallStorage()
+            #time.sleep(2)
     elif button == 2: # X
         # Drop Ball Storage
         button2Pressed = True
@@ -252,29 +252,50 @@ def calculateMotorSpeeds(axes):
     if speedFactor == 0:
         M1 = M2 = M3 = M4 = 1520
 
+
+# Pick Victim Function (takes "Alive" or "Dead")
 def pickVictim(type):
     global notWaiting
-    # Pick Victim Function (takes "Alive" or "Dead")
+    notWaiting = False
+
     printDebug(f"Pick {type}")
 
-    notWaiting = False
     commandWaitingList.append(f"AD")
     commandWaitingList.append(f"P{type}")
-    print(f"Command List: {commandWaitingList}")
+
+    printDebug(f"Command List: {commandWaitingList}")
+
     sendSerial(commandWaitingList[0]) # Test
 
-    """sendSerial(f"AD")
-    time.sleep(0.5)
-    sendSerial(f"P{type}")"""
-    pass
 
+# Drop Function (takes "Alive" or "Dead")
 def ballRelease(type):
-    # Drop Function (takes "Alive" or "Dead")
+    global notWaiting
+    notWaiting = False
+
     printDebug(f"Drop {type}")
-    sendSerial(f"D{type}")
-    time.sleep(0.5)
-    sendSerial(f"SF,5,F")
-    pass
+
+    commandWaitingList.append(f"D{type}")
+    commandWaitingList.append(f"SF,5,F")
+
+    printDebug(f"Command List: {commandWaitingList}")
+
+    sendSerial(commandWaitingList[0]) # Test
+
+
+# Closes Ball Storage
+def closeBallStorage():
+    global notWaiting
+    notWaiting = False
+
+    printDebug(f"Close Ball Storage")
+
+    commandWaitingList.append(f"BC")
+    commandWaitingList.append(f"SF,5,F")
+
+    printDebug(f"Command List: {commandWaitingList}")
+
+    sendSerial(commandWaitingList[0]) # Test
 
 # Main loop for handling joystick input and updating motor speeds
 def mainLoop(joystick):
