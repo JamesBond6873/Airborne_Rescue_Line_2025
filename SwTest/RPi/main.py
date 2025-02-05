@@ -305,33 +305,9 @@ def mainLoop(joystick):
     t0 = time.time()
     try:
         while True:
-            """handleEvents(joystick)
-
-            # Read joystick axes values
-            axes = [joystick.get_axis(i) for i in range(joystick.get_numaxes())]
-
-            # Calculate motor speeds
-            calculateMotorSpeeds(axes)
-
-            # Print motor speeds for debugging
-            #print(f"M({M2}, {M1})")
-
-            if oldM1 != M1 or oldM2 != M2:
-                message = f"M({M1}, {M2})"
-                sendSerial(message,DEBUG)
-            #ser.write(message.encode('utf-8'))
-            
-            #print(f"Sent to Serial: {message.strip()}")
-            #print(f"M1: {M1}, M2: {M2}, M3: {M3}, M4: {M4}")
-
-            oldM1 = M1
-            oldM2 = M2
-
-            pygame.time.delay(delayTimeMS)"""
-
             t1 = t0 + delayTimeMS * 0.001
 
-            print(notWaiting)
+            printDebug(notWaiting)
 
             if notWaiting:
                 handleEvents(joystick)
