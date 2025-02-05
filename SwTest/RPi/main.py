@@ -261,6 +261,7 @@ def pickVictim(type):
     commandWaitingList.append(f"AD")
     commandWaitingList.append(f"P{type}")
     print(f"Command List: {commandWaitingList}")
+    sendSerial(commandWaitingList[0])
 
     """sendSerial(f"AD", DEBUG)
     time.sleep(0.5)
