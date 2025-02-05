@@ -4,7 +4,7 @@ import serial
 import time
 
 # Is it DEBUG?
-DEBUG = True
+DEBUG = False
 
 SERIAL_PORT = '/dev/ttyACM0'
 BAUD_RATE = 115200
