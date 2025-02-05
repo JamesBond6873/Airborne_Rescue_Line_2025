@@ -94,7 +94,7 @@ def readSerial(debug):
         time.sleep(0.5)
         return "Give Up"
     
-    messageReceived = "-Test-"
+    messageReceived = "-Nothing-"
 
     if ser.in_waiting <= 0:
         return messageReceived
@@ -114,16 +114,6 @@ def readSerial(debug):
                 break
 
     return messageReceived
-"""
-def readSerial(debug):
-    if debug == True:
-        printDebug(f"No Serial Port - Debug = True")
-        time.sleep(0.5)
-        return "Give Up"
-    
-    messageReceived = ser.readline()
-
-    return messageReceived"""
 
 
 # Function to handle joystick events and speed factor changes
@@ -260,7 +250,7 @@ def pickVictim(type):
     # Pick Victim Function (takes "Alive" or "Dead")
     printDebug(f"Pick {type}")
     sendSerial(f"AD", DEBUG)
-    time.sleep(0.5)
+    #time.sleep(0.5)
     sendSerial(f"P{type}", DEBUG)
     pass
 
