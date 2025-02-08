@@ -25,3 +25,5 @@
 -> Seperate Files
 
 -> Code should take manual inputs fro User
+
+-> Create a ARM ESC command (attempt to avoid ESCs desarming when the robot is turned on)
