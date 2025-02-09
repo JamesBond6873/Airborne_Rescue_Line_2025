@@ -3,220 +3,25 @@ import sys
 import serial
 import time
 
-# Is it DEBUG?
-DEBUG = False
-softDEBUG = True
+import config
+import utils
+import mySerial
+import robot
+import gamepad
 
-# Serial Port Vars
-SERIAL_PORT = '/dev/ttyACM0'
-BAUD_RATE = 115200
-
-# Loop Vars
-notWaiting = True
-waitingResponse = ""
-commandWaitingList = []
-
-# Constants for speed factors and motor default values
-delayTimeMS = 10
-MAX_DEFAULT_SPEED = 2000
-MIN_DEFAULT_SPEED = 1600
-SPEED_STEP = 25
-FACTOR_STEP = 25
-MAX_SPEED_FACTOR_LIMIT = 500
-MIN_SPEED_FACTOR_LIMIT = 50
-
-# Variables that can be updated
-maxSpeedFactor = 250
-reverseSpeedFactor = -100
-defaultSpeed = 1850
 
 # Motor variables
 M1, M2, M3, M4 = 0, 0, 0, 0
-speedFactor = 0
 
-# Gamepad Vars
-button0Pressed = False
-button2Pressed = False
-
-# Makes printDebug dependent on DEBUG flag
-def printDebug(text, debug):
-    if debug:
-        print(text)
-
-# Initialize Pygame and joystick
-def initJoystick():
-    pygame.init()
-    pygame.joystick.init()
-    if pygame.joystick.get_count() == 0:
-        print("No joystick found!")
-        pygame.quit()
-        sys.exit()
-    joystick = pygame.joystick.Joystick(0)
-    joystick.init()
-    return joystick
-
-# Initialize Serial
-def initSerial(timeout, debug):
-    initT0 = time.time()
-    t0 = initT0
-
-    while True:
-        if debug == True: # Debugging Purposes, no serial, can be run off RPi
-            return None
-
-        t1 = t0 + 0.5
-
-        try:
-            ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
-            print(f"Connected to {SERIAL_PORT} at {BAUD_RATE} baud.")
-            time.sleep(2)
-            
-            return ser
-
-        except serial.SerialException as e:
-            print(f"Error opening serial port: {e}")
-            
-            if time.time() - initT0 >= timeout:
-                printDebug("EXITING - NO SERIAL PORT", DEBUG)
-                sys.exit()
-
-        while time.time() <= t1:
-            time.sleep(0.1)
-
-        t0 = t1
-
-# Sends serials and allows for use with no serial port (debug = True)
-def sendSerial(message):
-    if DEBUG == True:
-        printDebug(f"Fake Sent: {message}", DEBUG)
-        return
-    
-    printDebug(f"Sent to Serial: {message.strip()}", softDEBUG)
-    ser.write(message.encode('utf-8'))
-
-
-def readSerial(debug):
-    if debug == True:
-        printDebug(f"No Serial Port - Debug = True", DEBUG)
-        time.sleep(0.5)
-        return "Give Up"
-    
-    messageReceived = "-Nothing-"
-
-    if ser.in_waiting <= 0:
-        return messageReceived
-    
-    messageReceived = ""
-
-    while True:
-        c = ser.read()
-        if c == 0 or c == 0x0A or c == 0x0D:
-            break
-
-        messageReceived = messageReceived + str(c.decode('utf-8'))
-
-        if ser.in_waiting <= 0:
-            time.sleep(0.001)
-            if ser.in_waiting <= 0:
-                break
-
-    return messageReceived
-
-
-# Function to handle joystick events and speed factor changes
-def handleEvents(joystick):
-    global speedFactor
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            sys.exit()
-
-        # Button Presses
-        if event.type == pygame.JOYBUTTONDOWN:
-            handleButtonPress(event.button)
-        elif event.type == pygame.JOYBUTTONUP:
-            handleButtonRelease(event.button)
-
-# Handles button presses to adjust speed factor and default speed
-def handleButtonPress(button):
-    global speedFactor, defaultSpeed, maxSpeedFactor, reverseSpeedFactor, button0Pressed, button2Pressed
-
-    printDebug(f"Button {button} pressed", DEBUG)
-
-    if button == 8: # Select Quits Code
-        printDebug(f"Shutting Down: Button {button} Pressed!", softDEBUG)
-        pygame.quit()
-        sys.exit()
-    elif button == 7:
-        speedFactor = maxSpeedFactor
-        printDebug(f"Speed Factor: {speedFactor}", DEBUG)
-    elif button == 6:
-        speedFactor = reverseSpeedFactor
-        printDebug(f"Speed Factor: {speedFactor}", DEBUG)
-    elif button == 5:
-        # Increase default speed
-        defaultSpeed = min(defaultSpeed + SPEED_STEP, MAX_DEFAULT_SPEED)
-        printDebug(f"Default Speed Increased: {defaultSpeed}", DEBUG)
-    elif button == 4:
-        # Decrease default speed
-        defaultSpeed = max(defaultSpeed - SPEED_STEP, MIN_DEFAULT_SPEED)
-        printDebug(f"Default Speed Decreased: {defaultSpeed}", DEBUG)
-    elif button == 1:
-        if button0Pressed:
-            pickVictim("A")
-            #time.sleep(2)
-        elif button2Pressed:
-            ballRelease("A")
-            #time.sleep(2)
-        # Increase both forward and reverse speed factors
-        if maxSpeedFactor < MAX_SPEED_FACTOR_LIMIT:
-            maxSpeedFactor += FACTOR_STEP
-            reverseSpeedFactor -= FACTOR_STEP
-        printDebug(f"Max/Reverse Speed Factor Increased: {maxSpeedFactor}/{reverseSpeedFactor}", DEBUG)
-    elif button == 3:
-        if button0Pressed:
-            pickVictim("D")
-            #time.sleep(2)
-        elif button2Pressed:
-            ballRelease("D")
-            #time.sleep(2)
-        # Decrease both forward and reverse speed factors
-        elif maxSpeedFactor > MIN_SPEED_FACTOR_LIMIT:
-            maxSpeedFactor -= FACTOR_STEP
-            reverseSpeedFactor += FACTOR_STEP
-        printDebug(f"Max/Reverse Speed Factor Decreased: {maxSpeedFactor}/{reverseSpeedFactor}", DEBUG)
-    elif button == 0: # /_\ button
-        # Pick Motions
-        button0Pressed = True
-        if button2Pressed:
-            closeBallStorage()
-            #time.sleep(2)
-    elif button == 2: # X
-        # Drop Ball Storage
-        button2Pressed = True
-
-# Handles button releases to reset speed factor
-def handleButtonRelease(button):
-    global speedFactor, button0Pressed, button2Pressed
-    printDebug(f"Button {button} released", DEBUG)
-    if button == 7 or button == 6:
-        speedFactor = 0
-        printDebug(f"Speed Factor: {speedFactor}", DEBUG)
-    elif button == 0: # /_\ button
-        # Pick Motions
-        button0Pressed = False
-    elif button == 2: # X
-        # Drop Ball Storage
-        button2Pressed = False
 
 # Function to calculate motor speeds based on joystick input
 def calculateMotorSpeeds(axes):
     global M1, M2, M3, M4
     axisValue = round(axes[0], 3)
-    M1 = defaultSpeed + axisValue * speedFactor
-    M2 = defaultSpeed - axisValue * speedFactor
-    M3 = defaultSpeed + axisValue * speedFactor
-    M4 = defaultSpeed - axisValue * speedFactor
+    M1 = config.defaultSpeed + axisValue * config.speedFactor
+    M2 = config.defaultSpeed - axisValue * config.speedFactor
+    M3 = config.defaultSpeed + axisValue * config.speedFactor
+    M4 = config.defaultSpeed - axisValue * config.speedFactor
 
     if M1 < 1520:
         M1 = 1250 - (1520 - M1)
@@ -235,11 +40,11 @@ def calculateMotorSpeeds(axes):
         M4 = 2000
 
     # Handle reverse speedFactor
-    if speedFactor < 0:
-        M1 = 1000 + (2000 - defaultSpeed) + axisValue * abs(speedFactor)
-        M2 = 1000 + (2000 - defaultSpeed) - axisValue * abs(speedFactor)
-        M3 = 1000 + (2000 - defaultSpeed) + axisValue * abs(speedFactor)
-        M4 = 1000 + (2000 - defaultSpeed) - axisValue * abs(speedFactor)
+    if config.speedFactor < 0:
+        M1 = 1000 + (2000 - config.defaultSpeed) + axisValue * abs(config.speedFactor)
+        M2 = 1000 + (2000 - config.defaultSpeed) - axisValue * abs(config.speedFactor)
+        M3 = 1000 + (2000 - config.defaultSpeed) + axisValue * abs(config.speedFactor)
+        M4 = 1000 + (2000 - config.defaultSpeed) - axisValue * abs(config.speedFactor)
     
     if M1 < 1000:
         M1 = 1000
@@ -251,68 +56,23 @@ def calculateMotorSpeeds(axes):
         
 
     # If speedFactor is zero, stop motors
-    if speedFactor == 0:
+    if config.speedFactor == 0:
         M1 = M2 = M3 = M4 = 1520
 
 
-# Pick Victim Function (takes "Alive" or "Dead")
-def pickVictim(type):
-    global notWaiting
-    notWaiting = False
-
-    printDebug(f"Pick {type}", softDEBUG)
-
-    commandWaitingList.append(f"AD")
-    commandWaitingList.append(f"P{type}")
-
-    printDebug(f"Command List: {commandWaitingList}", softDEBUG)
-
-    sendSerial(commandWaitingList[0]) # Test
-
-
-# Drop Function (takes "Alive" or "Dead")
-def ballRelease(type):
-    global notWaiting
-    notWaiting = False
-
-    printDebug(f"Drop {type}", softDEBUG)
-
-    commandWaitingList.append(f"D{type}")
-    commandWaitingList.append(f"SF,5,F")
-
-    printDebug(f"Command List: {commandWaitingList}", softDEBUG)
-
-    sendSerial(commandWaitingList[0]) # Test
-
-
-# Closes Ball Storage
-def closeBallStorage():
-    global notWaiting
-    notWaiting = False
-
-    printDebug(f"Close Ball Storage", softDEBUG)
-
-    commandWaitingList.append(f"BC")
-    commandWaitingList.append(f"SF,5,F")
-
-    printDebug(f"Command List: {commandWaitingList}", softDEBUG)
-
-    sendSerial(commandWaitingList[0]) # Test
-
 # Main loop for handling joystick input and updating motor speeds
 def mainLoop(joystick):
-    global notWaiting
     oldM1 = M1
     oldM2 = M2
     t0 = time.time()
     try:
         while True:
-            t1 = t0 + delayTimeMS * 0.001
+            t1 = t0 + config.delayTimeMS * 0.001
 
-            printDebug(notWaiting, DEBUG)
+            utils.printDebug(robot.notWaiting, config.DEBUG)
 
-            if notWaiting:
-                handleEvents(joystick)
+            if robot.notWaiting:
+                gamepad.handleEvents(joystick)
 
                 # Read joystick axes values
                 axes = [joystick.get_axis(i) for i in range(joystick.get_numaxes())]
@@ -322,18 +82,18 @@ def mainLoop(joystick):
 
                 if oldM1 != M1 or oldM2 != M2:
                     message = f"M({M1}, {M2})"
-                    sendSerial(message)
+                    mySerial.sendSerial(message)
 
-            receivedMessage = readSerial(DEBUG)
+            receivedMessage = mySerial.readSerial(config.DEBUG)
             if "-Nothing-" not in receivedMessage:
                 print(f"Received Message: {receivedMessage}")
             if "Ok" in receivedMessage:
-                print(f"Command List: {commandWaitingList}")
-                if len(commandWaitingList) == 0:
-                    notWaiting = True
+                print(f"Command List: {robot.commandWaitingList}")
+                if len(robot.commandWaitingList) == 0:
+                    robot.notWaiting = True
                 else:
-                    sendSerial(commandWaitingList[0])
-                    commandWaitingList.pop(0)
+                    mySerial.sendSerial(robot.commandWaitingList[0])
+                    robot.commandWaitingList.pop(0)
 
             oldM1 = M1
             oldM2 = M2
@@ -347,7 +107,8 @@ def mainLoop(joystick):
         pygame.quit()
         sys.exit()
 
+
 if __name__ == "__main__":
-    joystick = initJoystick()
-    ser = initSerial(10, DEBUG) # 10 second timeout
+    joystick = gamepad.initJoystick()
+    ser = mySerial.initSerial(config.SERIAL_PORT, config.BAUD_RATE, 10, config.DEBUG) # 10 second timeout
     mainLoop(joystick)
