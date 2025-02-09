@@ -5,10 +5,11 @@ import time
 
 # Is it DEBUG?
 DEBUG = False
+softDEBUG = True
 
+# Serial Port Vars
 SERIAL_PORT = '/dev/ttyACM0'
 BAUD_RATE = 115200
-
 
 # Loop Vars
 notWaiting = True
@@ -38,8 +39,8 @@ button0Pressed = False
 button2Pressed = False
 
 # Makes printDebug dependent on DEBUG flag
-def printDebug(text):
-    if DEBUG:
+def printDebug(text, debug):
+    if debug:
         print(text)
 
 # Initialize Pygame and joystick
@@ -76,7 +77,7 @@ def initSerial(timeout, debug):
             print(f"Error opening serial port: {e}")
             
             if time.time() - initT0 >= timeout:
-                printDebug("EXITING - NO SERIAL PORT")
+                printDebug("EXITING - NO SERIAL PORT", DEBUG)
                 sys.exit()
 
         while time.time() <= t1:
@@ -87,16 +88,16 @@ def initSerial(timeout, debug):
 # Sends serials and allows for use with no serial port (debug = True)
 def sendSerial(message):
     if DEBUG == True:
-        printDebug(f"Fake Sent: {message}")
+        printDebug(f"Fake Sent: {message}", DEBUG)
         return
     
-    print(f"Sent to Serial: {message.strip()}")
+    printDebug(f"Sent to Serial: {message.strip()}", softDEBUG)
     ser.write(message.encode('utf-8'))
 
 
 def readSerial(debug):
     if debug == True:
-        printDebug(f"No Serial Port - Debug = True")
+        printDebug(f"No Serial Port - Debug = True", DEBUG)
         time.sleep(0.5)
         return "Give Up"
     
@@ -140,25 +141,26 @@ def handleEvents(joystick):
 def handleButtonPress(button):
     global speedFactor, defaultSpeed, maxSpeedFactor, reverseSpeedFactor, button0Pressed, button2Pressed
 
-    printDebug(f"Button {button} pressed")
+    printDebug(f"Button {button} pressed", softDEBUG)
+
     if button == 8: # Select Quits Code
-        printDebug(f"Shutting Down: Button {button} Pressed!")
+        printDebug(f"Shutting Down: Button {button} Pressed!", softDEBUG)
         pygame.quit()
         sys.exit()
     elif button == 7:
         speedFactor = maxSpeedFactor
-        printDebug(f"Speed Factor: {speedFactor}")
+        printDebug(f"Speed Factor: {speedFactor}", softDEBUG)
     elif button == 6:
         speedFactor = reverseSpeedFactor
-        printDebug(f"Speed Factor: {speedFactor}")
+        printDebug(f"Speed Factor: {speedFactor}", softDEBUG)
     elif button == 5:
         # Increase default speed
         defaultSpeed = min(defaultSpeed + SPEED_STEP, MAX_DEFAULT_SPEED)
-        printDebug(f"Default Speed Increased: {defaultSpeed}")
+        printDebug(f"Default Speed Increased: {defaultSpeed}", softDEBUG)
     elif button == 4:
         # Decrease default speed
         defaultSpeed = max(defaultSpeed - SPEED_STEP, MIN_DEFAULT_SPEED)
-        printDebug(f"Default Speed Decreased: {defaultSpeed}")
+        printDebug(f"Default Speed Decreased: {defaultSpeed}", softDEBUG)
     elif button == 1:
         if button0Pressed:
             pickVictim("A")
@@ -170,7 +172,7 @@ def handleButtonPress(button):
         if maxSpeedFactor < MAX_SPEED_FACTOR_LIMIT:
             maxSpeedFactor += FACTOR_STEP
             reverseSpeedFactor -= FACTOR_STEP
-        printDebug(f"Max/Reverse Speed Factor Increased: {maxSpeedFactor}/{reverseSpeedFactor}")
+        printDebug(f"Max/Reverse Speed Factor Increased: {maxSpeedFactor}/{reverseSpeedFactor}", softDEBUG)
     elif button == 3:
         if button0Pressed:
             pickVictim("D")
@@ -182,7 +184,7 @@ def handleButtonPress(button):
         elif maxSpeedFactor > MIN_SPEED_FACTOR_LIMIT:
             maxSpeedFactor -= FACTOR_STEP
             reverseSpeedFactor += FACTOR_STEP
-        printDebug(f"Max/Reverse Speed Factor Decreased: {maxSpeedFactor}/{reverseSpeedFactor}")
+        printDebug(f"Max/Reverse Speed Factor Decreased: {maxSpeedFactor}/{reverseSpeedFactor}", softDEBUG)
     elif button == 0: # /_\ button
         # Pick Motions
         button0Pressed = True
@@ -196,10 +198,10 @@ def handleButtonPress(button):
 # Handles button releases to reset speed factor
 def handleButtonRelease(button):
     global speedFactor, button0Pressed, button2Pressed
-    printDebug(f"Button {button} released")
+    printDebug(f"Button {button} released", softDEBUG)
     if button == 7 or button == 6:
         speedFactor = 0
-        printDebug(f"Speed Factor: {speedFactor}")
+        printDebug(f"Speed Factor: {speedFactor}", softDEBUG)
     elif button == 0: # /_\ button
         # Pick Motions
         button0Pressed = False
@@ -258,12 +260,12 @@ def pickVictim(type):
     global notWaiting
     notWaiting = False
 
-    printDebug(f"Pick {type}")
+    printDebug(f"Pick {type}", softDEBUG)
 
     commandWaitingList.append(f"AD")
     commandWaitingList.append(f"P{type}")
 
-    printDebug(f"Command List: {commandWaitingList}")
+    printDebug(f"Command List: {commandWaitingList}", softDEBUG)
 
     sendSerial(commandWaitingList[0]) # Test
 
@@ -273,12 +275,12 @@ def ballRelease(type):
     global notWaiting
     notWaiting = False
 
-    printDebug(f"Drop {type}")
+    printDebug(f"Drop {type}", softDEBUG)
 
     commandWaitingList.append(f"D{type}")
     commandWaitingList.append(f"SF,5,F")
 
-    printDebug(f"Command List: {commandWaitingList}")
+    printDebug(f"Command List: {commandWaitingList}", softDEBUG)
 
     sendSerial(commandWaitingList[0]) # Test
 
@@ -288,12 +290,12 @@ def closeBallStorage():
     global notWaiting
     notWaiting = False
 
-    printDebug(f"Close Ball Storage")
+    printDebug(f"Close Ball Storage", softDEBUG)
 
     commandWaitingList.append(f"BC")
     commandWaitingList.append(f"SF,5,F")
 
-    printDebug(f"Command List: {commandWaitingList}")
+    printDebug(f"Command List: {commandWaitingList}", softDEBUG)
 
     sendSerial(commandWaitingList[0]) # Test
 
@@ -307,7 +309,7 @@ def mainLoop(joystick):
         while True:
             t1 = t0 + delayTimeMS * 0.001
 
-            printDebug(notWaiting)
+            printDebug(notWaiting, DEBUG)
 
             if notWaiting:
                 handleEvents(joystick)
