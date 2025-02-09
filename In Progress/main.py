@@ -141,7 +141,7 @@ def handleEvents(joystick):
 def handleButtonPress(button):
     global speedFactor, defaultSpeed, maxSpeedFactor, reverseSpeedFactor, button0Pressed, button2Pressed
 
-    printDebug(f"Button {button} pressed", softDEBUG)
+    printDebug(f"Button {button} pressed", DEBUG)
 
     if button == 8: # Select Quits Code
         printDebug(f"Shutting Down: Button {button} Pressed!", softDEBUG)
@@ -149,18 +149,18 @@ def handleButtonPress(button):
         sys.exit()
     elif button == 7:
         speedFactor = maxSpeedFactor
-        printDebug(f"Speed Factor: {speedFactor}", softDEBUG)
+        printDebug(f"Speed Factor: {speedFactor}", DEBUG)
     elif button == 6:
         speedFactor = reverseSpeedFactor
-        printDebug(f"Speed Factor: {speedFactor}", softDEBUG)
+        printDebug(f"Speed Factor: {speedFactor}", DEBUG)
     elif button == 5:
         # Increase default speed
         defaultSpeed = min(defaultSpeed + SPEED_STEP, MAX_DEFAULT_SPEED)
-        printDebug(f"Default Speed Increased: {defaultSpeed}", softDEBUG)
+        printDebug(f"Default Speed Increased: {defaultSpeed}", DEBUG)
     elif button == 4:
         # Decrease default speed
         defaultSpeed = max(defaultSpeed - SPEED_STEP, MIN_DEFAULT_SPEED)
-        printDebug(f"Default Speed Decreased: {defaultSpeed}", softDEBUG)
+        printDebug(f"Default Speed Decreased: {defaultSpeed}", DEBUG)
     elif button == 1:
         if button0Pressed:
             pickVictim("A")
@@ -172,7 +172,7 @@ def handleButtonPress(button):
         if maxSpeedFactor < MAX_SPEED_FACTOR_LIMIT:
             maxSpeedFactor += FACTOR_STEP
             reverseSpeedFactor -= FACTOR_STEP
-        printDebug(f"Max/Reverse Speed Factor Increased: {maxSpeedFactor}/{reverseSpeedFactor}", softDEBUG)
+        printDebug(f"Max/Reverse Speed Factor Increased: {maxSpeedFactor}/{reverseSpeedFactor}", DEBUG)
     elif button == 3:
         if button0Pressed:
             pickVictim("D")
@@ -184,7 +184,7 @@ def handleButtonPress(button):
         elif maxSpeedFactor > MIN_SPEED_FACTOR_LIMIT:
             maxSpeedFactor -= FACTOR_STEP
             reverseSpeedFactor += FACTOR_STEP
-        printDebug(f"Max/Reverse Speed Factor Decreased: {maxSpeedFactor}/{reverseSpeedFactor}", softDEBUG)
+        printDebug(f"Max/Reverse Speed Factor Decreased: {maxSpeedFactor}/{reverseSpeedFactor}", DEBUG)
     elif button == 0: # /_\ button
         # Pick Motions
         button0Pressed = True
@@ -198,10 +198,10 @@ def handleButtonPress(button):
 # Handles button releases to reset speed factor
 def handleButtonRelease(button):
     global speedFactor, button0Pressed, button2Pressed
-    printDebug(f"Button {button} released", softDEBUG)
+    printDebug(f"Button {button} released", DEBUG)
     if button == 7 or button == 6:
         speedFactor = 0
-        printDebug(f"Speed Factor: {speedFactor}", softDEBUG)
+        printDebug(f"Speed Factor: {speedFactor}", DEBUG)
     elif button == 0: # /_\ button
         # Pick Motions
         button0Pressed = False
