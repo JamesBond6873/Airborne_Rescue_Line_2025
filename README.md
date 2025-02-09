@@ -16,8 +16,14 @@
 
 -> Planear Sessão no ginásio para avaliar movimentação do robô X
 
--> Gamepad code with Arm/Ball Storage Functionality Functionality
+-> Gamepad code with Arm/Ball Storage Functionality Functionality X
 
 -> Buzzer and DIP Switch
 
 -> Possible Start.py
+
+-> Seperate Files
+
+-> Code should take manual inputs fro User
+
+-> Create a ARM ESC command (attempt to avoid ESCs desarming when the robot is turned on)
