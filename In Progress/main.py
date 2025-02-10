@@ -85,15 +85,7 @@ def mainLoop(joystick):
                     mySerial.sendSerial(message)
 
             receivedMessage = mySerial.readSerial(config.DEBUG)
-            if "-Nothing-" not in receivedMessage:
-                print(f"Received Message: {receivedMessage}")
-            if "Ok" in receivedMessage:
-                print(f"Command List: {robot.commandWaitingList}")
-                if len(robot.commandWaitingList) == 0:
-                    robot.notWaiting = True
-                else:
-                    mySerial.sendSerial(robot.commandWaitingList[0])
-                    robot.commandWaitingList.pop(0)
+            robot.interpretMessage(receivedMessage)
 
             oldM1 = M1
             oldM2 = M2

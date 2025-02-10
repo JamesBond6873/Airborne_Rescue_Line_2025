@@ -14,6 +14,20 @@ waitingResponse = ""
 commandWaitingList = []
 
 
+# Interpret Received Message
+def interpretMessage(message):
+    global notWaiting, waitingResponse, commandWaitingList
+    if "-Nothing-" not in message:
+        print(f"Received Message: {message}")
+    if "Ok" in message:
+        print(f"Command List: {commandWaitingList}")
+    if len(commandWaitingList) == 0:
+        notWaiting = True
+    else:
+        mySerial.sendSerial(commandWaitingList[0])
+        commandWaitingList.pop(0)
+
+
 # Pick Victim Function (takes "Alive" or "Dead")
 def pickVictim(type):
     global notWaiting
