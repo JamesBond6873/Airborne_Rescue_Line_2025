@@ -20,6 +20,7 @@ void myServo::moveDefault() {
 void myServo::lineFollowing() {
   if (_camera == true) {
     setAngle(_camLineFollowingAng);
+    delay(500);
   }
   else { Serial.println("Error 404 - Not Camera Servo"); }
 }
@@ -31,6 +32,7 @@ void myServo::freeServo() {
 void myServo::EvacuationZone() {
   if (_camera == true) {
     setAngle(_camEvacuationAng);
+    delay(500);
   }
   else { Serial.println("Error 404 - Not Camera Servo"); }
 }
