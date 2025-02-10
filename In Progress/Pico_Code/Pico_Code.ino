@@ -72,10 +72,10 @@ void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
 
-  // Get Motors Ready
+  /*// Get Motors Ready
   for (int i = 0; i < 4; i++) {
     motors[i].getReady();
-  }
+  }*/
 
   // Get The Servos Ready - Correct Position
   Grip.begin();
@@ -84,7 +84,7 @@ void setup() {
   ballStorageServo.close(); // Close Ball Storage
 
   // Let the Servos Stay Free - Avoid Shaking
-  delay(10);
+  delay(1000);
   Grip.freeAllServos();
   camServo.freeServo();
   ballStorageServo.freeServo();
