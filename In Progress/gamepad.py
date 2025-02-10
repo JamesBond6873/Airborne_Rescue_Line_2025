@@ -44,7 +44,7 @@ def handleEvents(joystick):
 
 # Handles button presses to adjust speed factor and default speed
 def handleButtonPress(button):
-    global button0Pressed, button2Pressed
+    global button0Pressed, button2Pressed, button3Pressed
     # Global maxSpeedFactor config.defaultSpeed  config.reverseSpeedFactor speedFactor
 
     utils.printDebug(f"Button {button} pressed", config.DEBUG)
