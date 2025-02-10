@@ -102,5 +102,6 @@ def mainLoop(joystick):
 
 if __name__ == "__main__":
     joystick = gamepad.initJoystick()
+    robot.sendCommandList(["GR","BC", "SF,5,F", "CL", "SF,4,F"])
     #ser = mySerial.initSerial(config.SERIAL_PORT, config.BAUD_RATE, 10, config.DEBUG) # 10 second timeout
     mainLoop(joystick)
