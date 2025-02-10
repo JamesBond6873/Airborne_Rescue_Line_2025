@@ -23,7 +23,7 @@ private:
     volatile int _encoderCount;
     unsigned long _lastUpdate;  // Track the last time the encoder was updated
     float _timeElapsed;         // Time between encoder changes
-    bool _motorReady = False;
+    bool _motorReady = false;
 
     static const int pulsesPerRevolution = 360;  // Change this according to your encoder
     static Motor* instances[4];  // Optional for global ISR management

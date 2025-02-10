@@ -11,7 +11,7 @@ Motor::Motor(int pwmPin, int encoderPinA, int encoderPinB)
 }
 
 void Motor::getReady() {
-  if (_motorReady == False) {
+  if (_motorReady == false) {
     _ESC.attach(_pwmPin);
 
     //pinMode(_encoderPinA, INPUT);
@@ -24,7 +24,7 @@ void Motor::getReady() {
     controlMotor(1500);
     delay(50);
     controlMotor(1520);
-    _motorReady = True;
+    _motorReady = true;
   }
 }
 
