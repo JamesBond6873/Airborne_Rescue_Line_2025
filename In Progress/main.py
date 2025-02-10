@@ -102,5 +102,5 @@ def mainLoop(joystick):
 
 if __name__ == "__main__":
     joystick = gamepad.initJoystick()
-    ser = mySerial.initSerial(config.SERIAL_PORT, config.BAUD_RATE, 10, config.DEBUG) # 10 second timeout
+    #ser = mySerial.initSerial(config.SERIAL_PORT, config.BAUD_RATE, 10, config.DEBUG) # 10 second timeout
     mainLoop(joystick)

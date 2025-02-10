@@ -28,46 +28,35 @@ def interpretMessage(message):
         commandWaitingList.pop(0)
 
 
-# Pick Victim Function (takes "Alive" or "Dead")
-def pickVictim(type):
-    global notWaiting
+# Send Commands from Waiting List
+def sendCommandList(commandList):
+    global notWaiting, waitingResponse, commandWaitingList
     notWaiting = False
 
-    utils.printDebug(f"Pick {type}", config.softDEBUG)
-
-    commandWaitingList.append(f"AD")
-    commandWaitingList.append(f"P{type}")
+    for command in commandList:
+        commandWaitingList.append(command)
 
     utils.printDebug(f"Command List: {commandWaitingList}", config.softDEBUG)
 
     mySerial.sendSerial(commandWaitingList[0]) # Test
+
+
+# Pick Victim Function (takes "Alive" or "Dead")
+def pickVictim(type):
+    utils.printDebug(f"Pick {type}", config.softDEBUG)
+    
+    sendCommandList([f"AD", f"P{type}", "SF,0,F", "SF,1,F", "SF,2,F", "SF,3,F"])
 
 
 # Drop Function (takes "Alive" or "Dead")
 def ballRelease(type):
-    global notWaiting
-    notWaiting = False
-
     utils.printDebug(f"Drop {type}", config.softDEBUG)
 
-    commandWaitingList.append(f"D{type}")
-    commandWaitingList.append(f"SF,5,F")
-
-    utils.printDebug(f"Command List: {commandWaitingList}", config.softDEBUG)
-
-    mySerial.sendSerial(commandWaitingList[0]) # Test
+    sendCommandList([f"D{type}", f"SF,5,F"])
 
 
 # Closes Ball Storage
 def closeBallStorage():
-    global notWaiting
-    notWaiting = False
-
     utils.printDebug(f"Close Ball Storage", config.softDEBUG)
 
-    commandWaitingList.append(f"BC")
-    commandWaitingList.append(f"SF,5,F")
-
-    utils.printDebug(f"Command List: {commandWaitingList}", config.softDEBUG)
-
-    mySerial.sendSerial(commandWaitingList[0]) # Test
+    sendCommandList([f"BC", f"SF,5,F"])
