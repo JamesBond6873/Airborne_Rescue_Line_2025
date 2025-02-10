@@ -16,17 +16,21 @@ commandWaitingList = []
 
 # Interpret Received Message
 def interpretMessage(message):
+    utils.printDebug("---------------Here1", config.softDEBUG)
     global notWaiting, waitingResponse, commandWaitingList
     if "-Nothing-" not in message:
         print(f"Received Message: {message}")
     if "Ok" in message:
-        print(f"Command List: {commandWaitingList}")
+        commandWaitingList.pop(0)
+        mySerial.sendSerial(commandWaitingList[0])
+        
     if len(commandWaitingList) == 0:
         notWaiting = True
     else:
-        mySerial.sendSerial(commandWaitingList[0])
-        commandWaitingList.pop(0)
-
+        pass
+        #print(f"Command List: {commandWaitingList}")
+        
+        
 
 # Send Commands from Waiting List
 def sendCommandList(commandList):
