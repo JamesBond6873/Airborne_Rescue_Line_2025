@@ -16,7 +16,6 @@ commandWaitingList = []
 
 # Interpret Received Message
 def interpretMessage(message):
-    utils.printDebug("---------------Here1", config.softDEBUG)
     global notWaiting, waitingResponse, commandWaitingList
     if "-Nothing-" not in message:
         utils.printDebug(f"Received Message: {message}", config.softDEBUG)
