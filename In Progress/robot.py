@@ -21,7 +21,9 @@ def interpretMessage(message):
     if "-Nothing-" not in message:
         print(f"Received Message: {message}")
     if "Ok" in message:
+        utils.printDebug(f"Command List1: {commandWaitingList}", config.softDEBUG)
         commandWaitingList.pop(0)
+        utils.printDebug(f"Command List2: {commandWaitingList}", config.softDEBUG)
         mySerial.sendSerial(commandWaitingList[0])
         
     if len(commandWaitingList) == 0:
