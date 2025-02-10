@@ -19,18 +19,14 @@ def interpretMessage(message):
     utils.printDebug("---------------Here1", config.softDEBUG)
     global notWaiting, waitingResponse, commandWaitingList
     if "-Nothing-" not in message:
-        print(f"Received Message: {message}")
+        utils.printDebug(f"Received Message: {message}", config.softDEBUG)
     if "Ok" in message:
-        utils.printDebug(f"Command List1: {commandWaitingList}", config.softDEBUG)
-        commandWaitingList.pop(0)
-        utils.printDebug(f"Command List2: {commandWaitingList}", config.softDEBUG)
-        mySerial.sendSerial(commandWaitingList[0])
-        
-    if len(commandWaitingList) == 0:
-        notWaiting = True
-    else:
-        pass
-        #print(f"Command List: {commandWaitingList}")
+        utils.printDebug(f"Command List: {commandWaitingList}", config.softDEBUG)
+        if len(commandWaitingList) == 0:
+            notWaiting = True
+        else:
+            mySerial.sendSerial(commandWaitingList[0])
+            commandWaitingList.pop(0)
         
         
 
