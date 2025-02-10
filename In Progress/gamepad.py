@@ -11,6 +11,7 @@ print("GamePad Interface: \t \t OK")
 
 # Gamepad Vars
 button0Pressed = False
+button3Pressed = False
 button2Pressed = False
 
 # Initialize Pygame and joystick
@@ -79,6 +80,7 @@ def handleButtonPress(button):
             config.reverseSpeedFactor -= config.FACTOR_STEP
         utils.printDebug(f"Max/Reverse Speed Factor Increased: {config.maxSpeedFactor}/{config.reverseSpeedFactor}", config.DEBUG)
     elif button == 3:
+        button3Pressed = True
         if button0Pressed:
             robot.pickVictim("D")
             #time.sleep(2)
@@ -96,21 +98,29 @@ def handleButtonPress(button):
         if button2Pressed:
             robot.closeBallStorage()
             #time.sleep(2)
+        elif button3Pressed:
+            robot.cameraDefault("Evacuation")
     elif button == 2: # X
         # Drop Ball Storage
         button2Pressed = True
+        if button3Pressed:
+            robot.cameraDefault("Line")
 
 
 # Handles button releases to reset speed factor
 def handleButtonRelease(button):
-    global speedFactor, button0Pressed, button2Pressed
+    global button0Pressed, button2Pressed, button3Pressed
     utils.printDebug(f"Button {button} released", config.DEBUG)
+
     if button == 7 or button == 6:
         config.speedFactor = 0
         utils.printDebug(f"Speed Factor: {config.speedFactor}", config.DEBUG)
-    elif button == 0: # /_\ button
-        # Pick Motions
+    
+    elif button == 0: # /_\ button  --  Pick Motions
         button0Pressed = False
-    elif button == 2: # X
-        # Drop Ball Storage
+    
+    elif button == 2: # X  --  Drop Ball Storage
         button2Pressed = False
+    
+    elif button == 3: # X  --  Drop Ball Storage
+        button3Pressed = False

@@ -60,3 +60,14 @@ def closeBallStorage():
     utils.printDebug(f"Close Ball Storage", config.softDEBUG)
 
     sendCommandList([f"BC", f"SF,5,F"])
+
+
+# Moves Camera to Default Position: Line or Evacuation
+def cameraDefault(position):
+    if position == "Line":
+        utils.printDebug(f"Set Camera to Line Following Mode", config.softDEBUG)
+        sendCommandList(["CL", "SF,4,F"])
+
+    elif position == "Evacuation":
+        utils.printDebug(f"Set Camera to Evacaution Zone Mode", config.softDEBUG)
+        sendCommandList(["CE", "SF,4,F"])
