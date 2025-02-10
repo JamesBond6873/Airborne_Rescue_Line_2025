@@ -106,7 +106,7 @@ def handleButtonRelease(button):
     global speedFactor, button0Pressed, button2Pressed
     utils.printDebug(f"Button {button} released", config.DEBUG)
     if button == 7 or button == 6:
-        speedFactor = 0
+        config.speedFactor = 0
         utils.printDebug(f"Speed Factor: {speedFactor}", config.DEBUG)
     elif button == 0: # /_\ button
         # Pick Motions
