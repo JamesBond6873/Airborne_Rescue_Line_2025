@@ -39,7 +39,9 @@ def sendCommandList(commandList):
 
     utils.printDebug(f"Command List: {commandWaitingList}", config.softDEBUG)
 
-    mySerial.sendSerial(commandWaitingList[0]) # Test
+    # Do first Cycle
+    mySerial.sendSerial(commandWaitingList[0])
+    commandWaitingList.pop(0)
 
 
 # Pick Victim Function (takes "Alive" or "Dead")
