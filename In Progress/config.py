@@ -3,7 +3,7 @@
 print("Robot Configurations: \t \t OK")
 
 # Is it DEBUG?
-DEBUG = True
+DEBUG = False
 softDEBUG = True
 
 # Serial Port Vars
