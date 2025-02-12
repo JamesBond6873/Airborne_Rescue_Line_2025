@@ -15,6 +15,10 @@ button0Pressed = False
 button3Pressed = False
 button2Pressed = False
 
+# Motor variables
+M1, M2, M3, M4 = 0, 0, 0, 0
+
+
 def gamepad_loop():
     joystick = initJoystick()
 

@@ -6,10 +6,6 @@ from multiprocessing import Process
 from gamepad import gamepad_loop
 
 
-# Motor variables
-M1, M2, M3, M4 = 0, 0, 0, 0
-
-
 if __name__ == "__main__":
     processes = [
         Process(target=gamepad_loop, args=())
