@@ -622,7 +622,18 @@ def line_cam_loop():
         raw_capture = cv2.resize(raw_capture, (camera_x, camera_y))
         cv2_img = cv2.cvtColor(raw_capture, cv2.COLOR_RGBA2BGR)
 
-        frame_limit = max_frames_zone if objective.value == "zone" and (zone_status.value == "begin" or zone_status.value == "find_balls" or zone_status.value == "pickup_ball") else max_frames_line
+        # Removed
+        # frame_limit = max_frames_zone if objective.value == "zone" and (zone_status.value == "begin" or zone_status.value == "find_balls" or zone_status.value == "pickup_ball") else max_frames_line
+        # Added:
+        try:
+            if objective.value == "zone" and zone_status.value in ["begin", "find_balls", "pickup_ball"]:
+                frame_limit = max_frames_zone
+            else:
+                frame_limit = max_frames_line
+        except (BrokenPipeError, EOFError):
+            print("Error: Lost connection to multiprocessing value. Defaulting frame limit.")
+            frame_limit = max_frames_line  # Safe fallback
+        
         if objective.value == "follow_line" and not rotation_y.value in ["ramp_down", "ramp_up"]:
             do_inference_limit = 7
         elif objective.value == "follow_line" and rotation_y.value in ["ramp_down", "ramp_up"]:
