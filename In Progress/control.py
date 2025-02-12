@@ -3,7 +3,7 @@ from math import isclose, pow
 
 from gpiozero import Button, LED, PWMLED
 
-from Managers import Timer
+from utils import Timer
 from line_cam import camera_x, camera_y
 from mp_manager import *
 

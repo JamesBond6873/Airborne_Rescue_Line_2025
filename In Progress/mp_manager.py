@@ -3,7 +3,7 @@ from multiprocessing import Manager
 
 import numpy as np
 
-from Managers import ConfigManager
+from utils import ConfigManager
 
 config_manager = ConfigManager('config.ini')
 

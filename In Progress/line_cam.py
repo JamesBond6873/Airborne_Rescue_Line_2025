@@ -12,6 +12,7 @@ from picamera2 import Picamera2
 from utils import Timer
 from mp_manager import *
 
+
 debug_mode = False
 
 # Disable libcamera and Picamera2 logging
@@ -54,6 +55,38 @@ red_max_1_zone = np.array([10, 255, 255])
 red_min_2_zone = np.array([170, 100, 100])
 red_max_2_zone = np.array([180, 255, 255])
 
+
+# Test: [color_values_zone]
+green_min = np.array([54, 195, 7])
+green_max = np.array([104, 255, 137])
+red_min_1 = np.array([0, 167, 44])
+red_max_1 = np.array([10, 255, 234])
+red_min_2 = np.array([170, 167, 44])
+red_max_2 = np.array([180, 255, 234])
+
+# [color_values_line]
+black_max_normal_top = np.array([82, 83, 84])
+black_max_normal_bottom = np.array([133, 133, 135])
+black_max_silver_validate_top_off = np.array([50, 49, 53])
+black_max_silver_validate_bottom_off = np.array([54, 54, 56])
+black_max_silver_validate_top_on = np.array([59, 54, 50])
+black_max_silver_validate_bottom_on = np.array([89, 84, 80])
+black_max_ramp_down_top = np.array([27, 27, 26])
+black_max_zone = np.array([42, 41, 42])
+green_min = np.array([58, 95, 39])
+green_max = np.array([98, 255, 255])
+green_min_zone = np.array([65, 95, 89])
+green_max_zone = np.array([105, 255, 255])
+red_min_1 = np.array([0, 100, 90])
+red_max_1 = np.array([10, 255, 255])
+red_min_2 = np.array([170, 100, 100])
+red_max_2 = np.array([180, 255, 255])
+red_min_1_zone = np.array([0, 100, 90])
+red_max_1_zone = np.array([10, 255, 255])
+red_min_2_zone = np.array([170, 100, 100])
+red_max_2_zone = np.array([180, 255, 255])
+
+
 multiple_bottom_side = camera_x / 2
 
 timer = Timer()
@@ -65,7 +98,7 @@ def save_image(image):
     num = len(os.listdir("../../Ai/datasets/images_to_annotate"))
     cv2.imwrite(f"../../Ai/datasets/images_to_annotate/{num:04d}.png", image)
 
-
+"""
 def update_color_values():
     global black_max_normal_top, black_max_normal_bottom, black_max_silver_validate_top_off, black_max_silver_validate_bottom_off, black_max_silver_validate_top_on, black_max_silver_validate_bottom_on, black_max_ramp_down_top, black_max_zone, green_min, green_max, green_min_zone, green_max_zone, red_min_1, red_max_1, red_min_2, red_max_2, red_min_1_zone, red_max_1_zone, red_min_2_zone, red_max_2_zone
 
@@ -92,7 +125,7 @@ def update_color_values():
     red_max_1_zone = np.array(config_manager.read_variable('color_values_line', 'red_max_1_zone'))
     red_min_2_zone = np.array(config_manager.read_variable('color_values_line', 'red_min_2_zone'))
     red_max_2_zone = np.array(config_manager.read_variable('color_values_line', 'red_max_2_zone'))
-
+"""
 
 def check_contour_size(contours, contour_color="red", size=15000):
     if contour_color == "red":
@@ -139,7 +172,7 @@ def check_green(contours_grn, black_image):
         return "straight"
 
 
-@njit(cache=True)
+#@njit(cache=True)
 def check_black(black_around_sign, i, green_box, black_image):
     green_box = green_box[green_box[:, 1].argsort()]
 
@@ -241,7 +274,7 @@ def determine_correct_line(contours_blk):
     return blackline, blackline_crop
 
 
-@njit(cache=True)
+#@njit(cache=True)
 def calculate_angle_numba(blackline, blackline_crop, last_bottom_point, average_line_point):
     max_gap = 1
     max_line_width = camera_x * .19
@@ -528,7 +561,7 @@ def calc_silver_angle(silver_image):
 def line_cam_loop():
     global cv2_img, x_last, y_last, time_line_angle
 
-    model = YOLO('../../Ai/models/silver_zone_entry/silver_classify_s.onnx', task='classify')
+    #model = YOLO('../../Ai/models/silver_zone_entry/silver_classify_s.onnx', task='classify')
 
     x_last = camera_x / 2
     y_last = camera_y / 2
@@ -554,7 +587,7 @@ def line_cam_loop():
         shm_cam1 = shared_memory.SharedMemory(name="shm_cam_1", create=True, size=338688)
 
     calibration_saved = True
-    update_color_values()
+    #update_color_values()
 
     # Kernal for noise reduction
     kernal = np.ones((3, 3), np.uint8)
@@ -602,7 +635,7 @@ def line_cam_loop():
 
             if calibrate_color_status.value == "none":
 
-                # Silver AI prediction
+                """# Silver AI prediction
                 if objective.value == "follow_line":
                     if do_inference_counter >= do_inference_limit:
                         results = model.predict(raw_capture, imgsz=128, conf=0.4, workers=4, verbose=False)
@@ -614,7 +647,7 @@ def line_cam_loop():
 
                     do_inference_counter += 1
                     if silver_value.value > .5:
-                        cv2.circle(cv2_img, (10, camera_y - 10), 5, (100, 100, 100), -1, cv2.LINE_AA)
+                        cv2.circle(cv2_img, (10, camera_y - 10), 5, (100, 100, 100), -1, cv2.LINE_AA)"""
 
                 if objective.value == "follow_line":
                     hsv_image = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2HSV)
@@ -656,12 +689,12 @@ def line_cam_loop():
 
                     black_average.value = np.mean(black_image[:])
 
-                    # Check für image similarity
+                    """# Check für image similarity
                     if check_similarity_counter >= check_similarity_limit:
                         line_similarity.value = structural_similarity(black_image, last_image)
                         last_image = black_image.copy()
                         check_similarity_counter = 0
-                    check_similarity_counter += 1
+                    check_similarity_counter += 1"""
 
                     # Cut out certain parts of the image
                     if line_status.value == "obstacle_avoid" or line_status.value == "obstacle_detected":
@@ -992,7 +1025,7 @@ def line_cam_loop():
                         config_manager.write_variable('color_values_line', 'black_max_silver_validate_top_on', [int(c_black_max_silver_validate_top_on[0]), int(c_black_max_silver_validate_top_on[1]), int(c_black_max_silver_validate_top_on[2])])
                         config_manager.write_variable('color_values_line', 'black_max_silver_validate_bottom_on', [int(c_black_max_silver_validate_bottom_on[0]), int(c_black_max_silver_validate_bottom_on[1]), int(c_black_max_silver_validate_bottom_on[2])])
 
-                    update_color_values()
+                    #update_color_values()
                     calibration_saved = True
                     continue
 
