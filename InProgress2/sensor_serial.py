@@ -2,7 +2,7 @@ import serial
 
 from mp_manager import *
 
-serial_port = serial.Serial('/dev/ttyUSB0', 115200, timeout=1, dsrdtr=True, rtscts=True)
+serial_port = serial.Serial('/dev/ttyACM0', 115200, timeout=1, dsrdtr=True, rtscts=True)
 serial_port.reset_input_buffer()
 
 

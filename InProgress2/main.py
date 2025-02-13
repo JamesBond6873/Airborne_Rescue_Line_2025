@@ -3,11 +3,11 @@ from datetime import timedelta
 from multiprocessing import Process, shared_memory
 from tkinter import *
 
-import customtkinter as ctk
+#import customtkinter as ctk
 import cv2
 import psutil
 from PIL import Image
-from numba import njit
+#from numba import njit
 
 from control import control_loop
 from line_cam import line_cam_loop
@@ -15,8 +15,8 @@ from mp_manager import *
 from sensor_serial import serial_loop
 from zone_cam import zone_cam_loop
 
-ctk.set_appearance_mode("Dark")  # Modes: "System" (standard), "Dark", "Light"
-ctk.set_default_color_theme("dark-blue")  # Themes: "blue" (standard), "green", "dark-blue"
+#ctk.set_appearance_mode("Dark")  # Modes: "System" (standard), "Dark", "Light"
+#ctk.set_default_color_theme("dark-blue")  # Themes: "blue" (standard), "green", "dark-blue"
 
 camera_width_1 = 448
 camera_height_1 = 252
@@ -32,7 +32,7 @@ label_color = "#141414"
 button_color = "#141414"
 
 testing_mode = False
-
+"""
 if not testing_mode:
     model_map = np.load("../../Python/main/resources/robot_model.npz", allow_pickle=True)["image_hashmap"].item()
 
@@ -59,8 +59,8 @@ def create_circle(x, y, r, canvas, style):
         return canvas.create_oval(x0, y0, x1, y1, outline=label_color, width=3, fill="#BBBBBB")
     elif style == 3:
         return canvas.create_oval(x0, y0, x1, y1, outline=label_color, width=3, fill="Black")
-
-
+"""
+"""
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -587,7 +587,7 @@ class App(ctk.CTk):
 
         delay = 100
         self.after(delay, self.main)
-
+"""
 
 if __name__ == "__main__":
     program_start_time.value = time.perf_counter()
@@ -604,6 +604,6 @@ if __name__ == "__main__":
         print(process)
         time.sleep(0.5)
 
-    app = App()
-    app.main()
-    app.mainloop()
+    #app = App()
+    #app.main()
+    #app.mainloop()
