@@ -22,8 +22,8 @@
 
 -> Possible Start.py
 
--> Seperate Files
+-> Seperate Files #
 
--> Code should take manual inputs fro User
+-> Code should take manual inputs from User
 
 -> Create a ARM ESC command (attempt to avoid ESCs desarming when the robot is turned on)
