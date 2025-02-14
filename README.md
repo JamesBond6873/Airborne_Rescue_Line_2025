@@ -22,7 +22,7 @@
 
 -> Possible Start.py
 
--> Seperate Files #
+-> Seperate Files X
 
 -> Code should take manual inputs from User
 
