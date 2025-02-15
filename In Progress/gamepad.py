@@ -179,7 +179,7 @@ def calculateMotorSpeeds(axes):
 
 
 # Main loop for handling joystick input and updating motor speeds
-def gamepadLoop(joystick):
+def gamepadLoop():
     oldM1 = M1
     oldM2 = M2
 
