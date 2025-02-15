@@ -13,6 +13,15 @@ BAUD_RATE = 115200
 # Frame Rates
 lineDelayMS = 50 # Frame Rate = 20
 
+# Color Configs
+green_min_zone = [65, 95, 89]
+green_max_zone = [105, 255, 255]
+red_min_1 = [0, 100, 90]
+red_max_1 = [10, 255, 255]
+red_min_2 = [170, 100, 100]
+red_max_2 = [180, 255, 255]
+red_min_1_zone = [0, 100, 90]
+
 # Constants for speed factors and motor default values
 delayTimeMS = 10
 MAX_DEFAULT_SPEED = 2000

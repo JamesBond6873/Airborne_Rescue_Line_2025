@@ -56,6 +56,14 @@ def lineCamLoop():
             raw_capture = camera.capture_array()
             cv2_img = cv2.cvtColor(raw_capture, cv2.COLOR_RGBA2BGR)
 
+            hsv_image = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2HSV)
+            green_image = cv2.inRange(hsv_image, config.green_min, config.green_max)
+            red_image = cv2.inRange(hsv_image, config.red_min_1, config.red_max_1) + cv2.inRange(hsv_image, config.red_min_2, config.red_max_2)
+
+            # Show Images
+            cv2.imshow("Camera View", cv2_img)
+            cv2.imshow("HSV Image", hsv_image)
+
             gapController()
             intersectionController()
             obstacleController()
