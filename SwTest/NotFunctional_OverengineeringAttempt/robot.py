@@ -26,9 +26,7 @@ def interpretMessage(message):
         else:
             mySerial.sendSerial(commandWaitingList[0])
             commandWaitingList.pop(0)
-        
-        
-
+            
 # Send Commands from Waiting List
 def sendCommandList(commandList):
     global notWaiting, waitingResponse, commandWaitingList

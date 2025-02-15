@@ -1,11 +1,12 @@
 # -------- GamePad Interface -------- 
-
 import pygame
 import sys
+import time
 
 import utils
 import config
 import robot
+import mySerial
 
 print("GamePad Interface: \t \t OK")
 
@@ -13,6 +14,100 @@ print("GamePad Interface: \t \t OK")
 button0Pressed = False
 button3Pressed = False
 button2Pressed = False
+
+# Motor variables
+M1, M2, M3, M4 = 0, 0, 0, 0
+
+
+def gamepad_loop():
+    joystick = initJoystick()
+
+    oldM1 = M1
+    oldM2 = M2
+    t0 = time.time()
+
+    robot.sendCommandList(["GR","BC", "SF,5,F", "CL", "SF,4,F"])
+
+    try:
+        while True:
+            t1 = t0 + config.delayTimeMS * 0.001
+
+            utils.printDebug(robot.notWaiting, config.DEBUG)
+
+            if robot.notWaiting:
+                handleEvents(joystick)
+
+                # Read joystick axes values
+                axes = [joystick.get_axis(i) for i in range(joystick.get_numaxes())]
+
+                # Calculate motor speeds
+                calculateMotorSpeeds(axes)
+
+                if oldM1 != M1 or oldM2 != M2:
+                    message = f"M({M1}, {M2})"
+                    mySerial.sendSerial(message)
+
+            receivedMessage = mySerial.readSerial(config.DEBUG)
+            robot.interpretMessage(receivedMessage)
+
+            oldM1 = M1
+            oldM2 = M2
+
+            while (time.time() <= t1):
+                time.sleep(0.001)
+            t0 = t1
+            
+
+    except KeyboardInterrupt:
+        pygame.quit()
+        sys.exit()
+
+
+# Function to calculate motor speeds based on joystick input
+def calculateMotorSpeeds(axes):
+    global M1, M2, M3, M4
+    axisValue = round(axes[0], 3)
+    M1 = config.defaultSpeed + axisValue * config.speedFactor
+    M2 = config.defaultSpeed - axisValue * config.speedFactor
+    M3 = config.defaultSpeed + axisValue * config.speedFactor
+    M4 = config.defaultSpeed - axisValue * config.speedFactor
+
+    if M1 < 1520:
+        M1 = 1250 - (1520 - M1)
+        M3 = 1250 - (1520 - M3)
+    
+    if M2 < 1550:
+        M2 = 1250 - (1550 - M2)
+        M4 = 1250 - (1550 - M4)
+    
+    if M1 > 2000:
+        M1 = 2000
+        M3 = 2000
+
+    if M2 > 2000:
+        M2 = 2000
+        M4 = 2000
+
+    # Handle reverse speedFactor
+    if config.speedFactor < 0:
+        M1 = 1000 + (2000 - config.defaultSpeed) + axisValue * abs(config.speedFactor)
+        M2 = 1000 + (2000 - config.defaultSpeed) - axisValue * abs(config.speedFactor)
+        M3 = 1000 + (2000 - config.defaultSpeed) + axisValue * abs(config.speedFactor)
+        M4 = 1000 + (2000 - config.defaultSpeed) - axisValue * abs(config.speedFactor)
+    
+    if M1 < 1000:
+        M1 = 1000
+        M3 = 1000
+
+    if M2 < 1000:
+        M2 = 1000
+        M4 = 1000
+        
+
+    # If speedFactor is zero, stop motors
+    if config.speedFactor == 0:
+        M1 = M2 = M3 = M4 = 1520
+
 
 # Initialize Pygame and joystick
 def initJoystick():
