@@ -7,6 +7,8 @@ import mySerial
 
 print("Robot Functions: \t \t OK")
 
+# Situation Vars:
+objective = "Follow Line"
 
 # Loop Vars
 notWaiting = True

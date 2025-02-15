@@ -10,6 +10,9 @@ softDEBUG = True
 SERIAL_PORT = '/dev/ttyACM0'
 BAUD_RATE = 115200
 
+# Frame Rates
+lineDelayMS = 50 # Frame Rate = 20
+
 # Constants for speed factors and motor default values
 delayTimeMS = 10
 MAX_DEFAULT_SPEED = 2000
