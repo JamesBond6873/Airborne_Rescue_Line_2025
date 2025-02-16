@@ -10,6 +10,11 @@ softDEBUG = True
 SERIAL_PORT = '/dev/ttyACM0'
 BAUD_RATE = 115200
 
+# Buzzer Delay
+buzzerONMs = 100
+buzzerOffMs = 5000
+buzzerState = False
+
 # Frame Rates
 lineDelayMS = 50 # Frame Rate = 20
 

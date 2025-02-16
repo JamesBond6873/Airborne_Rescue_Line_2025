@@ -2,7 +2,7 @@
 import sys
 import pygame
 import time
-from gpiozero import Button, Buzzer
+#from gpiozero import Button, Buzzer, PWMOutputDevice, OutputDevice, DigitalOutputDevice, Device
 
 import utils
 import config
@@ -12,6 +12,9 @@ import robot
 
 print("GamePad Interface: \t \t OK")
 
+# Loop var
+loop = True
+
 # Gamepad Vars
 button0Pressed = False
 button3Pressed = False
@@ -19,30 +22,51 @@ button2Pressed = False
 
 # Pin Definitions
 SWITCH_PIN = 14
-BUZZER_PIN = 15
+BUZZER_PIN = 17
 
+"""
 # Initialize components
 switch = Button(SWITCH_PIN, pull_up=True)  # Uses internal pull-up
-buzzer = Buzzer(BUZZER_PIN)
+buzzer = PWMOutputDevice(BUZZER_PIN)
+buzzerT0 = 0
+buzzerT1 = 0
+
+buzzer.frequency = 2000  # Try 2 kHz
+buzzer.value = 0  # 50% duty cycle"""
 
 # Motor variables
 M1, M2, M3, M4 = 0, 0, 0, 0
 
-
+"""
 def is_switch_on():
-    """Returns True if the switch is ON, False otherwise."""
+    """"""Returns True if the switch is ON, False otherwise."""""""
     return switch.is_pressed
 
 
 def buzzer_on():
-    """Turns the buzzer on."""
-    buzzer.on()
+    buzzer.frequency = 2000  # Try 2 kHz
+    buzzer.value = 1  # 50% duty cycle
 
 
 def buzzer_off():
-    """Turns the buzzer off."""
-    buzzer.off()
+    buzzer.value = 0  # Deactivates the buzzer
 
+
+def buzzerController():
+    global buzzerT0, buzzerT1
+    buzzerT1 = buzzerT0 + config.buzzerOffMs * 0.001
+    #print(f"In, T1: {buzzerT1} T2: {buzzerT1}")
+    if (time.time() >= buzzerT1):
+        print("In1")
+        config.buzzerState = not config.buzzerState
+        if config.buzzerState == True:
+            print("In2")
+            buzzer_on()
+            time.sleep(1)
+        else:
+            print("In3")
+            buzzer_off()
+        buzzerT0 = buzzerT1"""
 
 # Initialize Pygame and joystick
 def initJoystick():
@@ -59,9 +83,10 @@ def initJoystick():
 
 # Function to handle joystick events and speed factor changes
 def handleEvents(joystick):
-    global speedFactor
+    global speedFactor, loop
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
+            loop = False
             pygame.quit()
             sys.exit()
 
@@ -204,21 +229,25 @@ def calculateMotorSpeeds(axes):
 
 # Main loop for handling joystick input and updating motor speeds
 def gamepadLoop():
+    global buzzerT0, buzzerT1
     oldM1 = M1
     oldM2 = M2
 
     joystick = initJoystick()
     robot.sendCommandList(["GR","BC", "SF,5,F", "CL", "SF,4,F"])
 
+    """buzzer_off()"""
+
+    buzzerT0 = time.time()
     t0 = time.time()
     try:
-        while True:
+        while loop:
             t1 = t0 + config.delayTimeMS * 0.001
 
             utils.printDebug(robot.notWaiting, config.DEBUG)
 
-            if is_switch_on():
-                print("Switch is ON")
+            """if is_switch_on():
+                print("Switch is ON")"""
 
             if robot.notWaiting:
                 handleEvents(joystick)
@@ -239,11 +268,22 @@ def gamepadLoop():
             oldM1 = M1
             oldM2 = M2
 
+            #buzzerController()
+            #buzzer_on()
+            #buzzer_on()
+            #time.sleep(1)
+            #buzzer.off()
+            #time.sleep(1)
+
             while (time.time() <= t1):
                 time.sleep(0.001)
             t0 = t1
             
 
     except KeyboardInterrupt:
+        print(f"Shutting Down")
+        #buzzer.off()
+        #switch.close()
+        #Device.close()
         pygame.quit()
         sys.exit()
