@@ -10,8 +10,8 @@ def pick_color(event,x,y,flags,param):
         pixel = image_hsv[y,x]
 
         #you might want to adjust the ranges(+-10, etc):
-        upper =  np.array([pixel[0] + 10, pixel[1] + 10, pixel[2] + 40])
-        lower =  np.array([pixel[0] - 10, pixel[1] - 10, pixel[2] - 40])
+        upper =  np.array([pixel[0] + 15, pixel[1] + 15, pixel[2] + 40])
+        lower =  np.array([pixel[0] - 40, pixel[1] - 40, pixel[2] - 40])
         print(pixel, lower, upper)
 
         image_mask = cv2.inRange(image_hsv,lower,upper)
@@ -21,7 +21,7 @@ def main():
     import sys
     global image_hsv, pixel # so we can use it in mouse callback
 
-    image_src = cv2.imread(sys.argv[1])  # pick.py my.png
+    image_src = cv2.imread("/home/raspberrypi/Airborne_Rescue_Line_2025/In Progress/latest_frame_cv2.jpg")  # pick.py my.png
     if image_src is None:
         print ("the image read is None............")
         return
