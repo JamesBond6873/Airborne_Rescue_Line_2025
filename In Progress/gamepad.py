@@ -2,6 +2,7 @@
 import sys
 import pygame
 import time
+from gpiozero import Button, Buzzer
 
 import utils
 import config
@@ -16,9 +17,32 @@ button0Pressed = False
 button3Pressed = False
 button2Pressed = False
 
+# Pin Definitions
+SWITCH_PIN = 14
+BUZZER_PIN = 15
+
+# Initialize components
+switch = Button(SWITCH_PIN, pull_up=True)  # Uses internal pull-up
+buzzer = Buzzer(BUZZER_PIN)
 
 # Motor variables
 M1, M2, M3, M4 = 0, 0, 0, 0
+
+
+def is_switch_on():
+    """Returns True if the switch is ON, False otherwise."""
+    return switch.is_pressed
+
+
+def buzzer_on():
+    """Turns the buzzer on."""
+    buzzer.on()
+
+
+def buzzer_off():
+    """Turns the buzzer off."""
+    buzzer.off()
+
 
 # Initialize Pygame and joystick
 def initJoystick():
@@ -192,6 +216,9 @@ def gamepadLoop():
             t1 = t0 + config.delayTimeMS * 0.001
 
             utils.printDebug(robot.notWaiting, config.DEBUG)
+
+            if is_switch_on():
+                print("Switch is ON")
 
             if robot.notWaiting:
                 handleEvents(joystick)
