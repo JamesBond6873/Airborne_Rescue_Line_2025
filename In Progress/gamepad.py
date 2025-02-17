@@ -2,7 +2,7 @@
 import sys
 import pygame
 import time
-#from gpiozero import Button, Buzzer, PWMOutputDevice, OutputDevice, DigitalOutputDevice, Device
+from gpiozero import Button, Buzzer, PWMOutputDevice, OutputDevice, DigitalOutputDevice, Device
 
 import utils
 import config
@@ -24,10 +24,10 @@ button2Pressed = False
 SWITCH_PIN = 14
 BUZZER_PIN = 17
 
-"""
+
 # Initialize components
 switch = Button(SWITCH_PIN, pull_up=True)  # Uses internal pull-up
-buzzer = PWMOutputDevice(BUZZER_PIN)
+"""buzzer = PWMOutputDevice(BUZZER_PIN)
 buzzerT0 = 0
 buzzerT1 = 0
 
@@ -37,12 +37,12 @@ buzzer.value = 0  # 50% duty cycle"""
 # Motor variables
 M1, M2, M3, M4 = 0, 0, 0, 0
 
-"""
+
 def is_switch_on():
-    """"""Returns True if the switch is ON, False otherwise."""""""
+    """Returns True if the switch is ON, False otherwise."""
     return switch.is_pressed
 
-
+"""
 def buzzer_on():
     buzzer.frequency = 2000  # Try 2 kHz
     buzzer.value = 1  # 50% duty cycle
@@ -246,8 +246,8 @@ def gamepadLoop():
 
             utils.printDebug(robot.notWaiting, config.DEBUG)
 
-            """if is_switch_on():
-                print("Switch is ON")"""
+            if is_switch_on():
+                print("Switch is ON")
 
             if robot.notWaiting:
                 handleEvents(joystick)
