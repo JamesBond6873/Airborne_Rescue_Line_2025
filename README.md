@@ -28,7 +28,7 @@
 
 -> Code should take manual inputs from User
 
--> Create a ARM ESC command (attempt to avoid ESCs desarming when the robot is turned on)
+-> Create a ARM ESC command (attempt to avoid ESCs desarming when the robot is turned on) X
 
 -> PCB Updates: IMU + Led Driver + Better Flat Connection
 
