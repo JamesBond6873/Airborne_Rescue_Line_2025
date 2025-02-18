@@ -29,3 +29,5 @@
 -> Create a ARM ESC command (attempt to avoid ESCs desarming when the robot is turned on)
 
 -> PCB Updates: IMU + Led Driver + Better Flat Connection
+
+-> (In Order) Line Following, Intersection Detection, Gap, Silver Line, Evacuation Zone rescue
