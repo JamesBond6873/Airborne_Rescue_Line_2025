@@ -18,9 +18,11 @@
 
 -> Gamepad code with Arm/Ball Storage Functionality Functionality X
 
--> Buzzer and DIP Switch
+-> DIP Switch X
 
--> Possible Start.py
+-> Buzzer
+
+-> Possible Main.py X
 
 -> Seperate Files X
 
