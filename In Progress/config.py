@@ -21,7 +21,7 @@ controlDelayMS = 10 # 100 Hz
 
 # Color Configs
 black_min = [0, 0, 0] # 82 83 84
-black_max = [133, 243, 105] # 133 133 135
+black_max = [180, 255, 30] # 133 133 135
 green_min = [58, 95, 39]
 green_max = [98, 255, 255]
 red_min_1 = [0, 100, 90]
@@ -32,7 +32,11 @@ red_max_2 = [180, 255, 255]
 # Constants for speed factors and motor default values
 delayTimeMS = 10
 MAX_DEFAULT_SPEED = 2000
-MIN_DEFAULT_SPEED = 1600
+MIN_DEFAULT_SPEED = 1600 # Gamepad only?!
+MIN_GENERAL_SPEED = 1000
+DEFAULT_STOPPED_SPEED = 1520
+DEFAULT_FORWARD_SPEED = 1700
+ESC_DEADZONE = 50
 SPEED_STEP = 25
 FACTOR_STEP = 25
 MAX_SPEED_FACTOR_LIMIT = 500
@@ -45,3 +49,6 @@ defaultSpeed = 1850
 
 # Motor Vars
 speedFactor = 0
+KP = 0.50
+KD = 1.25
+KI = 0
