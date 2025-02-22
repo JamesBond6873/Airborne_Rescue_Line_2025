@@ -1,0 +1,22 @@
+from multiprocessing import Manager
+
+print("MultiProcessing Manager: \t OK")
+
+
+manager = Manager()
+
+terminate = manager.Value("i", False)
+
+gamepadM1 = manager.Value("i", 1520)
+gamepadM2 = manager.Value("i", 1520)
+commandToExecute = manager.Value("i", "none") #"none",""
+
+line_angle = manager.Value("i", 0.)
+line_angle_y = manager.Value("i", -1)
+line_detected = manager.Value("i", False)
+
+objective = manager.Value("i", "follow_line")  # "follow_line"; "zone"; "debug"
+line_status = manager.Value("i", "line_detected")  # "line_detected"; "gap_detected"; "gap_avoid"; "obstacle_detected"; "obstacle_avoid"; "obstacle_orientate"; "check_silver"; "position_entry"; "position_entry_1"; "position_entry_2"; "stop"
+zone_status = manager.Value("i", "begin")  # "begin"; "find_balls"; "pickup_ball"; "deposit_red"; "deposit_green"; "exit"
+
+status = manager.Value("i", "Stopped")
