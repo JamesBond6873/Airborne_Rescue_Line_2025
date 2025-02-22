@@ -17,8 +17,8 @@ from Line_Cam import lineCamLoop
 if __name__ == "__main__":
 
     processes = [
-        Process(target=gamepadLoop, args=())#,
-        #Process(target=lineCamLoop, args=())
+        Process(target=gamepadLoop, args=()), 
+        Process(target=lineCamLoop, args=())
     ]
 
     for process in processes:
