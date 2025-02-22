@@ -28,7 +28,7 @@ red_max_2 = np.array(config.red_max_2)
 def get_line_center(binary_image):
     height, width = binary_image.shape
     roi = binary_image[int(height * 0.7):, :]  # Focus on the lower part of the image
-    contours, _ = cv2.findContours(roi, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv2.findContours(roi, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
 
     if contours:
         largest_contour = max(contours, key=cv2.contourArea)
@@ -72,7 +72,6 @@ def redLineCheck():
 def silverLineCheck():
     pass
 
-
 #############################################################################
 #                            Line Camera Loop
 #############################################################################
@@ -82,6 +81,8 @@ def lineCamLoop():
 
     mode = camera.sensor_modes[0]
     camera.configure(camera.create_video_configuration(sensor={'output_size': mode['size'], 'bit_depth': mode['bit_depth']}))
+    #camera.set_controls({"AfMode": 2})  # 2 corresponds to "Auto" mode
+    camera.set_controls({"AfMode": controls.AfModeEnum.Continuous})
 
     # Enable Autofocus and Adjust Exposure
     #camera.set_controls({"AfMode": controls.AfModeEnum.Continuous, "LensPosition": 2.5, "FrameDurationLimits": (1000000 // 50, 1000000 // 50)})
@@ -117,7 +118,8 @@ def lineCamLoop():
             line_position = get_line_center(black_image)
             if line_position:
                 cx, _ = line_position
-                follow_line(cx, cv2_img.shape[1])
+                lineCenter.value = cx
+                #follow_line(cx, cv2_img.shape[1])
 
             gapController()
             intersectionController()

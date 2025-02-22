@@ -11,6 +11,7 @@ gamepadM1 = manager.Value("i", 1520)
 gamepadM2 = manager.Value("i", 1520)
 commandToExecute = manager.Value("i", "none") #"none",""
 
+lineCenter = manager.Value("i", 600)
 line_angle = manager.Value("i", 0.)
 line_angle_y = manager.Value("i", -1)
 line_detected = manager.Value("i", False)

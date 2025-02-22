@@ -28,7 +28,7 @@ switch = Button(SWITCH_PIN, pull_up=True)  # Uses internal pull-up
 # Motor Vars
 M1 = M2 = 1520 # Left - Right
 oldM1 = oldM2 = M1
-
+error = errorAcc = lastError = 0
 
 # Command Intrepreter
 def intrepretCommand():
@@ -123,15 +123,48 @@ def LoPSwitchController():
             switchState = False
             printDebug(f"LoP Switch is now OFF: {switchState}", config.softDEBUG)
     
+# Calculate motor Speed difference from default
+def PID(lineCenter):
+    global error, errorAcc, lastError
+    error = lineCenter - 1280 / 2 # Camera view is 1280 pixels
+    errorAcc = errorAcc + error
+
+    motorSpeed = config.KP * error + config.KD * (error - lastError) + config.KI * errorAcc
+
+    lastError = error
+
+    return motorSpeed
+
+# Calculate motor Speed
+def calculateMotorSpeeds(motorSpeed):
+    global M1, M2
+    m1Speed = config.DEFAULT_FORWARD_SPEED + motorSpeed
+    m2Speed = config.DEFAULT_FORWARD_SPEED - motorSpeed
+
+    # Ensure values are within ESC_MIN and ESC_MAX
+    m1Speed = max(config.MIN_GENERAL_SPEED, min(config.MAX_DEFAULT_SPEED, m1Speed))
+    m2Speed = max(config.MIN_GENERAL_SPEED, min(config.MAX_DEFAULT_SPEED, m2Speed))
+
+    # Adjust for dead zone (avoid 1450-1550)
+    if 1450 <= m1Speed <= 1550:
+        m1Speed = config.DEFAULT_STOPPED_SPEED + config.ESC_DEADZONE if m1Speed > config.DEFAULT_STOPPED_SPEED else config.DEFAULT_STOPPED_SPEED - config.ESC_DEADZONE
+    if 1450 <= m2Speed <= 1550:
+        m2Speed = config.DEFAULT_STOPPED_SPEED + config.ESC_DEADZONE if m2Speed > config.DEFAULT_STOPPED_SPEED else config.DEFAULT_STOPPED_SPEED - config.ESC_DEADZONE
+    
+    printDebug(f"Line Center: {lineCenter.value}, motorSpeed: {motorSpeed}, M1: {m1Speed}, M2: {m2Speed}", config.softDEBUG)
+
+    return m1Speed, m2Speed
+    
 
 # Update Motor Vars accordingly
-def setMotorsVars():
+def setMotorsSpeeds():
     global M1, M2, switchState
     if switchState: #LoP On - GamepadControl
         M1 = gamepadM1.value
         M2 = gamepadM2.value
     else: #LoP Off, auto control
-        pass
+        motorSpeedDiference = PID(lineCenter.value)
+        M1, M2 = calculateMotorSpeeds(motorSpeedDiference)
 
 
 # Control Motors
@@ -160,7 +193,7 @@ def controlLoop():
 
         printDebug(f"Robot Not Waiting: {notWaiting}", config.DEBUG)
         if notWaiting:
-            setMotorsVars()
+            setMotorsSpeeds()
             controlMotors()
 
         intrepretCommand()
