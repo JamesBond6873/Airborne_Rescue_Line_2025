@@ -15,8 +15,9 @@ buzzerONMs = 100
 buzzerOffMs = 5000
 buzzerState = False
 
-# Frame Rates
+# Time Delays
 lineDelayMS = 50 # Frame Rate = 20
+controlDelayMS = 10 # 100 Hz
 
 # Color Configs
 black_min = [0, 0, 0] # 82 83 84

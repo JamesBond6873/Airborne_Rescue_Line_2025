@@ -9,8 +9,9 @@ from libcamera import controls
 import config
 import utils
 import robot
+from MP_Manager import *
 
-print("Line Camera: \t \t OK")
+print("Line Camera: \t \t \t OK")
 
 
 # Color Configs
@@ -90,7 +91,7 @@ def lineCamLoop():
     time.sleep(0.1)
 
     t0 = time.time()
-    while True:
+    while not terminate.value:
         t1 = t0 + config.lineDelayMS * 0.001
 
         # Loop

@@ -2,11 +2,11 @@
 import sys
 import pygame
 import time
-from gpiozero import Button, Buzzer, PWMOutputDevice, OutputDevice, DigitalOutputDevice, Device
 
 import utils
 import config
 import mySerial
+from MP_Manager import *
 import robot
 
 
@@ -20,19 +20,8 @@ button0Pressed = False
 button3Pressed = False
 button2Pressed = False
 
-# Pin Definitions
-SWITCH_PIN = 14
-
-# Initialize components
-switch = Button(SWITCH_PIN, pull_up=True)  # Uses internal pull-up
-
 # Motor variables
 M1, M2, M3, M4 = 0, 0, 0, 0
-
-
-def is_switch_on():
-    """Returns True if the switch is ON, False otherwise."""
-    return switch.is_pressed
 
 
 # Initialize Pygame and joystick
@@ -73,6 +62,7 @@ def handleButtonPress(button):
 
     if button == 8: # Select Quits Code
         utils.printDebug(f"Shutting Down: Button {button} Pressed!", config.softDEBUG)
+        terminate.value = True
         pygame.quit()
         sys.exit()
     elif button == 7:
@@ -91,11 +81,9 @@ def handleButtonPress(button):
         utils.printDebug(f"Default Speed Decreased: {config.defaultSpeed}", config.DEBUG)
     elif button == 1:
         if button0Pressed:
-            robot.pickVictim("A")
-            #time.sleep(2)
+            commandToExecute.value = "Pick Alive"
         elif button2Pressed:
-            robot.ballRelease("A")
-            #time.sleep(2)
+            commandToExecute.value = "Drop Alive"
         # Increase both forward and reverse speed factors
         if config.maxSpeedFactor < config.MAX_SPEED_FACTOR_LIMIT:
             config.maxSpeedFactor += config.FACTOR_STEP
@@ -104,11 +92,9 @@ def handleButtonPress(button):
     elif button == 3:
         button3Pressed = True
         if button0Pressed:
-            robot.pickVictim("D")
-            #time.sleep(2)
+            commandToExecute.value = "Pick Dead"
         elif button2Pressed:
-            robot.ballRelease("D")
-            #time.sleep(2)
+            commandToExecute.value = "Drop Dead"
         # Decrease both forward and reverse speed factors
         elif config.maxSpeedFactor > config.MIN_SPEED_FACTOR_LIMIT:
             config.maxSpeedFactor -= config.FACTOR_STEP
@@ -118,15 +104,14 @@ def handleButtonPress(button):
         # Pick Motions
         button0Pressed = True
         if button2Pressed:
-            robot.closeBallStorage()
-            #time.sleep(2)
+            commandToExecute.value = "Close Ball Storage"
         elif button3Pressed:
-            robot.cameraDefault("Evacuation")
+            commandToExecute.value = "Camera Evacuation"
     elif button == 2: # X
         # Drop Ball Storage
         button2Pressed = True
         if button3Pressed:
-            robot.cameraDefault("Line")
+            commandToExecute.value = "Camera Line"
 
 
 # Handles button releases to reset speed factor
@@ -196,25 +181,16 @@ def calculateMotorSpeeds(axes):
 
 # Main loop for handling joystick input and updating motor speeds
 def gamepadLoop():
-    global buzzerT0, buzzerT1
-    oldM1 = M1
-    oldM2 = M2
-
     joystick = initJoystick()
-    robot.sendCommandList(["GR","BC", "SF,5,F", "CL", "SF,4,F"])
 
-    buzzerT0 = time.time()
     t0 = time.time()
     try:
-        while loop:
+        while not terminate.value and loop:
             t1 = t0 + config.delayTimeMS * 0.001
 
-            utils.printDebug(robot.notWaiting, config.DEBUG)
+            utils.printDebug(robot.gamepadLoopValue, config.DEBUG)
 
-            if is_switch_on():
-                print("Switch is ON")
-
-            if robot.notWaiting:
+            if robot.gamepadLoopValue:
                 handleEvents(joystick)
 
                 # Read joystick axes values
@@ -223,15 +199,8 @@ def gamepadLoop():
                 # Calculate motor speeds
                 calculateMotorSpeeds(axes)
 
-                if oldM1 != M1 or oldM2 != M2:
-                    message = f"M({M1}, {M2})"
-                    mySerial.sendSerial(message)
-
-            receivedMessage = mySerial.readSerial(config.DEBUG)
-            robot.interpretMessage(receivedMessage)
-
-            oldM1 = M1
-            oldM2 = M2
+                gamepadM1.value = M1
+                gamepadM2.value = M2
 
             while (time.time() <= t1):
                 time.sleep(0.001)
