@@ -33,3 +33,5 @@
 -> PCB Updates: IMU + Led Driver + Better Flat Connection + Move components due to height constraints
 
 -> (In Order) Line Following, Intersection Detection, Gap, Silver Line, Evacuation Zone rescue
+
+-> Victim detection NPU
