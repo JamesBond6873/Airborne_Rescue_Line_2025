@@ -30,6 +30,7 @@ M1 = M2 = 1520 # Left - Right
 oldM1 = oldM2 = M1
 error = errorAcc = lastError = 0
 
+
 # Command Intrepreter
 def intrepretCommand():
     command = commandToExecute.value
@@ -46,6 +47,7 @@ def intrepretCommand():
 
     commandToExecute.value = "none"
 
+
 # Interpret Received Message
 def interpretMessage(message):
     global notWaiting, waitingResponse, commandWaitingList
@@ -58,7 +60,7 @@ def interpretMessage(message):
         else:
             mySerial.sendSerial(commandWaitingList[0])
             commandWaitingList.pop(0)
-        
+
 
 # Send Commands from Waiting List
 def sendCommandList(commandList):
@@ -106,9 +108,11 @@ def cameraDefault(position):
         printDebug(f"Set Camera to Evacaution Zone Mode", config.softDEBUG)
         sendCommandList(["CE", "SF,4,F"])
 
+
 #Returns True if the switch is ON, False otherwise.
 def is_switch_on(): 
     return switch.is_pressed
+
 
 # Controller for LoP
 def LoPSwitchController():
@@ -123,6 +127,7 @@ def LoPSwitchController():
             switchState = False
             printDebug(f"LoP Switch is now OFF: {switchState}", config.softDEBUG)
     
+
 # Calculate motor Speed difference from default
 def PID(lineCenter):
     global error, errorAcc, lastError
@@ -134,6 +139,7 @@ def PID(lineCenter):
     lastError = error
 
     return motorSpeed
+
 
 # Calculate motor Speed
 def calculateMotorSpeeds(motorSpeed):
@@ -151,10 +157,10 @@ def calculateMotorSpeeds(motorSpeed):
     if 1450 <= m2Speed <= 1550:
         m2Speed = config.DEFAULT_STOPPED_SPEED + config.ESC_DEADZONE if m2Speed > config.DEFAULT_STOPPED_SPEED else config.DEFAULT_STOPPED_SPEED - config.ESC_DEADZONE
     
-    #printDebug(f"Line Center: {lineCenter.value}, motorSpeed: {motorSpeed}, M1: {m1Speed}, M2: {m2Speed}", config.softDEBUG)
+    printDebug(f"Line Center: {lineCenter.value}, motorSpeed: {motorSpeed}, M1: {m1Speed}, M2: {m2Speed}", config.softDEBUG)
 
     return m1Speed, m2Speed
-    
+
 
 # Update Motor Vars accordingly
 def setMotorsSpeeds():
@@ -166,9 +172,8 @@ def setMotorsSpeeds():
     if switchState: #LoP On - GamepadControl
         M1 = gamepadM1.value
         M2 = gamepadM2.value
-        
-
-
+ 
+       
 # Control Motors
 def controlMotors():
     global oldM1, oldM2
@@ -186,7 +191,7 @@ def controlLoop():
     switchState = is_switch_on()
     sendCommandList(["GR","BC", "SF,5,F", "CL", "SF,4,F"])
 
-    t0 = time.time()
+    t0 = time.perf_counter()
     while not terminate.value:
         t1 = t0 + config.controlDelayMS * 0.001
 
@@ -206,6 +211,6 @@ def controlLoop():
         oldM2 = M2
 
 
-        while (time.time() <= t1):
-            time.sleep(0.001)
+        while (time.perf_counter() <= t1):
+            time.sleep(0.0005)
         t0 = t1

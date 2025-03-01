@@ -56,7 +56,51 @@ def get_line_center(binary_image):
             cx = int(M["m10"] / M["m00"])
             return cx, height - 1  # Return x position of the detected line
     return None  # No line detected
+    
 
+def getLine(Image, blackImage):
+    contoursblk, _ = cv2.findContours(blackImage, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+    
+    # No contours
+    if not contoursblk:
+        return line_angle.value, Image, blackImage
+    
+    largest_contour = max(contoursblk, key=cv2.contourArea)
+
+    # Draw the largest contour
+    cv2.drawContours(Image, [largest_contour], -1, (0, 255, 0), 2)
+
+    # Compute image moments for the largest contour
+    M = cv2.moments(largest_contour)
+    if M["m00"] != 0:
+        # Centroid (First Moment)
+        cx = int(M["m10"] / M["m00"])
+        cy = int(M["m01"] / M["m00"])
+
+        # Calculate orientation using central moments
+        mu20 = M["mu20"] / M["m00"]
+        mu02 = M["mu02"] / M["m00"]
+        mu11 = M["mu11"] / M["m00"]
+
+        theta = np.rad2deg(0.5 * np.arctan2(2 * mu11, mu20 - mu02))  # Principal axis angle
+
+        # Define line endpoints along the principal axis
+        length = 100  # Adjust for visualization
+        x1 = int(cx + length * np.cos(theta))
+        y1 = int(cy + length * np.sin(theta))
+        x2 = int(cx - length * np.cos(theta))
+        y2 = int(cy - length * np.sin(theta))
+
+        # Draw centroid
+        cv2.circle(Image, (cx, cy), 5, (0, 255, 255), -1)
+
+        # Draw principal axis line
+        cv2.line(Image, (x1, y1), (x2, y2), (255, 0, 0), 2)
+
+        return theta, Image, blackImage
+    
+    else:
+        return line_angle.value, Image, blackImage
 
 def LoPController():
     pass
@@ -90,17 +134,28 @@ def lineCamLoop():
 
     mode = camera.sensor_modes[0]
     camera.configure(camera.create_video_configuration(sensor={'output_size': mode['size'], 'bit_depth': mode['bit_depth']}))
+
+    #camera.set_controls({"AfMode": controls.AfModeEnum.Manual, "ExposureTime":10000})
+
+    # Fix exposure to avoid automatic adjustments
+    """camera.set_controls({
+        "ExposureTime": 5000,  # Increase from 500 to 5000 (5ms) or more
+        "AnalogueGain": 4.0    # Boost brightness (increase if still too dark)
+    })"""
+
+    """
+    camera.configure(camera.create_video_configuration(sensor={'output_size': mode['size'], 'bit_depth': mode['bit_depth']}))
     #camera.set_controls({"AfMode": 2})  # 2 corresponds to "Auto" mode
     camera.set_controls({"AfMode": controls.AfModeEnum.Continuous})
 
     # Enable Autofocus and Adjust Exposure
     #camera.set_controls({"AfMode": controls.AfModeEnum.Continuous, "LensPosition": 2.5, "FrameDurationLimits": (1000000 // 50, 1000000 // 50)})
-    #camera.set_controls({"LensPosition": 2.5, "FrameDurationLimits": (1000000 // 50, 1000000 // 50)})
+    #camera.set_controls({"LensPosition": 2.5, "FrameDurationLimits": (1000000 // 50, 1000000 // 50)})"""
 
     camera.start()
     time.sleep(0.1)
 
-    t0 = time.time()
+    t0 = time.perf_counter()
     while not terminate.value:
         t1 = t0 + config.lineDelayMS * 0.001
 
@@ -116,6 +171,17 @@ def lineCamLoop():
             green_image = cv2.inRange(hsv_image, green_min, green_max)
             red_image = cv2.inRange(hsv_image, red_min_1, red_max_1) + cv2.inRange(hsv_image, red_min_2, red_max_2)
             black_image = cv2.inRange(hsv_image, black_min, black_max)
+            
+            # Find the line center and determine movement
+            line_position = get_line_center(black_image)
+            if line_position:
+                cx, _ = line_position
+                lineCenter.value = cx
+                # Draw centroid
+                cv2.circle(cv2_img, (cx, 300), 5, (0, 255, 255), -1)
+
+            
+            line_angle.value, cv2_img, black_image = getLine(cv2_img, black_image)
 
             # Show Images
             cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/In Progress/latest_frame_cv2.jpg", cv2_img)
@@ -123,11 +189,6 @@ def lineCamLoop():
             cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/In Progress/latest_frame_green.jpg", green_image)
             cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/In Progress/latest_frame_black.jpg", black_image)
 
-            # Find the line center and determine movement
-            line_position = get_line_center(black_image)
-            if line_position:
-                cx, _ = line_position
-                lineCenter.value = cx
 
             gapController()
             intersectionController()
@@ -136,9 +197,12 @@ def lineCamLoop():
             silverLineCheck()
 
             saveImage("Frames", cv2_img)
+            #saveImage("Frames", cv2_img)
 
 
-        while (time.time() <= t1):
-            time.sleep(0.001)
+        while (time.perf_counter() <= t1):
+            time.sleep(0.0005)
+
+        printDebug(f"\t\t\t\t\t\t\t\tLine Cam Loop Time: {t0} | {t1} | {time.perf_counter()} | {time.time()}", config.softDEBUG)
         t0 = t1
             
