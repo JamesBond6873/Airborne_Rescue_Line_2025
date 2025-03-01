@@ -1,6 +1,8 @@
 # -------- Robot Actuators/Sensors -------- 
 
+import datetime
 import time
+import os
 import cv2
 import numpy as np
 from picamera2 import Picamera2
@@ -8,6 +10,7 @@ from libcamera import controls
 
 import config
 import utils
+from utils import printDebug
 import robot
 from MP_Manager import *
 
@@ -25,6 +28,22 @@ red_min_2 = np.array(config.red_min_2)
 red_max_2 = np.array(config.red_max_2)
 
 
+def saveImage(folder, cv2_img):
+    if saveFrame.value:
+        # Create the "fotos" directory if it doesn't exist
+        folder_name = folder
+        os.makedirs(folder_name, exist_ok=True)
+        
+        # Generate filename based on timestamp
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]  # Remove last 3 digits for milliseconds
+        file_path = os.path.join(folder_name, f"image_{timestamp}.jpg")
+        
+        # Save the image using OpenCV
+        cv2.imwrite(file_path, cv2_img)
+
+        printDebug(f"File path: {file_path}", config.softDEBUG)
+
+
 def get_line_center(binary_image):
     height, width = binary_image.shape
     roi = binary_image[int(height * 0.7):, :]  # Focus on the lower part of the image
@@ -37,16 +56,6 @@ def get_line_center(binary_image):
             cx = int(M["m10"] / M["m00"])
             return cx, height - 1  # Return x position of the detected line
     return None  # No line detected
-
-
-def follow_line(cx, frame_width):
-    center_x = frame_width // 2
-    if cx < center_x - 20:
-        print("Turn Left")
-    elif cx > center_x + 20:
-        print("Turn Right")
-    else:
-        print("Move Forward")
 
 
 def LoPController():
@@ -119,13 +128,14 @@ def lineCamLoop():
             if line_position:
                 cx, _ = line_position
                 lineCenter.value = cx
-                #follow_line(cx, cv2_img.shape[1])
 
             gapController()
             intersectionController()
             obstacleController()
             redLineCheck()
             silverLineCheck()
+
+            saveImage("Frames", cv2_img)
 
 
         while (time.time() <= t1):

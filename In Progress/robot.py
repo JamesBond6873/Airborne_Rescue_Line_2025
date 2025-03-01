@@ -151,7 +151,7 @@ def calculateMotorSpeeds(motorSpeed):
     if 1450 <= m2Speed <= 1550:
         m2Speed = config.DEFAULT_STOPPED_SPEED + config.ESC_DEADZONE if m2Speed > config.DEFAULT_STOPPED_SPEED else config.DEFAULT_STOPPED_SPEED - config.ESC_DEADZONE
     
-    printDebug(f"Line Center: {lineCenter.value}, motorSpeed: {motorSpeed}, M1: {m1Speed}, M2: {m2Speed}", config.softDEBUG)
+    #printDebug(f"Line Center: {lineCenter.value}, motorSpeed: {motorSpeed}, M1: {m1Speed}, M2: {m2Speed}", config.softDEBUG)
 
     return m1Speed, m2Speed
     
@@ -159,12 +159,14 @@ def calculateMotorSpeeds(motorSpeed):
 # Update Motor Vars accordingly
 def setMotorsSpeeds():
     global M1, M2, switchState
+    
+    motorSpeedDiference = PID(lineCenter.value)
+    M1, M2 = calculateMotorSpeeds(motorSpeedDiference)
+
     if switchState: #LoP On - GamepadControl
         M1 = gamepadM1.value
         M2 = gamepadM2.value
-    else: #LoP Off, auto control
-        motorSpeedDiference = PID(lineCenter.value)
-        M1, M2 = calculateMotorSpeeds(motorSpeedDiference)
+        
 
 
 # Control Motors

@@ -49,6 +49,6 @@ defaultSpeed = 1850
 
 # Motor Vars
 speedFactor = 0
-KP = 0.50
+KP = 0.25
 KD = 1.25
 KI = 0

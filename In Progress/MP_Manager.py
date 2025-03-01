@@ -21,3 +21,4 @@ line_status = manager.Value("i", "line_detected")  # "line_detected"; "gap_detec
 zone_status = manager.Value("i", "begin")  # "begin"; "find_balls"; "pickup_ball"; "deposit_red"; "deposit_green"; "exit"
 
 status = manager.Value("i", "Stopped")
+saveFrame = manager.Value("i", False)

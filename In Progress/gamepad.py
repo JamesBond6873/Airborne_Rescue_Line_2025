@@ -17,8 +17,9 @@ loop = True
 
 # Gamepad Vars
 button0Pressed = False
-button3Pressed = False
+button1Pressed = False
 button2Pressed = False
+button3Pressed = False
 
 # Motor variables
 M1, M2, M3, M4 = 0, 0, 0, 0
@@ -55,7 +56,7 @@ def handleEvents(joystick):
 
 # Handles button presses to adjust speed factor and default speed
 def handleButtonPress(button):
-    global button0Pressed, button2Pressed, button3Pressed
+    global button0Pressed, button1Pressed, button2Pressed, button3Pressed
     # Global maxSpeedFactor config.defaultSpeed  config.reverseSpeedFactor speedFactor
 
     utils.printDebug(f"Button {button} pressed", config.DEBUG)
@@ -80,43 +81,63 @@ def handleButtonPress(button):
         config.defaultSpeed = max(config.defaultSpeed - config.SPEED_STEP, config.MIN_DEFAULT_SPEED)
         utils.printDebug(f"Default Speed Decreased: {config.defaultSpeed}", config.DEBUG)
     elif button == 1:
-        if button0Pressed:
+        button1Pressed = True
+        if button0Pressed and button1Pressed and button2Pressed and button3Pressed:
+            saveFrame.value = not saveFrame.value
+            utils.printDebug(f"Save Frame is now set to: {saveFrame.value}", config.softDEBUG)
+
+        elif button0Pressed:
             commandToExecute.value = "Pick Alive"
         elif button2Pressed:
             commandToExecute.value = "Drop Alive"
+        
         # Increase both forward and reverse speed factors
         if config.maxSpeedFactor < config.MAX_SPEED_FACTOR_LIMIT:
             config.maxSpeedFactor += config.FACTOR_STEP
             config.reverseSpeedFactor -= config.FACTOR_STEP
         utils.printDebug(f"Max/Reverse Speed Factor Increased: {config.maxSpeedFactor}/{config.reverseSpeedFactor}", config.DEBUG)
+    
     elif button == 3:
         button3Pressed = True
-        if button0Pressed:
+        if button0Pressed and button1Pressed and button2Pressed and button3Pressed:
+            saveFrame.value = not saveFrame.value
+            utils.printDebug(f"Save Frame is now set to: {saveFrame.value}", config.softDEBUG)
+
+        elif button0Pressed:
             commandToExecute.value = "Pick Dead"
         elif button2Pressed:
             commandToExecute.value = "Drop Dead"
+
         # Decrease both forward and reverse speed factors
         elif config.maxSpeedFactor > config.MIN_SPEED_FACTOR_LIMIT:
             config.maxSpeedFactor -= config.FACTOR_STEP
             config.reverseSpeedFactor += config.FACTOR_STEP
         utils.printDebug(f"Max/Reverse Speed Factor Decreased: {config.maxSpeedFactor}/{config.reverseSpeedFactor}", config.DEBUG)
+    
     elif button == 0: # /_\ button
         # Pick Motions
         button0Pressed = True
-        if button2Pressed:
+        if button0Pressed and button1Pressed and button2Pressed and button3Pressed:
+            saveFrame.value = not saveFrame.value
+            utils.printDebug(f"Save Frame is now set to: {saveFrame.value}", config.softDEBUG)
+        elif button2Pressed:
             commandToExecute.value = "Close Ball Storage"
         elif button3Pressed:
             commandToExecute.value = "Camera Evacuation"
+    
     elif button == 2: # X
         # Drop Ball Storage
         button2Pressed = True
-        if button3Pressed:
+        if button0Pressed and button1Pressed and button2Pressed and button3Pressed:
+            saveFrame.value = not saveFrame.value
+            utils.printDebug(f"Save Frame is now set to: {saveFrame.value}", config.softDEBUG)
+        elif button3Pressed:
             commandToExecute.value = "Camera Line"
 
 
 # Handles button releases to reset speed factor
 def handleButtonRelease(button):
-    global button0Pressed, button2Pressed, button3Pressed
+    global button0Pressed, button1Pressed, button2Pressed, button3Pressed
     utils.printDebug(f"Button {button} released", config.DEBUG)
 
     if button == 7 or button == 6:
@@ -126,6 +147,9 @@ def handleButtonRelease(button):
     elif button == 0: # /_\ button  --  Pick Motions
         button0Pressed = False
     
+    elif button == 1:
+        button1Pressed = False
+
     elif button == 2: # X  --  Drop Ball Storage
         button2Pressed = False
     
@@ -181,6 +205,7 @@ def calculateMotorSpeeds(axes):
 
 # Main loop for handling joystick input and updating motor speeds
 def gamepadLoop():
+    global button0Pressed, button1Pressed, button2Pressed, button3Pressed
     joystick = initJoystick()
 
     t0 = time.time()
@@ -189,7 +214,6 @@ def gamepadLoop():
             t1 = t0 + config.delayTimeMS * 0.001
 
             utils.printDebug(robot.gamepadLoopValue, config.DEBUG)
-
             if robot.gamepadLoopValue:
                 handleEvents(joystick)
 
