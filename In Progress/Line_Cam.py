@@ -82,7 +82,7 @@ def getLine(Image, blackImage):
         mu02 = M["mu02"] / M["m00"]
         mu11 = M["mu11"] / M["m00"]
 
-        theta = np.rad2deg(0.5 * np.arctan2(2 * mu11, mu20 - mu02))  # Principal axis angle
+        theta = round(np.rad2deg(0.5 * np.arctan2(2 * mu11, mu20 - mu02)), 0)  # Principal axis angle
 
         # Define line endpoints along the principal axis
         length = 100  # Adjust for visualization
@@ -96,6 +96,9 @@ def getLine(Image, blackImage):
 
         # Draw principal axis line
         cv2.line(Image, (x1, y1), (x2, y2), (255, 0, 0), 2)
+
+        #
+        cv2.putText(Image, f"{theta}", (1125, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
         return theta, Image, blackImage
     
