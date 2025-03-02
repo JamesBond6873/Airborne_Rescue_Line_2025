@@ -18,7 +18,7 @@ from robot import controlLoop
 if __name__ == "__main__":
 
     processes = [
-        Process(target=gamepadLoop, args=()), 
+        Process(target=gamepadLoop, args=()),
         Process(target=lineCamLoop, args=()),
         Process(target=controlLoop, args=())
     ]
