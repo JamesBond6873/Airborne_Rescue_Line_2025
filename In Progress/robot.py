@@ -1,6 +1,7 @@
 # -------- Robot Actuators/Sensors -------- 
 import time
 from gpiozero import Button
+import numpy as np
 
 import config
 from utils import *
@@ -129,9 +130,9 @@ def LoPSwitchController():
     
 
 # Calculate motor Speed difference from default
-def PID(lineCenter):
+def PID(lineCenterX):
     global error, errorAcc, lastError
-    error = lineCenter - 1280 / 2 # Camera view is 1280 pixels
+    error = lineCenterX - 1280 / 2 # Camera view is 1280 pixels
     errorAcc = errorAcc + error
 
     motorSpeed = config.KP * error + config.KD * (error - lastError) + config.KI * errorAcc
@@ -140,6 +141,25 @@ def PID(lineCenter):
 
     return motorSpeed
 
+def PID2(lineCenterX, lineAngle):
+    global error_x, errorAcc, lastError, error_theta
+    
+    # Errors
+    error_x = lineCenterX - 1280 / 2  # Camera view is 1280 pixels
+    error_theta = lineAngle - (np.pi / 2)  # Angle difference from vertical (pi/2)
+    
+    # Accumulate error for integral term
+    errorAcc += error_x
+
+    # Compute motor speed adjustment (mixing both errors)
+    motorSpeed = (config.KP * error_x + 
+                  config.KD * (error_x - lastError) + 
+                  config.KI * errorAcc + 
+                  config.KP_THETA * error_theta)  # New term for angle correction
+
+    lastError = error_x  # Only update last error for x
+
+    return motorSpeed
 
 # Calculate motor Speed
 def calculateMotorSpeeds(motorSpeed):
@@ -157,17 +177,19 @@ def calculateMotorSpeeds(motorSpeed):
     if 1450 <= m2Speed <= 1550:
         m2Speed = config.DEFAULT_STOPPED_SPEED + config.ESC_DEADZONE if m2Speed > config.DEFAULT_STOPPED_SPEED else config.DEFAULT_STOPPED_SPEED - config.ESC_DEADZONE
     
-    printDebug(f"Line Center: {lineCenter.value}, motorSpeed: {motorSpeed}, M1: {m1Speed}, M2: {m2Speed}", config.softDEBUG)
+    #printDebug(f"Line Center: {lineCenterX.value}, Angle: {round(np.rad2deg(lineAngle.value), 0)} motorSpeed: {motorSpeed}, M1: {m1Speed}, M2: {m2Speed}", config.softDEBUG)
 
     return m1Speed, m2Speed
 
 
 # Update Motor Vars accordingly
 def setMotorsSpeeds():
-    global M1, M2, switchState
+    global M1, M2, M1info, M2info, switchState, motorSpeedDiference, commandWaitingList
     
-    motorSpeedDiference = PID(lineCenter.value)
+    #motorSpeedDiference = PID(lineCenterX.value)
+    motorSpeedDiference = PID2(lineCenterX.value, lineAngle.value)
     M1, M2 = calculateMotorSpeeds(motorSpeedDiference)
+    M1info, M2info = M1, M2
 
     if switchState: #LoP On - GamepadControl
         M1 = gamepadM1.value
@@ -186,9 +208,16 @@ def controlMotors():
 #############################################################################
 
 def controlLoop():
-    global switchState, M1, M2, oldM1, oldM2
+    global switchState, M1, M2, M1info, M2info, oldM1, oldM2, motorSpeedDiference, error_theta, error_x, errorAcc, lastError
 
     switchState = is_switch_on()
+    motorSpeedDiference = 0
+    M1info = 0
+    M2info = 0
+    error_theta = 0
+    error_x = 0
+    lastError = 0
+    errorAcc = 0
     sendCommandList(["GR","BC", "SF,5,F", "CL", "SF,4,F"])
 
     t0 = time.perf_counter()
@@ -207,9 +236,22 @@ def controlLoop():
         receivedMessage = mySerial.readSerial(config.DEBUG)
         interpretMessage(receivedMessage)
 
+        #debugMessage = f"Line C: {lineCenterX.value} \tA: {round(np.rad2deg(lineAngle.value),2)} \tKx: {config.KP * error_x + config.KD * (error_x - lastError) + config.KI * errorAcc} \tKpTheta: {round(config.KP_THETA*error_theta,2)} \tMotor D: {round(motorSpeedDiference, 2)} \tM1: {int(M1info)} \tM2: {int(M2info)} \tLOP: {switchState} \tCommands: {commandWaitingList}"
+        debugMessage = (
+            f"Line Center: {lineCenterX.value} \t"
+            f"Angle: {round(np.rad2deg(lineAngle.value),2)} \t"
+            f"LineBias: {config.KP * error_x + config.KD * (error_x - lastError) + config.KI * errorAcc}   \t"
+            f"AngBias: {round(config.KP_THETA*error_theta,2)}     \t"
+            f"Motor D: {round(motorSpeedDiference, 2)}   \t"
+            f"M1: {int(M1info)} \t"
+            f"M2: {int(M2info)} \t"
+            f"LOP: {switchState} \t"
+            f"Commands: {commandWaitingList}"
+        )
+        printDebug(f"{debugMessage}", config.softDEBUG)
+
         oldM1 = M1
         oldM2 = M2
-
 
         while (time.perf_counter() <= t1):
             time.sleep(0.0005)

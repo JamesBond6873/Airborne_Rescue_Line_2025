@@ -21,7 +21,7 @@ controlDelayMS = 25 # 100 Hz
 
 # Color Configs
 black_min = [0, 0, 0] # 82 83 84
-black_max = [255, 255, 150] # 133 133 135
+black_max = [255, 255, 100] # 133 133 135
 green_min = [58, 95, 39]
 green_max = [98, 255, 255]
 red_min_1 = [0, 100, 90]
@@ -52,3 +52,4 @@ speedFactor = 0
 KP = 0.75
 KD = 1.50
 KI = 0
+KP_THETA = 250 # 407 = 1280/3.14159

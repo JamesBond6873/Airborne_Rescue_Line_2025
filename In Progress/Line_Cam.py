@@ -63,7 +63,7 @@ def getLine(Image, blackImage):
     
     # No contours
     if not contoursblk:
-        return line_angle.value, Image, blackImage
+        return lineCenterX.value, lineAngle.value, Image, blackImage
     
     largest_contour = max(contoursblk, key=cv2.contourArea)
 
@@ -82,7 +82,11 @@ def getLine(Image, blackImage):
         mu02 = M["mu02"] / M["m00"]
         mu11 = M["mu11"] / M["m00"]
 
-        theta = round(np.rad2deg(0.5 * np.arctan2(2 * mu11, mu20 - mu02)), 0)  # Principal axis angle
+        theta = 0.5 * np.arctan2(2 * mu11, mu20 - mu02)  # Principal axis angle
+
+        if theta < 0:
+            printDebug(f"theta og: {round(theta,2)} {round(np.rad2deg(theta),2)}, new {round(np.pi + theta,2)} {round(np.rad2deg(np.pi + theta),2)}", config.DEBUG)
+            theta = np.pi + theta
 
         # Define line endpoints along the principal axis
         length = 100  # Adjust for visualization
@@ -98,12 +102,12 @@ def getLine(Image, blackImage):
         cv2.line(Image, (x1, y1), (x2, y2), (255, 0, 0), 2)
 
         #
-        cv2.putText(Image, f"{theta}", (1125, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+        cv2.putText(Image, f"{round(np.rad2deg(theta), 0)}", (1125, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
-        return theta, Image, blackImage
+        return cx, theta, Image, blackImage
     
     else:
-        return line_angle.value, Image, blackImage
+        return lineCenterX.value, lineAngle.value, Image, blackImage
 
 def LoPController():
     pass
@@ -176,15 +180,15 @@ def lineCamLoop():
             black_image = cv2.inRange(hsv_image, black_min, black_max)
             
             # Find the line center and determine movement
-            line_position = get_line_center(black_image)
+            """line_position = get_line_center(black_image)
             if line_position:
                 cx, _ = line_position
-                lineCenter.value = cx
+                lineCenterX.value = cx
                 # Draw centroid
-                cv2.circle(cv2_img, (cx, 300), 5, (0, 255, 255), -1)
+                cv2.circle(cv2_img, (cx, 300), 5, (0, 255, 255), -1)"""
 
             
-            line_angle.value, cv2_img, black_image = getLine(cv2_img, black_image)
+            lineCenterX.value, lineAngle.value, cv2_img, black_image = getLine(cv2_img, black_image)
 
             # Show Images
             cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/In Progress/latest_frame_cv2.jpg", cv2_img)
@@ -206,6 +210,6 @@ def lineCamLoop():
         while (time.perf_counter() <= t1):
             time.sleep(0.0005)
 
-        printDebug(f"\t\t\t\t\t\t\t\tLine Cam Loop Time: {t0} | {t1} | {time.perf_counter()} | {time.time()}", config.softDEBUG)
+        printDebug(f"\t\t\t\t\t\t\t\tLine Cam Loop Time: {t0} | {t1} | {time.perf_counter()}", config.DEBUG)
         t0 = t1
             
