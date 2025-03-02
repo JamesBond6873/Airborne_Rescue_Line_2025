@@ -81,8 +81,16 @@ def lineCamLoop():
 
     mode = camera.sensor_modes[0]
     camera.configure(camera.create_video_configuration(sensor={'output_size': mode['size'], 'bit_depth': mode['bit_depth']}))
+    # Fix exposure to avoid automatic adjustments
+    camera.set_controls({
+        "ExposureTime": 500,  # Microseconds (Lower values reduce blur, try 500-2000)
+        "AnalogueGain": 2.0,  # Increase brightness if necessary (1.0 to 8.0)
+        "AfMode": controls.AfModeEnum.Continuous
+    })
+    """
+    camera.configure(camera.create_video_configuration(sensor={'output_size': mode['size'], 'bit_depth': mode['bit_depth']}))
     #camera.set_controls({"AfMode": 2})  # 2 corresponds to "Auto" mode
-    camera.set_controls({"AfMode": controls.AfModeEnum.Continuous})
+    camera.set_controls({"AfMode": controls.AfModeEnum.Continuous})"""
 
     # Enable Autofocus and Adjust Exposure
     #camera.set_controls({"AfMode": controls.AfModeEnum.Continuous, "LensPosition": 2.5, "FrameDurationLimits": (1000000 // 50, 1000000 // 50)})

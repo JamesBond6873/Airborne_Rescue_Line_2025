@@ -2,10 +2,10 @@ import cv2
 import numpy as np
 
 # Load image
-cv2_img = cv2.imread("C:\\Users\\Francisco\\Projects\\RoboCup Junior Rescue Line\\2025\\Software_Repo\\test_moments\\latest_frame_cv2.jpg")
+cv2_img = cv2.imread("C:\\Users\\Francisco\\Projects\\RoboCup Junior Rescue Line\\2025\\Software_Repo\\test_moments\\Frames01\\image_2025-03-01_18-15-39-198.jpg")
 #gray = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
 hsv_image = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2HSV)
-black_image = cv2.inRange(hsv_image, np.array([0, 0, 0]), np.array([111, 255, 80])) # 180,255,30
+black_image = cv2.inRange(hsv_image, np.array([0, 0, 0]), np.array([255, 255, 150])) # 180,255,30
 """gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
 # Invert colors: Make black lines white and background black
@@ -17,7 +17,7 @@ _, binary = cv2.threshold(inverted, 127, 255, cv2.THRESH_BINARY)
 # Find contours
 contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)"""
 
-contours, _ = cv2.findContours(black_image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+contours, _ = cv2.findContours(black_image, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
 
 # If no contours found, exit
 if not contours:
