@@ -27,6 +27,8 @@ red_max_1 = np.array(config.red_max_1)
 red_min_2 = np.array(config.red_min_2)
 red_max_2 = np.array(config.red_max_2)
 
+camera_x = 1280
+camera_y = 720
 
 def saveImage(folder, cv2_img):
     if saveFrame.value:
@@ -116,10 +118,95 @@ def LoPController():
 def gapController():
     pass
 
+def check_black(black_around_sign, i, green_box, black_image):
+    green_box = green_box[green_box[:, 1].argsort()]
 
-def intersectionController():
-    pass
+    marker_height = green_box[-1][1] - green_box[0][1]
 
+    black_around_sign[i, 4] = int(green_box[2][1])
+
+    # Bottom
+    roi_b = black_image[int(green_box[2][1]):np.minimum(int(green_box[2][1] + (marker_height * 0.8)), camera_y), np.minimum(int(green_box[2][0]), int(green_box[3][0])):np.maximum(int(green_box[2][0]), int(green_box[3][0]))]
+    if roi_b.size > 0:
+        if np.mean(roi_b[:]) > 125:
+            black_around_sign[i, 0] = 1
+
+    # Top
+    roi_t = black_image[np.maximum(int(green_box[1][1] - (marker_height * 0.8)), 0):int(green_box[1][1]), np.minimum(np.maximum(int(green_box[0][0]), 0), np.maximum(int(green_box[1][0]), 0)):np.maximum(np.maximum(int(green_box[0][0]), 0), np.maximum(int(green_box[1][0]), 0))]
+    if roi_t.size > 0:
+        if np.mean(roi_t[:]) > 125:
+            black_around_sign[i, 1] = 1
+
+    green_box = green_box[green_box[:, 0].argsort()]
+
+    # Left
+    roi_l = black_image[np.minimum(int(green_box[0][1]), int(green_box[1][1])):np.maximum(int(green_box[0][1]), int(green_box[1][1])), np.maximum(int(green_box[1][0] - (marker_height * 0.8)), 0):int(green_box[1][0])]
+    if roi_l.size > 0:
+        if np.mean(roi_l[:]) > 125:
+            black_around_sign[i, 2] = 1
+
+    # Right
+    roi_r = black_image[np.minimum(int(green_box[2][1]), int(green_box[3][1])):np.maximum(int(green_box[2][1]), int(green_box[3][1])), int(green_box[2][0]):np.minimum(int(green_box[2][0] + (marker_height * 0.8)), camera_x)]
+    if roi_r.size > 0:
+        if np.mean(roi_r[:]) > 125:
+            black_around_sign[i, 3] = 1
+
+    return black_around_sign
+
+
+def determine_turn_direction(black_around_sign):
+    turn_left = False
+    turn_right = False
+    left_bottom = False
+    right_bottom = False
+
+    for i in black_around_sign:
+        if np.sum(i[:4]) == 2:
+            if i[1] == 1 and i[2] == 1:
+                turn_right = True
+                if i[4] > camera_y * 0.95:
+                    right_bottom = True
+            elif i[1] == 1 and i[3] == 1:
+                turn_left = True
+                if i[4] > camera_y * 0.95:
+                    left_bottom = True
+
+    return turn_left, turn_right, left_bottom, right_bottom
+
+
+def checkGreen(Image, contours_grn, black_image):
+    black_around_sign = np.zeros((len(contours_grn), 5), dtype=np.int16)  # [[b,t,l,r,lp], [b,t,l,r,lp]]
+
+    for i, contour in enumerate(contours_grn):
+        area = cv2.contourArea(contour)
+        if area <= 2500:
+            continue
+
+        green_box = cv2.boxPoints(cv2.minAreaRect(contour))
+        draw_box = np.intp(green_box)
+        cv2.drawContours(Image, [draw_box], -1, (0, 0, 255), 2)
+
+        black_around_sign = check_black(black_around_sign, i, green_box, black_image.copy())
+
+    turn_left, turn_right, left_bottom, right_bottom = determine_turn_direction(black_around_sign)
+
+    if turn_left and not turn_right and not left_bottom:
+        return "left"
+    elif turn_right and not turn_left and not right_bottom:
+        return "right"
+    elif turn_left and turn_right and not (left_bottom and right_bottom):
+        return "uTurn"
+    else:
+        return "straight"
+
+
+def intersectionController(Image, greenImage, blackImage):
+    contoursGreen, _ = cv2.findContours(greenImage, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+
+    if len(contoursGreen) > 0:
+        turnDirection.value = checkGreen(Image, contoursGreen, blackImage)
+    else:
+        turnDirection.value = "straight"
 
 def obstacleController():
     pass
@@ -178,17 +265,12 @@ def lineCamLoop():
             green_image = cv2.inRange(hsv_image, green_min, green_max)
             red_image = cv2.inRange(hsv_image, red_min_1, red_max_1) + cv2.inRange(hsv_image, red_min_2, red_max_2)
             black_image = cv2.inRange(hsv_image, black_min, black_max)
-            
-            # Find the line center and determine movement
-            """line_position = get_line_center(black_image)
-            if line_position:
-                cx, _ = line_position
-                lineCenterX.value = cx
-                # Draw centroid
-                cv2.circle(cv2_img, (cx, 300), 5, (0, 255, 255), -1)"""
 
-            
+            # Follow Line - Get Centroid and Line Angle            
             lineCenterX.value, lineAngle.value, cv2_img, black_image = getLine(cv2_img, black_image)
+
+            # Deal with intersections
+            intersectionController(cv2_img, green_image, black_image)
 
             # Show Images
             cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/In Progress/latest_frame_cv2.jpg", cv2_img)
@@ -198,7 +280,6 @@ def lineCamLoop():
 
 
             gapController()
-            intersectionController()
             obstacleController()
             redLineCheck()
             silverLineCheck()

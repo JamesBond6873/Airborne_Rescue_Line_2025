@@ -242,6 +242,7 @@ def controlLoop():
             f"Angle: {round(np.rad2deg(lineAngle.value),2)} \t"
             f"LineBias: {config.KP * error_x + config.KD * (error_x - lastError) + config.KI * errorAcc}   \t"
             f"AngBias: {round(config.KP_THETA*error_theta,2)}     \t"
+            f"Turn: {turnDirection.value}   \t"
             f"Motor D: {round(motorSpeedDiference, 2)}   \t"
             f"M1: {int(M1info)} \t"
             f"M2: {int(M2info)} \t"
