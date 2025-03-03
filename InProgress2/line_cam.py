@@ -527,6 +527,7 @@ def lineCamLoop():
             greenImage = cv2.inRange(hsvImage, green_min, green_max)
             redImage = cv2.inRange(hsvImage, red_min_1, red_max_1) + cv2.inRange(hsvImage, red_min_2, red_max_2)
             blackImage = cv2.inRange(hsvImage, black_min, black_max)
+            blackImage = cv2.subtract(blackImage, greenImage) # Improve black image quality by removing green
 
             """# Follow Line - Get Centroid and Line Angle            
             lineCenterX.value, lineAngle.value = getLine()"""
