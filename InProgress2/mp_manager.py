@@ -16,6 +16,7 @@ lineAngle = manager.Value("i", 0.)
 line_angle_y = manager.Value("i", -1)
 line_detected = manager.Value("i", False)
 
+lineCropPercentage = manager.Value("i", 0.6)
 onIntersection = manager.Value("i", False)
 turnDirection = manager.Value("i", "straight") # "straight", "left", "right", "uTurn"
 objective = manager.Value("i", "follow_line")  # "follow_line"; "zone"; "debug"
