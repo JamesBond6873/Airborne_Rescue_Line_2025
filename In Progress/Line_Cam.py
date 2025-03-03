@@ -194,9 +194,36 @@ def checkGreen(contours_grn):
         return "straight"
 
 
-def intersectionController():
+def onTopIntersection(contours_grn):
+    global cv2_img
+
+    closeToIntersection = onIntersection.value
+
+    for i, contour in enumerate(contours_grn):
+        area = cv2.contourArea(contour)
+        if area <= 2500:
+            continue
+
+        # Compute Green Contours moments
+        M = cv2.moments(contour)
+        if M["m00"] != 0:
+            # Centroid (First Moment)
+            cx = int(M["m10"] / M["m00"])
+            cy = int(M["m01"] / M["m00"])
+
+            cv2.circle(cv2_img, (cx, cy), 5, (255, 0, 0), -1)
+
+            if cy > 0.5 * camera_y:
+                closeToIntersection = True 
+
+    return closeToIntersection
+
+
+def intersectionDetector():
     global greencv2_img, blackcv2_img
     contoursGreen, _ = cv2.findContours(greencv2_img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+
+    onIntersection.value = onTopIntersection(contoursGreen)
 
     if len(contoursGreen) > 0:
         turnDirection.value = checkGreen(contoursGreen)
@@ -268,7 +295,7 @@ def lineCamLoop():
             lineCenterX.value, lineAngle.value = getLine()
 
             # Deal with intersections
-            intersectionController()
+            intersectionDetector()
 
             # Show cv2_imgs
             cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/In Progress/latest_frame_cv2.jpg", cv2_img)
