@@ -6,7 +6,7 @@ import numpy as np
 import config
 from utils import *
 import mySerial
-from MP_Manager import *
+from mp_manager import *
 
 
 print("Robot Functions: \t \t OK")
@@ -161,6 +161,7 @@ def PID2(lineCenterX, lineAngle):
 
     return motorSpeed
 
+
 # Calculate motor Speed
 def calculateMotorSpeeds(motorSpeed):
     global M1, M2
@@ -200,8 +201,53 @@ def setMotorsSpeeds():
 def controlMotors():
     global oldM1, oldM2
     if M1 != oldM1 or M2 != oldM2:
-        message = f"M({M1}, {M2})"
+        message = f"M({int(M1)}, {int(M2)})"
         mySerial.sendSerial(message)
+
+"""
+def intersectionController():
+    global M1, M2, switchState
+    if onIntersection.value and switchState == False:
+        M1, M2 = 1800, 1800
+        controlMotors()
+        time.sleep(0.3)
+
+        M1, M2 = 1520, 1520
+        controlMotors()
+
+        if turnDirection.value == "straight":
+            return
+        
+        elif turnDirection.value == "left":
+            M1, M2 = 1200, 1800
+            controlMotors()
+            time.sleep(0.3)
+
+        elif turnDirection.value == "right":
+            M1, M2 = 1800, 1200
+            controlMotors()
+            time.sleep(0.3)
+
+        elif turnDirection.value == "uTurn":
+            M1, M2 = 1200, 1800
+            controlMotors()
+            time.sleep(0.6)
+        
+        M1, M2 = 1200, 1200
+        controlMotors()
+        time.sleep(0.3)
+
+        M1, M2 = 1520, 1520
+        controlMotors()
+        
+        onIntersection.value = False
+"""
+
+
+def intersectionController():
+    pass
+
+
 
 #############################################################################
 #                           Robot Control Loop
@@ -230,18 +276,25 @@ def controlLoop():
         printDebug(f"Robot Not Waiting: {notWaiting}", config.DEBUG)
         if notWaiting:
             setMotorsSpeeds()
+            intersectionController()
             controlMotors()
 
         intrepretCommand()
         receivedMessage = mySerial.readSerial(config.DEBUG)
         interpretMessage(receivedMessage)
 
-        #debugMessage = f"Line C: {lineCenterX.value} \tA: {round(np.rad2deg(lineAngle.value),2)} \tKx: {config.KP * error_x + config.KD * (error_x - lastError) + config.KI * errorAcc} \tKpTheta: {round(config.KP_THETA*error_theta,2)} \tMotor D: {round(motorSpeedDiference, 2)} \tM1: {int(M1info)} \tM2: {int(M2info)} \tLOP: {switchState} \tCommands: {commandWaitingList}"
+
+        oldM1 = M1
+        oldM2 = M2
+
+
         debugMessage = (
-            f"Line Center: {lineCenterX.value} \t"
+            f"Center: {lineCenterX.value} \t"
             f"Angle: {round(np.rad2deg(lineAngle.value),2)} \t"
             f"LineBias: {config.KP * error_x + config.KD * (error_x - lastError) + config.KI * errorAcc}   \t"
             f"AngBias: {round(config.KP_THETA*error_theta,2)}     \t"
+            f"Inter: {onIntersection.value} \t"
+            f"Turn: {turnDirection.value}     \t"
             f"Motor D: {round(motorSpeedDiference, 2)}   \t"
             f"M1: {int(M1info)} \t"
             f"M2: {int(M2info)} \t"
@@ -250,8 +303,6 @@ def controlLoop():
         )
         printDebug(f"{debugMessage}", config.softDEBUG)
 
-        oldM1 = M1
-        oldM2 = M2
 
         while (time.perf_counter() <= t1):
             time.sleep(0.0005)
