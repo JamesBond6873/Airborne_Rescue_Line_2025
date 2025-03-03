@@ -546,6 +546,9 @@ def lineCamLoop():
 
             cv2.circle(cv2_img, (int(bottomPoint[0]), int(bottomPoint[1])), 10, (0, 255, 255), -1)
 
+            lastBottomPoint_x = bottomPoint[0]
+            lastLineAngle = lineAngle.value
+
             # Deal with intersections
             intersectionDetector()
 
