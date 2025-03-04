@@ -146,7 +146,7 @@ def PID2(lineCenterX, lineAngle):
     
     # Errors
     error_x = lineCenterX - 1280 / 2  # Camera view is 1280 pixels
-    error_theta = lineAngle - (np.pi / 2)  # Angle difference from vertical (pi/2)
+    error_theta = lineAngle - (np.pi/2)  # Angle difference from vertical (pi/2)
     
     # Accumulate error for integral term
     errorAcc += error_x
@@ -293,7 +293,8 @@ def controlLoop():
             f"Angle: {round(np.rad2deg(lineAngle.value),2)} \t"
             f"LineBias: {config.KP * error_x + config.KD * (error_x - lastError) + config.KI * errorAcc}   \t"
             f"AngBias: {round(config.KP_THETA*error_theta,2)}     \t"
-            f"Inter: {onIntersection.value} \t"
+            #f"isCrop: {isCropped.value} \t"
+            f"lineDetected: {line_detected.value} \t"
             f"Turn: {turnDirection.value}     \t"
             f"Motor D: {round(motorSpeedDiference, 2)}   \t"
             f"M1: {int(M1info)} \t"

@@ -52,11 +52,24 @@ def getLine():
 
     contoursblk, _ = cv2.findContours(blackImage, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
     
+    
+    # Define the bottom 70% of the image
+    height, width = blackImage.shape[:2]
+    roi_bottom = blackImage[int(0.2 * height):]  # Crop the bottom 70%
+
+    # Find contours in the cropped image (bottom 70%)
+    contoursblk, _ = cv2.findContours(roi_bottom, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+    
+
     # No contours
     if not contoursblk:
         return lineCenterX.value, lineAngle.value
     
     largest_contour = max(contoursblk, key=cv2.contourArea)
+
+    # Shift contour coordinates back to the original image
+    for i in range(len(largest_contour)):
+        largest_contour[i] = (largest_contour[i][0][0], largest_contour[i][0][1] + int(0.2 * height))
 
     # Draw the largest contour
     cv2.drawContours(cv2_img, [largest_contour], -1, (0, 255, 0), 2)
@@ -101,7 +114,7 @@ def getLine():
         return lineCenterX.value, lineAngle.value
 
 
-def getLineAndCrop(contours_blk):
+def getLineAndCrop2(contours_blk):
     global cv2_img, x_last, y_last
 
     candidates = np.zeros((len(contours_blk), 5), dtype=np.int32)
@@ -145,6 +158,81 @@ def getLineAndCrop(contours_blk):
     cv2.circle(cv2_img, (int(x_last), int(y_last)), 3, (0, 0, 255), -1)
 
     return blackline, blackline_crop
+
+
+def getLineAndCrop(contours_blk):
+    global cv2_img, x_last, y_last
+
+    min_area = 100
+    candidates = np.zeros((len(contours_blk), 6), dtype=np.float32)  # Added contour area
+    off_bottom = 0
+
+    for i, contour in enumerate(contours_blk):
+        box = cv2.boxPoints(cv2.minAreaRect(contour))
+        box = box[box[:, 1].argsort()[::-1]]  # Sort by y value (descending)
+        bottom_y = box[0][1]
+        y_mean = (np.clip(box[0][1], 0, camera_y) + np.clip(box[3][1], 0, camera_y)) / 2
+
+        contour_area = cv2.contourArea(contour)  # Get contour area
+
+        if contour_area < min_area:
+            continue  # Skip small contours
+
+        if bottom_y >= (camera_y * 0.75):  
+            off_bottom += 1
+
+        box = box[box[:, 0].argsort()]  
+        x_mean = (np.clip(box[0][0], 0, camera_x) + np.clip(box[3][0], 0, camera_x)) / 2
+        x_y_distance = abs(x_last - x_mean) + abs(y_last - y_mean)
+
+        candidates[i] = i, bottom_y, x_y_distance, x_mean, y_mean, contour_area  # Store values
+
+    if np.all(candidates[:,5] == 0)  or len(candidates) == 0: # No valid contours found
+        #return None, None
+        line_detected.value = False
+        x_last, y_last = camera_x // 2, camera_y * 0.75
+        return np.array([[[x_last, y_last]]]), np.array([[[x_last, y_last]]])  # Fake contour at center
+    
+    line_detected.value = True
+   
+
+    # Normalize values
+    max_area = np.max(candidates[:, 5]) if len(candidates) > 0 else 1
+    max_distance = np.max(candidates[:, 2]) if len(candidates) > 0 else 1
+
+    # Adjust weights for selection
+    w1, w2, w3 = 0.4, 0.3, 0.3  # Adjustable weights
+
+    # Compute probability-based scores
+    scores = (w1 * (candidates[:, 1] / camera_y) +  # Favor lower contours
+              w2 * (1 - (candidates[:, 2] / max_distance)) +  # Prefer closer to last position
+              w3 * (candidates[:, 5] / max_area))  # Favor larger contours
+
+    # Select best contour
+    best_index = np.argmax(scores)
+    best_contour = contours_blk[int(candidates[best_index, 0])]
+    
+    #print(f"contourArea {scores}")
+
+    # Update last known position
+    if turnDirection.value == "left":
+        x_last = np.clip(candidates[best_index, 3] - 150, 0, camera_x)
+    elif turnDirection.value == "right":
+        x_last = np.clip(candidates[best_index, 3] + 150, 0, camera_x)
+    else:
+        x_last = candidates[best_index, 3]
+
+    y_last = candidates[best_index, 4]
+
+    # Crop the selected contour
+    blackline_crop = best_contour[np.where(best_contour[:, 0, 1] > camera_y * lineCropPercentage.value)]
+
+    # Visualization
+    cv2.drawContours(cv2_img, best_contour, -1, (255, 0, 0), 2)
+    cv2.drawContours(cv2_img, blackline_crop, -1, (255, 255, 0), 2)
+    cv2.circle(cv2_img, (int(x_last), int(y_last)), 3, (0, 0, 255), -1)
+
+    return best_contour, blackline_crop
 
 
 def calculatePointsOfInterest(blackline, blackline_crop, last_bottom_point, average_line_point):
@@ -245,35 +333,34 @@ def calculatePointsOfInterest(blackline, blackline_crop, last_bottom_point, aver
 
     return poi, poi_no_crop, is_crop, max_black_top, bottom_point
 
-"""
-def calculate_angle(blackline, blackline_crop, average_line_angle, turn_direction, last_bottom_point, average_line_point, entry):
+
+def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, lastLinePoint, bottomPoint):
     global multiple_bottom_side
 
-    poi, poi_no_crop, is_crop, max_black_top, bottom_point = calculate_angle_numba(blackline, blackline_crop, last_bottom_point, average_line_point)
+    black_top = poi[0][1] < camera_y * .1
 
-    black_top = poi_no_crop[0][1] < camera_y * .1
+    multiple_bottom = not (poi[3][0] == 0 and poi[3][1] == 0)
 
-    multiple_bottom = not (poi_no_crop[3][0] == 0 and poi_no_crop[3][1] == 0)
+    black_l_high = poi[1][1] < camera_y * .5
+    black_r_high = poi[2][1] < camera_y * .5
 
-    black_l_high = poi_no_crop[1][1] < camera_y * .5
-    black_r_high = poi_no_crop[2][1] < camera_y * .5
+    """if entry:
+        final_poi = poi[0]"""
 
-    if entry:
-        final_poi = poi_no_crop[0]
+    """elif not timer.get_timer("multiple_bottom"):
+        final_poi = [multiple_bottom_side, camera_y]"""
 
-    elif not timer.get_timer("multiple_bottom"):
-        final_poi = [multiple_bottom_side, camera_y]
-
-    elif turn_direction in ["left", "right"]:
-        index = 1 if turn_direction == "left" else 2
-        final_poi = poi[index] if is_crop else poi_no_crop[index]
+    if turnDirection.value in ["left", "right"]:
+        index = 1 if turnDirection.value == "left" else 2
+        #final_poi = poiCropped[index] if is_crop else poi[index]
+        final_poi = poi[index]
 
     else:
         if black_top:
-            final_poi = poi[0] if is_crop and not max_black_top else poi_no_crop[0]
+            final_poi = poiCropped[0] if is_crop and not maxBlackTop else poi[0]
 
-            if (poi_no_crop[1][0] < camera_x * 0.02 and poi_no_crop[1][1] > camera_y * (lineCropPercentage.value * .75)) or (poi_no_crop[2][0] > camera_x * 0.98 and poi_no_crop[2][1] > camera_y * (lineCropPercentage.value * .75)):
-                final_poi = poi_no_crop[0]
+            if (poi[1][0] < camera_x * 0.02 and poi[1][1] > camera_y * (lineCropPercentage.value * .75)) or (poi[2][0] > camera_x * 0.98 and poi[2][1] > camera_y * (lineCropPercentage.value * .75)):
+                final_poi = poi[0]
 
                 if black_l_high or black_r_high:
                     near_high_index = 0
@@ -285,50 +372,43 @@ def calculate_angle(blackline, blackline_crop, average_line_angle, turn_directio
                         near_high_index = 2
 
                     elif black_l_high and black_r_high:
-                        if np.abs(poi_no_crop[1][0] - average_line_point) < np.abs(poi_no_crop[2][0] - average_line_point):
+                        if np.abs(poi[1][0] - lastLinePoint) < np.abs(poi[2][0] - lastLinePoint):
                             near_high_index = 1
                         else:
                             near_high_index = 2
 
-                    if np.abs(poi_no_crop[near_high_index][0] - average_line_point) < np.abs(poi_no_crop[0][0] - average_line_point):
-                        final_poi = poi_no_crop[near_high_index]
+                    if np.abs(poi[near_high_index][0] - lastLinePoint) < np.abs(poi[0][0] - lastLinePoint):
+                        final_poi = poi[near_high_index]
 
         else:
-            final_poi = poi[0] if is_crop else poi_no_crop[0]
+            final_poi = poiCropped[0] if is_crop else poi[0]
 
-            if poi_no_crop[1][0] < camera_x * 0.02 and poi_no_crop[2][0] > camera_x * 0.98 and timer.get_timer("multiple_side_r") and timer.get_timer("multiple_side_l"):
-                if average_line_angle >= 0:
-                    index = 2
-                    timer.set_timer("multiple_side_r", .6)
-                else:
-                    index = 1
-                    timer.set_timer("multiple_side_l", .6)
+            if poi[1][0] < camera_x * 0.02:
+                final_poi = poiCropped[1] if is_crop else poi[1]
 
-                final_poi = poi[index] if is_crop else poi_no_crop[index]
+            elif poi[2][0] > camera_x * 0.98:
+                final_poi = poiCropped[2] if is_crop else poi[2]
 
-            elif not timer.get_timer("multiple_side_l"):
-                final_poi = poi[1] if is_crop else poi_no_crop[1]
 
-            elif not timer.get_timer("multiple_side_r"):
-                final_poi = poi[2] if is_crop else poi_no_crop[2]
+    lineAngle = np.arctan2(final_poi[1] - bottomPoint[1], final_poi[0] - bottomPoint[0])
 
-            elif poi_no_crop[1][0] < camera_x * 0.02:
-                final_poi = poi[1] if is_crop else poi_no_crop[1]
+    if lineAngle < 0:
+        lineAngle = np.pi + lineAngle
 
-            elif poi_no_crop[2][0] > camera_x * 0.98:
-                final_poi = poi[2] if is_crop else poi_no_crop[2]
+    cv2.line(cv2_img, (int(final_poi[0]), int(final_poi[1])), (int(bottomPoint[0]), int(bottomPoint[1])), (255, 0, 0), 2)
 
-            elif multiple_bottom and timer.get_timer("multiple_bottom"):
-                if poi_no_crop[3][0] < bottom_point[0]:
-                    final_poi = [0, camera_y]
-                    multiple_bottom_side = 0
-                else:
-                    final_poi = [camera_x, camera_y]
-                    multiple_bottom_side = camera_x
-                timer.set_timer("multiple_bottom", .6)
+    #return int((final_poi[0] - camera_x / 2) / (camera_x / 2) * 180), final_poi
+    #return int((final_poi[0] / camera_x) * 180), final_poi
+    return lineAngle, final_poi
 
-    return int((final_poi[0] - camera_x / 2) / (camera_x / 2) * 180), final_poi, bottom_point
-"""
+
+def choosePOI(poiCropped, poi, cropAvailable):
+    chosenPOI = poiCropped[0]
+
+    if poiCropped[0][1] < camera_y * lineCropPercentage.value:
+        pass
+
+    return chosenPOI
 
 def LoPController():
     pass
@@ -450,13 +530,18 @@ def onTopIntersection(contours_grn):
 
 
 def intersectionDetector():
-    global greenImage, blackImage
+    global greenImage, blackImage, intersectionTakeOverStart
     contoursGreen, _ = cv2.findContours(greenImage, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
     onIntersection.value = onTopIntersection(contoursGreen)
 
     if len(contoursGreen) > 0:
-        turnDirection.value = checkGreen(contoursGreen)
+        turnDirectionNew = checkGreen(contoursGreen)
+        if turnDirectionNew != turnDirection.value:
+            turnDirection.value = turnDirectionNew
+            if turnDirectionNew != "straight":
+                intersectionTakeOverStart = time.perf_counter()
+                print(f"New Intersection Time: {intersectionTakeOverStart}")
     else:
         turnDirection.value = "straight"
 
@@ -477,7 +562,7 @@ def silverLineCheck():
 #############################################################################
 
 def lineCamLoop():
-    global cv2_img, blackImage, greenImage, redImage, x_last, y_last
+    global cv2_img, blackImage, greenImage, redImage, x_last, y_last, intersectionTakeOverStart
 
     camera = Picamera2(0)
 
@@ -509,7 +594,9 @@ def lineCamLoop():
     y_last = camera_y / 2
     lastBottomPoint_x = camera_x / 2
     lastLineAngle = 90
+    lastLinePoint = camera_x / 2
 
+    intersectionTakeOverStart = - config.intersectionMaxTime
 
     t0 = time.perf_counter()
     while not terminate.value:
@@ -527,31 +614,42 @@ def lineCamLoop():
             greenImage = cv2.inRange(hsvImage, green_min, green_max)
             redImage = cv2.inRange(hsvImage, red_min_1, red_max_1) + cv2.inRange(hsvImage, red_min_2, red_max_2)
             blackImage = cv2.inRange(hsvImage, black_min, black_max)
-            blackImage = cv2.subtract(blackImage, greenImage) # Improve black image quality by removing green
-
-            """# Follow Line - Get Centroid and Line Angle            
-            lineCenterX.value, lineAngle.value = getLine()"""
-
-            # Get blackline and blackline contours
-            contoursBlack, _ = cv2.findContours(blackImage, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-            blackLine, blackLineCrop = getLineAndCrop(contoursBlack)
-            poiCropped, poi, isCrop, maxBlackTop, bottomPoint = calculatePointsOfInterest(blackLine, blackLineCrop, lastBottomPoint_x, lastLineAngle)
-            
-            cv2.circle(cv2_img, (int(poiCropped[0][0]), int(poiCropped[0][1])), 10, (0, 0, 255), -1)
-            cv2.circle(cv2_img, (int(poiCropped[1][0]), int(poiCropped[1][1])), 10, (0, 255, 0), -1)
-            cv2.circle(cv2_img, (int(poiCropped[2][0]), int(poiCropped[2][1])), 10, (255, 0, 0), -1)
-
-            cv2.circle(cv2_img, (int(poi[0][0]), int(poi[0][1])), 5, (0, 0, 255), -1)
-            cv2.circle(cv2_img, (int(poi[1][0]), int(poi[1][1])), 5, (255, 0, 0), -1)
-            cv2.circle(cv2_img, (int(poi[2][0]), int(poi[2][1])), 5, (0, 255, 0), -1)
-
-            cv2.circle(cv2_img, (int(bottomPoint[0]), int(bottomPoint[1])), 10, (0, 255, 255), -1)
-
-            lastBottomPoint_x = bottomPoint[0]
-            lastLineAngle = lineAngle.value
+            #blackImage = cv2.subtract(blackImage, greenImage) # Improve black image quality by removing green
 
             # Deal with intersections
             intersectionDetector()
+
+            if turnDirection.value != "straight" or time.perf_counter() < intersectionTakeOverStart + config.intersectionMaxTime:
+                # Get blackline and blackline contours
+                print(f"Intersection Time: {time.perf_counter()} {intersectionTakeOverStart}")
+                contoursBlack, _ = cv2.findContours(blackImage, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+                blackLine, blackLineCrop = getLineAndCrop(contoursBlack)
+                poiCropped, poi, isCrop, maxBlackTop, bottomPoint = calculatePointsOfInterest(blackLine, blackLineCrop, lastBottomPoint_x, lastLinePoint)
+                lineAngle.value, finalPoi = interpretPOI(poiCropped, poi, isCrop, maxBlackTop, lastLinePoint, bottomPoint)
+                lineCenterX.value = finalPoi[0]
+                isCropped.value = isCrop
+
+                lineAngle.value = np.pi / 2 # Means ignore line angle when in this situation
+
+                cv2.circle(cv2_img, (int(poiCropped[0][0]), int(poiCropped[0][1])), 10, (0, 0, 255), -1)
+                cv2.circle(cv2_img, (int(poiCropped[1][0]), int(poiCropped[1][1])), 10, (0, 255, 0), -1)
+                cv2.circle(cv2_img, (int(poiCropped[2][0]), int(poiCropped[2][1])), 10, (255, 0, 0), -1)
+
+                cv2.circle(cv2_img, (int(poi[0][0]), int(poi[0][1])), 5, (0, 0, 255), -1)
+                cv2.circle(cv2_img, (int(poi[1][0]), int(poi[1][1])), 5, (255, 0, 0), -1)
+                cv2.circle(cv2_img, (int(poi[2][0]), int(poi[2][1])), 5, (0, 255, 0), -1)
+
+                cv2.circle(cv2_img, (int(bottomPoint[0]), int(bottomPoint[1])), 10, (0, 255, 255), -1)
+
+                cv2.circle(cv2_img, (int(finalPoi[0]), int(finalPoi[1])), 20, (0, 0, 255), -1)
+
+                lastBottomPoint_x = bottomPoint[0]
+                lastLineAngle = lineAngle.value
+                lastLinePoint = finalPoi[0]
+                
+            else:
+                # Follow Line - Get Centroid and Line Angle            
+                lineCenterX.value, lineAngle.value = getLine()
 
             # Show cv2_imgs
             cv2.imwrite("./InProgress2/latest_frame_cv2.jpg", cv2_img)
