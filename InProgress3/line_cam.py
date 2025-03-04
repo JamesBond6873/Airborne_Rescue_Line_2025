@@ -529,7 +529,6 @@ def lineCamLoop():
     timer.set_timer("right_marker_up", .05)
     timer.set_timer("left_marker_up", .05)
 
-    intersectionTakeOverStart = - config.intersectionMaxTime
 
     t0 = time.perf_counter()
     while not terminate.value:
@@ -551,37 +550,37 @@ def lineCamLoop():
             # Deal with intersections
             intersectionDetector()
 
-            if True:
-                # Get blackline and blackline contours
-                #print(f"Intersection Time: {time.perf_counter()} {intersectionTakeOverStart}")
-                contoursBlack, _ = cv2.findContours(blackImage, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-                blackLine, blackLineCrop = getLineAndCrop(contoursBlack)
-                poiCropped, poi, isCrop, maxBlackTop, bottomPoint = calculatePointsOfInterest(blackLine, blackLineCrop, lastBottomPoint_x, lastLinePoint)
-                lineAngle.value, finalPoi, bottomPoint = interpretPOI(poiCropped, poi, isCrop, maxBlackTop, bottomPoint, lastLineAngle, turnDirection.value, lastLinePoint)
-                lineCenterX.value = finalPoi[0]
-                isCropped.value = isCrop
+            
+            # Get Black Contours
+            contoursBlack, _ = cv2.findContours(blackImage, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+            
+            # Calculate Black Line (cropped and not) + Points of Interest
+            blackLine, blackLineCrop = getLineAndCrop(contoursBlack)
+            poiCropped, poi, isCrop, maxBlackTop, bottomPoint = calculatePointsOfInterest(blackLine, blackLineCrop, lastBottomPoint_x, lastLinePoint)
+            lineAngle.value, finalPoi, bottomPoint = interpretPOI(poiCropped, poi, isCrop, maxBlackTop, bottomPoint, lastLineAngle, turnDirection.value, lastLinePoint)
+            lineCenterX.value = finalPoi[0]
+            isCropped.value = isCrop
 
-                lineAngle.value = np.pi / 2 # Means ignore line angle when in this situation
+            lineAngle.value = np.pi / 2 # Means ignore line angle when in this situation
 
-                cv2.circle(cv2_img, (int(poiCropped[0][0]), int(poiCropped[0][1])), 10, (0, 0, 255), -1)
-                cv2.circle(cv2_img, (int(poiCropped[1][0]), int(poiCropped[1][1])), 10, (0, 255, 0), -1)
-                cv2.circle(cv2_img, (int(poiCropped[2][0]), int(poiCropped[2][1])), 10, (255, 0, 0), -1)
+            # Update Image
+            cv2.circle(cv2_img, (int(poiCropped[0][0]), int(poiCropped[0][1])), 10, (0, 0, 255), -1)
+            cv2.circle(cv2_img, (int(poiCropped[1][0]), int(poiCropped[1][1])), 10, (0, 255, 0), -1)
+            cv2.circle(cv2_img, (int(poiCropped[2][0]), int(poiCropped[2][1])), 10, (255, 0, 0), -1)
 
-                cv2.circle(cv2_img, (int(poi[0][0]), int(poi[0][1])), 5, (0, 0, 255), -1)
-                cv2.circle(cv2_img, (int(poi[1][0]), int(poi[1][1])), 5, (255, 0, 0), -1)
-                cv2.circle(cv2_img, (int(poi[2][0]), int(poi[2][1])), 5, (0, 255, 0), -1)
+            cv2.circle(cv2_img, (int(poi[0][0]), int(poi[0][1])), 5, (0, 0, 255), -1)
+            cv2.circle(cv2_img, (int(poi[1][0]), int(poi[1][1])), 5, (255, 0, 0), -1)
+            cv2.circle(cv2_img, (int(poi[2][0]), int(poi[2][1])), 5, (0, 255, 0), -1)
 
-                cv2.circle(cv2_img, (int(bottomPoint[0]), int(bottomPoint[1])), 10, (0, 255, 255), -1)
+            cv2.circle(cv2_img, (int(bottomPoint[0]), int(bottomPoint[1])), 10, (0, 255, 255), -1)
 
-                cv2.circle(cv2_img, (int(finalPoi[0]), int(finalPoi[1])), 20, (0, 0, 255), -1)
+            cv2.circle(cv2_img, (int(finalPoi[0]), int(finalPoi[1])), 20, (0, 0, 255), -1)
 
-                lastBottomPoint_x = bottomPoint[0]
-                lastLineAngle = lineAngle.value
-                lastLinePoint = finalPoi[0]
-                
-            else:
-                # Follow Line - Get Centroid and Line Angle            
-                lineCenterX.value, lineAngle.value = getLine()
+
+            lastBottomPoint_x = bottomPoint[0]
+            lastLineAngle = lineAngle.value
+            lastLinePoint = finalPoi[0]
+            
 
             # Show cv2_imgs
             cv2.imwrite("./InProgress3/latest_frame_cv2.jpg", cv2_img)
@@ -595,8 +594,7 @@ def lineCamLoop():
             silverLineCheck()
 
             savecv2_img("Frames", cv2_img)
-            #savecv2_img("Frames", cv2_img)
-
+            
 
         while (time.perf_counter() <= t1):
             time.sleep(0.0005)
