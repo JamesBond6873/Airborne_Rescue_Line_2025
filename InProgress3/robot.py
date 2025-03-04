@@ -204,46 +204,6 @@ def controlMotors():
         message = f"M({int(M1)}, {int(M2)})"
         mySerial.sendSerial(message)
 
-"""
-def intersectionController():
-    global M1, M2, switchState
-    if onIntersection.value and switchState == False:
-        M1, M2 = 1800, 1800
-        controlMotors()
-        time.sleep(0.3)
-
-        M1, M2 = 1520, 1520
-        controlMotors()
-
-        if turnDirection.value == "straight":
-            return
-        
-        elif turnDirection.value == "left":
-            M1, M2 = 1200, 1800
-            controlMotors()
-            time.sleep(0.3)
-
-        elif turnDirection.value == "right":
-            M1, M2 = 1800, 1200
-            controlMotors()
-            time.sleep(0.3)
-
-        elif turnDirection.value == "uTurn":
-            M1, M2 = 1200, 1800
-            controlMotors()
-            time.sleep(0.6)
-        
-        M1, M2 = 1200, 1200
-        controlMotors()
-        time.sleep(0.3)
-
-        M1, M2 = 1520, 1520
-        controlMotors()
-        
-        onIntersection.value = False
-"""
-
-
 def intersectionController():
     pass
 
@@ -291,7 +251,7 @@ def controlLoop():
         debugMessage = (
             f"Center: {lineCenterX.value} \t"
             f"Angle: {round(np.rad2deg(lineAngle.value),2)} \t"
-            f"LineBias: {config.KP * error_x + config.KD * (error_x - lastError) + config.KI * errorAcc}   \t"
+            f"LineBias: {int(config.KP * error_x + config.KD * (error_x - lastError) + config.KI * errorAcc)}   \t"
             f"AngBias: {round(config.KP_THETA*error_theta,2)}     \t"
             #f"isCrop: {isCropped.value} \t"
             f"lineDetected: {line_detected.value} \t"

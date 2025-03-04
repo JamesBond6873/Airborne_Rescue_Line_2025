@@ -118,6 +118,46 @@ def getLine():
         return lineCenterX.value, lineAngle.value
 
 
+def computeMoments(contour):
+    # Compute cv2_img moments for the largest contour
+
+    theta = np.pi / 2
+
+    finalContour = cv2.cvtColor(contour, cv2.COLOR_BGR2GRAY)
+
+    M = cv2.moments(finalContour)
+    if M["m00"] != 0:
+        # Centroid (First Moment)
+        cx = int(M["m10"] / M["m00"])
+        cy = int(M["m01"] / M["m00"])
+
+        # Calculate orientation using central moments
+        mu20 = M["mu20"] / M["m00"]
+        mu02 = M["mu02"] / M["m00"]
+        mu11 = M["mu11"] / M["m00"]
+
+        theta = 0.5 * np.arctan2(2 * mu11, mu20 - mu02)  # Principal axis angle
+
+        if theta < 0:
+            printDebug(f"theta og: {round(theta,2)} {round(np.rad2deg(theta),2)}, new {round(np.pi + theta,2)} {round(np.rad2deg(np.pi + theta),2)}", config.DEBUG)
+            theta = np.pi + theta
+
+        # Define line endpoints along the principal axis
+        length = 100  # Adjust for visualization
+        x1 = int(cx + length * np.cos(theta))
+        y1 = int(cy + length * np.sin(theta))
+        x2 = int(cx - length * np.cos(theta))
+        y2 = int(cy - length * np.sin(theta))
+
+        # Draw centroid
+        cv2.circle(cv2_img, (cx, cy), 5, (0, 255, 255), -1)
+
+        # Draw principal axis line
+        cv2.line(cv2_img, (x1, y1), (x2, y2), (255, 0, 0), 2)
+
+    return theta
+
+
 def getLineAndCrop(contours_blk):
     global cv2_img, x_last, y_last
 
@@ -193,7 +233,7 @@ def getLineAndCrop(contours_blk):
 
 def calculatePointsOfInterest(blackline, blackline_crop, last_bottom_point, average_line_point):
     max_gap = 1
-    max_line_width = camera_x * .19
+    max_line_width = camera_x * .3
 
     poi_no_crop = np.zeros((4, 2), dtype=np.int32)  # [t, l, r, b]
 
@@ -290,12 +330,10 @@ def calculatePointsOfInterest(blackline, blackline_crop, last_bottom_point, aver
     return poi, poi_no_crop, is_crop, max_black_top, bottom_point
 
 
-def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, average_line_angle, turn_direction, average_line_point):
+def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, average_line_angle, turn_direction, average_line_point, blackLine, blackLineCrop):
     global multiple_bottom_side
 
-    #poi, poi_no_crop, is_crop, maxBlackTop, bottom_point = calculate_angle_numba(blackline, blackline_crop, last_bottom_point, average_line_point)
-
-    black_top = poi[0][1] < camera_y * .1
+    black_top = poi[0][1] < camera_y * .05
 
     multiple_bottom = not (poi[3][0] == 0 and poi[3][1] == 0)
 
@@ -312,53 +350,72 @@ def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, average_lin
 
     else:
         if black_top:
+            print(f"Here 12 {is_crop} {maxBlackTop}")
             final_poi = poiCropped[0] if is_crop and not maxBlackTop else poi[0]
 
             if (poi[1][0] < camera_x * 0.02 and poi[1][1] > camera_y * (lineCropPercentage.value * .75)) or (poi[2][0] > camera_x * 0.98 and poi[2][1] > camera_y * (lineCropPercentage.value * .75)):
+                print(f"Here 13")
                 final_poi = poi[0]
 
                 if black_l_high or black_r_high:
+                    print(f"Here 11")
                     near_high_index = 0
 
                     if black_l_high and not black_r_high:
+                        print(f"Here 7")
                         near_high_index = 1
 
                     elif not black_l_high and black_r_high:
+                        print(f"Here 8")
                         near_high_index = 2
 
                     elif black_l_high and black_r_high:
                         if np.abs(poi[1][0] - average_line_point) < np.abs(poi[2][0] - average_line_point):
+                            print(f"Here 9")
                             near_high_index = 1
                         else:
+                            print(f"Here 10")
                             near_high_index = 2
 
                     if np.abs(poi[near_high_index][0] - average_line_point) < np.abs(poi[0][0] - average_line_point):
+                        print(f"Here 14")
                         final_poi = poi[near_high_index]
 
         else:
+            print(f"Here 15 - Is Crop {is_crop}")
             final_poi = poiCropped[0] if is_crop else poi[0]
 
+
             if poi[1][0] < camera_x * 0.02 and poi[2][0] > camera_x * 0.98 and timer.get_timer("multiple_side_r") and timer.get_timer("multiple_side_l"):
+                print(f"Here {average_line_angle}")
                 if average_line_angle >= 0:
+                    print(f"Here 1")
                     index = 2
                     timer.set_timer("multiple_side_r", .6)
                 else:
+                    print(f"Here 2")
                     index = 1
                     timer.set_timer("multiple_side_l", .6)
 
                 final_poi = poiCropped[index] if is_crop else poi[index]
 
             elif not timer.get_timer("multiple_side_l"):
+                print(f"Here 3")
                 final_poi = poiCropped[1] if is_crop else poi[1]
 
             elif not timer.get_timer("multiple_side_r"):
+                print(f"Here 4")
                 final_poi = poiCropped[2] if is_crop else poi[2]
 
             elif poi[1][0] < camera_x * 0.02:
-                final_poi = poiCropped[1] if is_crop else poi[1]
+                print(f"Here 5")
+                # final_poi = poiCropped[1] if is_crop else poi[1] # Removed because constant lineCropPercentage
+                final_poi = poi[1]
 
             elif poi[2][0] > camera_x * 0.98:
-                final_poi = poiCropped[2] if is_crop else poi[2]
+                print(f"Here 6")
+                # final_poi = poiCropped[2] if is_crop else poi[2] # Removed because constant lineCropPercentage
+                final_poi = poi[2]
 
             elif multiple_bottom and timer.get_timer("multiple_bottom"):
                 if poi[3][0] < bottomPoint[0]:
@@ -376,7 +433,15 @@ def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, average_lin
     print(f"Multiple Bottom: {multiple_bottom}")
     print(f"Final POI: {final_poi}")"""
 
-    return int((final_poi[0] - camera_x / 2) / (camera_x / 2) * 180), final_poi, bottomPoint
+    if (final_poi == poiCropped[0]).all():
+        #angle = computeMoments(blackLineCrop)
+        angle = np.pi / 2
+    else: 
+        angle = np.pi / 2 # don't know how to calculate angle in other cases
+
+    angle = int((final_poi[0] - camera_x / 2) / (camera_x / 2) * 180)
+
+    return angle, final_poi, bottomPoint
 
 
 def LoPController():
@@ -501,7 +566,7 @@ def silverLineCheck():
 #############################################################################
 
 def lineCamLoop():
-    global cv2_img, blackImage, greenImage, redImage, x_last, y_last, intersectionTakeOverStart
+    global cv2_img, blackImage, greenImage, redImage, x_last, y_last
 
     camera = Picamera2(0)
 
@@ -557,7 +622,7 @@ def lineCamLoop():
             # Calculate Black Line (cropped and not) + Points of Interest
             blackLine, blackLineCrop = getLineAndCrop(contoursBlack)
             poiCropped, poi, isCrop, maxBlackTop, bottomPoint = calculatePointsOfInterest(blackLine, blackLineCrop, lastBottomPoint_x, lastLinePoint)
-            lineAngle.value, finalPoi, bottomPoint = interpretPOI(poiCropped, poi, isCrop, maxBlackTop, bottomPoint, lastLineAngle, turnDirection.value, lastLinePoint)
+            lineAngle2, finalPoi, bottomPoint = interpretPOI(poiCropped, poi, isCrop, maxBlackTop, bottomPoint, lastLineAngle, turnDirection.value, lastLinePoint, blackLine, blackLineCrop)
             lineCenterX.value = finalPoi[0]
             isCropped.value = isCrop
 
@@ -578,7 +643,7 @@ def lineCamLoop():
 
 
             lastBottomPoint_x = bottomPoint[0]
-            lastLineAngle = lineAngle.value
+            lastLineAngle = lineAngle2
             lastLinePoint = finalPoi[0]
             
 
