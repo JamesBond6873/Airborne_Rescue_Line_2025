@@ -421,7 +421,8 @@ def interpretPOI2(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, average_li
 
     elif turn_direction in ["left", "right"]:
         index = 1 if turn_direction == "left" else 2
-        final_poi = poiCropped[index] if is_crop else poi[index]
+        #final_poi = poiCropped[index] if is_crop else poi[index]
+        final_poi = poi[index] # choose far left/right in intersections not cropped because of camera poiting forward
 
     else:
         if black_top:
