@@ -35,3 +35,5 @@
 -> (In Order) Line Following, Intersection Detection, Gap, Silver Line, Evacuation Zone rescue
 
 -> Victim detection NPU
+
+-> 7 Points following
