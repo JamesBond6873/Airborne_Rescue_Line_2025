@@ -33,6 +33,50 @@ class Timer:
         time_val = self.__timer_arr[np.where(self.__timer_arr[:, 0] == name), 3]
 
         if time_val.size > 0:
+            #print(f'CHECK ME_------------------------ {time_val[0][0] == True}')
             return time_val[0][0] == "True"
         else:
             return False
+
+
+class TimerManager:
+    def __init__(self):
+        self.timers = {}  # Dictionary to store timers
+
+    def add_timer(self, name, duration):
+        #Add a new timer with a given name and duration (in seconds).
+        self.timers[name] = {"start_time": time.perf_counter(), "duration": duration}
+
+    def remove_timer(self, name):
+        #Remove a timer by name if it exists.
+        if name in self.timers:
+            del self.timers[name]
+
+    def update_timer_duration(self, name, new_duration):
+        #Update the duration of an existing timer.
+        if name in self.timers:
+            self.timers[name]["duration"] = new_duration
+
+    def set_timer(self, name, new_duration):
+        if name in self.timers:
+            self.timers[name]["start_time"] = time.perf_counter()
+            self.timers[name]["duration"] = new_duration
+
+    def is_timer_expired(self, name):
+        #Check if a timer has expired.
+        if name in self.timers:
+            elapsed_time = time.perf_counter() - self.timers[name]["start_time"]
+            return elapsed_time >= self.timers[name]["duration"]
+        return False  # If the timer doesn't exist, return False
+
+    def reset_timer(self, name):
+        #Reset the timer start time while keeping the same duration.
+        if name in self.timers:
+            self.timers[name]["start_time"] = time.perf_counter()
+
+    def get_remaining_time(self, name):
+        #Get the remaining time until the timer expires.
+        if name in self.timers:
+            elapsed_time = time.perf_counter() - self.timers[name]["start_time"]
+            return max(0, self.timers[name]["duration"] - elapsed_time)  # Ensure non-negative
+        return None  # Timer doesn't exist

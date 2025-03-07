@@ -5,6 +5,7 @@ import numpy as np
 
 import config
 from utils import *
+from line_cam import camera_x
 import mySerial
 from mp_manager import *
 
@@ -145,7 +146,7 @@ def PID2(lineCenterX, lineAngle):
     global error_x, errorAcc, lastError, error_theta
     
     # Errors
-    error_x = lineCenterX - 1280 / 2  # Camera view is 1280 pixels
+    error_x = lineCenterX - camera_x / 2  # Camera view is 1280 pixels
     error_theta = lineAngle - (np.pi/2)  # Angle difference from vertical (pi/2)
     
     # Accumulate error for integral term
@@ -253,14 +254,15 @@ def controlLoop():
             f"Angle: {round(np.rad2deg(lineAngle.value),2)} \t"
             f"LineBias: {int(config.KP * error_x + config.KD * (error_x - lastError) + config.KI * errorAcc)}   \t"
             f"AngBias: {round(config.KP_THETA*error_theta,2)}     \t"
+            f"Reason: {turnReason.value} \t"
             #f"isCrop: {isCropped.value} \t"
-            f"lineDetected: {line_detected.value} \t"
+            #f"lineDetected: {line_detected.value} \t"
             f"Turn: {turnDirection.value}     \t"
             f"Motor D: {round(motorSpeedDiference, 2)}   \t"
             f"M1: {int(M1info)} \t"
             f"M2: {int(M2info)} \t"
             f"LOP: {switchState} \t"
-            f"Commands: {commandWaitingList}"
+            #f"Commands: {commandWaitingList}"
         )
         printDebug(f"{debugMessage}", config.softDEBUG)
 

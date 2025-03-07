@@ -24,8 +24,10 @@ intersectionMaxTime = 1.000 #s
 # Color Configs
 black_min = [0, 0, 0] # 82 83 84
 black_max = [255, 255, 130] # 133 133 135
-green_min = [50, 95, 40]    # 58, 95, 39 Night | 126, 94, 145 Day
-green_max = [100, 255, 255] # 98, 255, 255 Night | 155, 130, 180 Day
+#green_min = [50, 95, 40]    # 58, 95, 39 Night | 126, 94, 145 Day
+#green_max = [100, 255, 255] # 98, 255, 255 Night | 155, 130, 180 Day
+green_min = [25, 55, 40] # 50, 95, 40
+green_max = [100, 150, 125] # 100, 255, 255
 red_min_1 = [0, 100, 90]
 red_max_1 = [10, 255, 255]
 red_min_2 = [170, 100, 100]
@@ -51,7 +53,7 @@ defaultSpeed = 1850
 
 # Motor Vars
 speedFactor = 0
-KP = 0.75
-KD = 1.50
+KP = 1.50
+KD = 2.00
 KI = 0
 KP_THETA = 250 # 407 = 1280/3.14159
