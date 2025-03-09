@@ -438,7 +438,7 @@ def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, average_lin
             final_poi = poiCropped[0] if is_crop and not maxBlackTop else poi[0]
             turnReason.value = 2
 
-            if (poi[1][0] < camera_x * 0.02 and poi[1][1] > camera_y * (lineCropPercentage.value * .75)) or (poi[2][0] > camera_x * 0.98 and poi[2][1] > camera_y * (lineCropPercentage.value * .75)):
+            if (poi[1][0] < camera_x * 0.05 and poi[1][1] > camera_y * (lineCropPercentage.value * .75)) or (poi[2][0] > camera_x * 0.95 and poi[2][1] > camera_y * (lineCropPercentage.value * .75)):
                 #print(f"Here 13")
                 final_poi = poi[0]
                 turnReason.value = 3
@@ -478,8 +478,8 @@ def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, average_lin
             final_poi = poiCropped[0] if is_crop else poi[0]
             turnReason.value = 10
 
-
-            if poi[1][0] < camera_x * 0.02 and poi[2][0] > camera_x * 0.98 and timer.get_timer("multiple_side_r") and timer.get_timer("multiple_side_l"):
+            """
+            if poi[1][0] < camera_x * 0.05 and poi[2][0] > camera_x * 0.95 and timer.get_timer("multiple_side_r") and timer.get_timer("multiple_side_l"):
                 #print(f"Here {average_line_angle}")
                 if average_line_angle >= 0:
                     #print(f"Here 1")
@@ -503,15 +503,16 @@ def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, average_lin
             elif not timer.get_timer("multiple_side_r"):
                 #print(f"Here 4")
                 final_poi = poiCropped[2] if is_crop else poi[2]
-                turnReason.value = 15
+                turnReason.value = 15"""
 
-            elif poi[1][0] < camera_x * 0.02:
+            #elif poi[1][0] < camera_x * 0.05:
+            if poi[1][0] < camera_x * 0.05:
                 #print(f"Here 5")
                 # final_poi = poiCropped[1] if is_crop else poi[1] # Removed because constant lineCropPercentage
                 final_poi = poi[1]
                 turnReason.value = 16
 
-            elif poi[2][0] > camera_x * 0.98:
+            elif poi[2][0] > camera_x * 0.95:
                 #print(f"Here 6")
                 # final_poi = poiCropped[2] if is_crop else poi[2] # Removed because constant lineCropPercentage
                 final_poi = poi[2]
@@ -572,7 +573,7 @@ def interpretPOI2(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, average_li
             final_poi = poiCropped[0] if is_crop and not maxBlackTop else poi[0]
             turnReason.value = 2
 
-            if (poi[1][0] < camera_x * 0.02 and poi[1][1] > camera_y * (lineCropPercentage.value * .75)) or (poi[2][0] > camera_x * 0.98 and poi[2][1] > camera_y * (lineCropPercentage.value * .75)):
+            if (poi[1][0] < camera_x * 0.05 and poi[1][1] > camera_y * (lineCropPercentage.value * .75)) or (poi[2][0] > camera_x * 0.95 and poi[2][1] > camera_y * (lineCropPercentage.value * .75)):
                 #print(f"Here 13")
                 final_poi = poi[0]
                 turnReason.value = 3
@@ -613,7 +614,7 @@ def interpretPOI2(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, average_li
             turnReason.value = 10
 
 
-            if poi[1][0] < camera_x * 0.02 and poi[2][0] > camera_x * 0.98 and timer.get_timer("multiple_side_r") and timer.get_timer("multiple_side_l"):
+            if poi[1][0] < camera_x * 0.05 and poi[2][0] > camera_x * 0.95 and timer.get_timer("multiple_side_r") and timer.get_timer("multiple_side_l"):
                 #print(f"Here {average_line_angle}")
                 if average_line_angle >= 0:
                     #print(f"Here 1")
@@ -639,13 +640,13 @@ def interpretPOI2(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, average_li
                 final_poi = poiCropped[2] if is_crop else poi[2]
                 turnReason.value = 15
 
-            elif poi[1][0] < camera_x * 0.02:
+            elif poi[1][0] < camera_x * 0.05:
                 #print(f"Here 5")
                 # final_poi = poiCropped[1] if is_crop else poi[1] # Removed because constant lineCropPercentage
                 final_poi = poi[1]
                 turnReason.value = 16
 
-            elif poi[2][0] > camera_x * 0.98:
+            elif poi[2][0] > camera_x * 0.95:
                 #print(f"Here 6")
                 # final_poi = poiCropped[2] if is_crop else poi[2] # Removed because constant lineCropPercentage
                 final_poi = poi[2]
@@ -780,8 +781,7 @@ def intersectionDetector():
 
     if len(contoursGreen) > 0:
         turnDirection.value = checkGreen(contoursGreen)
-    
-                
+                    
     else:
         turnDirection.value = "straight"
 
@@ -810,10 +810,21 @@ def lineCamLoop():
     camera.configure(camera.create_video_configuration(sensor={'output_size': mode['size'], 'bit_depth': mode['bit_depth']}))
 
     #camera.set_controls({"AfMode": controls.AfModeEnum.Manual, "ExposureTime":10000})
+    camera.set_controls({
+        #"AfMode": controls.AfModeEnum.Manual,
+        #"LensPosition": 6.5,
+        "FrameDurationLimits": (1000000 // 50, 1000000 // 50),
+        #"AnalogueGain": 3.0,  # Fix gain (default 1.0)
+        #"ExposureTime": 10000  # Set exposure in microseconds (adjust as needed)
+    })
 
     camera.start()
     time.sleep(0.1)
 
+    # Image for brightness normalization
+    white_img = cv2.imread("./InProgress3/White_Image_2.jpg")
+    white_gray = cv2.cvtColor(white_img, cv2.COLOR_RGB2GRAY)
+    white_gray += (white_gray == 0)
 
     x_last = camera_x / 2
     y_last = camera_y / 2
@@ -847,11 +858,35 @@ def lineCamLoop():
             raw_capture = cv2.resize(raw_capture, (camera_x, camera_y))
             cv2_img = cv2.cvtColor(raw_capture, cv2.COLOR_RGBA2BGR)
 
+            cv2.imwrite("./InProgress3/latest_frame_original.jpg", cv2_img)
+
+            # Color Processing
             hsvImage = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2HSV)
             greenImage = cv2.inRange(hsvImage, green_min, green_max)
             redImage = cv2.inRange(hsvImage, red_min_1, red_max_1) + cv2.inRange(hsvImage, red_min_2, red_max_2)
-            blackImage = cv2.inRange(hsvImage, black_min, black_max)
             
+            # Black Processing
+            grayImage = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
+            _, blackImage = cv2.threshold(grayImage, 65, 255, cv2.THRESH_BINARY_INV)
+            #blackImage = cv2.inRange(hsvImage, black_min, black_max)
+
+            height, width = camera_y, camera_x
+
+            # Set top-left and top-right corners to white (255)
+            # You can adjust the size of the ignored corners by changing the size of the slice
+            corner_size = int(width * 0.2)  # Adjust percentage as needed
+            blackImage[:corner_size, :corner_size] = 0 #255  # Top-left corner
+            blackImage[:corner_size, -corner_size:] = 0 #255  # Top-right corner
+
+            """# Black Processing         
+            normalized_img = (cv2_img / white_gray[:, :, None]) * np.mean(white_gray)
+            normalized_img = np.clip(normalized_img, 0, 255).astype(np.uint8) 
+            
+            grayImage = cv2.cvtColor(normalized_img, cv2.COLOR_BGR2GRAY) # Convert to grayscale for black region detection  
+            
+            blackImage = cv2.inRange(grayImage, black_min, black_max) # Apply thresholding to detect black areas"""
+            #blackImage = cv2.inRange(hsvImage, black_min, black_max)
+                        
             # Deal with intersections
             intersectionDetector()
 
@@ -892,6 +927,8 @@ def lineCamLoop():
             cv2.imwrite("./InProgress3/latest_frame_hsv.jpg", hsvImage)
             cv2.imwrite("./InProgress3/latest_frame_green.jpg", greenImage)
             cv2.imwrite("./InProgress3/latest_frame_black.jpg", blackImage)
+            #cv2.imwrite("./InProgress3/latest_frame_Gray.jpg", grayImage)
+            #cv2.imwrite("./InProgress3/latest_frame_Normalized.jpg", normalized_img)
 
             gapController()
             obstacleController()

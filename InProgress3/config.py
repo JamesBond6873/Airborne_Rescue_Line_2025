@@ -24,6 +24,9 @@ intersectionMaxTime = 1.000 #s
 # Color Configs
 black_min = [0, 0, 0] # 82 83 84
 black_max = [255, 255, 130] # 133 133 135
+#black_min = 0
+#black_max = 80
+
 #green_min = [50, 95, 40]    # 58, 95, 39 Night | 126, 94, 145 Day
 #green_max = [100, 255, 255] # 98, 255, 255 Night | 155, 130, 180 Day
 green_min = [25, 55, 40] # 50, 95, 40
