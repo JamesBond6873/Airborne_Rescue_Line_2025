@@ -78,5 +78,6 @@ class TimerManager:
         #Get the remaining time until the timer expires.
         if name in self.timers:
             elapsed_time = time.perf_counter() - self.timers[name]["start_time"]
-            return max(0, self.timers[name]["duration"] - elapsed_time)  # Ensure non-negative
+            return self.timers[name]["duration"] - elapsed_time
         return None  # Timer doesn't exist
+

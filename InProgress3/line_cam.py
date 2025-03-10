@@ -302,9 +302,14 @@ def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, average_lin
         lastDirection = turn_direction
         
         if timer_manager.is_timer_expired("test_timer"): # So only start counting time from the last time it was seen
-            timer_manager.set_timer("test_timer", 0.75) # Give .75 s for turn
+            timer_manager.set_timer("test_timer", 1.5) # Give 1.0 s for turn
         
         turnReason.value = 1
+
+    elif turn_direction == "uTurn":
+        # BackUp to Control loop. Meaning it will go forward until control decides otherwise
+        final_poi = (camera_x / 2, camera_y / 2)
+        turnReason.value = 102
 
     elif not timer_manager.is_timer_expired("test_timer"): # Not Expired
         #print(f'Still in Turn {"left" if lastDirection == "left" else "right"}')
@@ -448,12 +453,12 @@ def check_black(black_around_sign, i, green_box):
     marker_height_search_factor = 0.3
 
     # Bottom
-    """roi_b_top_left = (np.minimum(int(green_box[2][0]), int(green_box[3][0])), int(green_box[2][1]))
+    roi_b_top_left = (np.minimum(int(green_box[2][0]), int(green_box[3][0])), int(green_box[2][1]))
     roi_b_bottom_right = (np.maximum(int(green_box[2][0]), int(green_box[3][0])), np.minimum(int(green_box[2][1] + (marker_height * marker_height_search_factor)), camera_y))
 
     # Draw the bounding box for the bottom region
     cv2.rectangle(cv2_img, roi_b_top_left, roi_b_bottom_right, (0, 255, 0), 2)  # Green color box
-    """
+    
     
     # Bottom
     roi_b = blackImage[int(green_box[2][1]):np.minimum(int(green_box[2][1] + (marker_height * marker_height_search_factor)), camera_y), np.minimum(int(green_box[2][0]), int(green_box[3][0])):np.maximum(int(green_box[2][0]), int(green_box[3][0]))]
@@ -462,12 +467,12 @@ def check_black(black_around_sign, i, green_box):
             black_around_sign[i, 0] = 1
 
     # Top
-    """roi_t_top_left = (np.minimum(np.maximum(int(green_box[0][0]), 0), np.maximum(int(green_box[1][0]), 0)), np.maximum(int(green_box[1][1] - (marker_height * marker_height_search_factor)), 0))
+    roi_t_top_left = (np.minimum(np.maximum(int(green_box[0][0]), 0), np.maximum(int(green_box[1][0]), 0)), np.maximum(int(green_box[1][1] - (marker_height * marker_height_search_factor)), 0))
     roi_t_bottom_right = (np.maximum(np.maximum(int(green_box[0][0]), 0), np.maximum(int(green_box[1][0]), 0)), int(green_box[1][1]))
 
     # Draw the bounding box for the top region
     cv2.rectangle(cv2_img, roi_t_top_left, roi_t_bottom_right, (0, 255, 0), 2)  # Green color box
-    """
+    
 
     roi_t = blackImage[np.maximum(int(green_box[1][1] - (marker_height * marker_height_search_factor)), 0):int(green_box[1][1]), np.minimum(np.maximum(int(green_box[0][0]), 0), np.maximum(int(green_box[1][0]), 0)):np.maximum(np.maximum(int(green_box[0][0]), 0), np.maximum(int(green_box[1][0]), 0))]
     if roi_t.size > 0:
@@ -477,12 +482,12 @@ def check_black(black_around_sign, i, green_box):
     green_box = green_box[green_box[:, 0].argsort()]
 
     # Left
-    """roi_l_top_left = (np.maximum(int(green_box[1][0] - (marker_height * marker_height_search_factor)), 0), np.minimum(int(green_box[0][1]), int(green_box[1][1])))
+    roi_l_top_left = (np.maximum(int(green_box[1][0] - (marker_height * marker_height_search_factor)), 0), np.minimum(int(green_box[0][1]), int(green_box[1][1])))
     roi_l_bottom_right = (int(green_box[1][0]), np.maximum(int(green_box[0][1]), int(green_box[1][1])))
 
     # Draw the bounding box for the left region
     cv2.rectangle(cv2_img, roi_l_top_left, roi_l_bottom_right, (0, 255, 0), 2)  # Green color box
-    """
+    
 
     roi_l = blackImage[np.minimum(int(green_box[0][1]), int(green_box[1][1])):np.maximum(int(green_box[0][1]), int(green_box[1][1])), np.maximum(int(green_box[1][0] - (marker_height * marker_height_search_factor)), 0):int(green_box[1][0])]
     if roi_l.size > 0:
@@ -490,12 +495,12 @@ def check_black(black_around_sign, i, green_box):
             black_around_sign[i, 2] = 1
 
     # Right
-    """roi_r_top_left = (int(green_box[2][0]), np.minimum(int(green_box[2][1]), int(green_box[3][1])))
+    roi_r_top_left = (int(green_box[2][0]), np.minimum(int(green_box[2][1]), int(green_box[3][1])))
     roi_r_bottom_right = (np.minimum(int(green_box[2][0] + (marker_height * marker_height_search_factor)), camera_x), np.maximum(int(green_box[2][1]), int(green_box[3][1])))
 
     # Draw the bounding box for the right region
     cv2.rectangle(cv2_img, roi_r_top_left, roi_r_bottom_right, (0, 255, 0), 2)  # Green color box
-    """
+    
 
     roi_r = blackImage[np.minimum(int(green_box[2][1]), int(green_box[3][1])):np.maximum(int(green_box[2][1]), int(green_box[3][1])), int(green_box[2][0]):np.minimum(int(green_box[2][0] + (marker_height * marker_height_search_factor)), camera_x)]
     if roi_r.size > 0:
@@ -545,7 +550,7 @@ def checkGreen(contours_grn):
         
         # Only process contours in the bottom 80% of the image
         if y_center < bottom_percent_threshold:
-            print(f"Here {y_center} {bottom_percent_threshold}")
+            #print(f"Here {y_center} {bottom_percent_threshold}")
             continue
             
 
@@ -634,7 +639,8 @@ def lineCamLoop():
     timer.set_timer("left_marker_up", .05)
     timer.set_timer("turn_persistence_timer", .05)  # Initialize if not present
 
-    timer_manager.add_timer("test_timer", 0.05)  # Timer lasts for 5 seconds
+    timer_manager.add_timer("test_timer", 0.05)
+    timer_manager.add_timer("uTurn", 0.05)
 
 
     t0 = time.perf_counter()

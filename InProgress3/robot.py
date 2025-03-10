@@ -14,6 +14,8 @@ print("Robot Functions: \t \t OK")
 
 # Situation Vars:
 objective = "Follow Line"
+lastTurn = "Straight"
+rotateTo = "left" # When it needs to do 180 it rotates to ...
 
 # Loop Vars
 notWaiting = True
@@ -23,8 +25,6 @@ commandWaitingList = []
 
 # Pin Definitions
 SWITCH_PIN = 14
-
-# Initialize components
 switch = Button(SWITCH_PIN, pull_up=True)  # Uses internal pull-up
 
 # Motor Vars
@@ -32,6 +32,7 @@ M1 = M2 = 1520 # Left - Right
 oldM1 = oldM2 = M1
 error = errorAcc = lastError = 0
 
+timer_manager = TimerManager()
 
 # Command Intrepreter
 def intrepretCommand():
@@ -118,7 +119,7 @@ def is_switch_on():
 
 # Controller for LoP
 def LoPSwitchController():
-    global switchState
+    global switchState, rotateTo
 
     if is_switch_on():
         if switchState == False:
@@ -128,6 +129,7 @@ def LoPSwitchController():
         if switchState == True:
             switchState = False
             printDebug(f"LoP Switch is now OFF: {switchState}", config.softDEBUG)
+            rotateTo = "right" if rotateTo == "left" else "left" # Toggles rotate To
     
 
 # Calculate motor Speed difference from default
@@ -191,9 +193,26 @@ def setMotorsSpeeds():
     #motorSpeedDiference = PID(lineCenterX.value)
     motorSpeedDiference = PID2(lineCenterX.value, lineAngle.value)
     M1, M2 = calculateMotorSpeeds(motorSpeedDiference)
+
+    if not timer_manager.is_timer_expired("uTurn"): # if in uTurn (timer not expired)
+        if rotateTo == "left":
+            M1, M2 = 1000, 2000
+        elif rotateTo == "right":
+            M1, M2 = 2000, 1000
+    
+    elif not timer_manager.is_timer_expired('backwards'):
+        M1, M2 = 1000, 1000
+
+    elif timer_manager.get_remaining_time('uTurn') < 0 and timer_manager.get_remaining_time('uTurn') > -0.2:
+        # Left uTurn Routine a few moments prior
+        timer_manager.set_timer('backwards', 1.0)
+
+    #print(f"Remaining Time: {timer_manager.get_remaining_time('uTurn')}")
+
     M1info, M2info = M1, M2
 
-    if switchState: #LoP On - GamepadControl
+    if True:
+    #if switchState: #LoP On - GamepadControl
         M1 = gamepadM1.value
         M2 = gamepadM2.value
  
@@ -205,8 +224,18 @@ def controlMotors():
         message = f"M({int(M1)}, {int(M2)})"
         mySerial.sendSerial(message)
 
+
+
 def intersectionController():
-    pass
+    global lastTurn
+    if turnDirection.value != lastTurn:
+        printDebug(f"New Turn direction {turnDirection.value} {lastTurn}", config.DEBUG)
+        
+        if turnDirection.value == "uTurn":
+            if timer_manager.is_timer_expired("uTurn"):
+                timer_manager.set_timer("uTurn", 1.5) # Give 1.5 s for 180degree turn
+
+        lastTurn = turnDirection.value
 
 
 
@@ -226,6 +255,11 @@ def controlLoop():
     lastError = 0
     errorAcc = 0
     sendCommandList(["GR","BC", "SF,5,F", "CL", "SF,4,F"])
+
+    # Timers
+    timer_manager.add_timer("uTurn", 0.05)
+    timer_manager.add_timer("backwards", 0.05)
+    time.sleep(0.1)
 
     t0 = time.perf_counter()
     while not terminate.value:
