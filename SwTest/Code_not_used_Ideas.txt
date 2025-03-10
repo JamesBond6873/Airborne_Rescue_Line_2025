@@ -1,0 +1,25 @@
+- Create White Rectangular Corners:
+
+# Set top-left and top-right corners to white (255)
+# You can adjust the size of the ignored corners by changing the size of the slice
+corner_size = int(width * 0.2)  # Adjust percentage as needed
+blackImage[:corner_size, :corner_size] = 0 #255  # Top-left corner
+blackImage[:corner_size, -corner_size:] = 0 #255  # Top-right corner
+
+
+- Black image Processing with normalization by white mask:
+
+normalized_img = (cv2_img / white_gray[:, :, None]) * np.mean(white_gray)
+normalized_img = np.clip(normalized_img, 0, 255).astype(np.uint8) 
+            
+grayImage = cv2.cvtColor(normalized_img, cv2.COLOR_BGR2GRAY) # Convert to grayscale for black region detection  
+            
+blackImage = cv2.inRange(grayImage, black_min, black_max) # Apply thresholding to detect black areas
+
+
+- First version of black detection
+
+#blackImage = cv2.inRange(hsvImage, black_min, black_max)
+            
+
+
