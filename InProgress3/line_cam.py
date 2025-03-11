@@ -138,7 +138,6 @@ def checkContourSize(contours, contour_color="red", size=15000):
 
 def getLineAndCrop(contours_blk):
     global x_last, y_last
-    #candidates = np.zeros((len(contours_blk), 5), dtype=np.int32)
     candidates = []
     off_bottom = 0
     min_area = 1500
@@ -153,11 +152,8 @@ def getLineAndCrop(contours_blk):
         if box[0][1] >= (camera_y * 0.75):
             off_bottom += 1
 
-        #print(f"Area {contour_area}")
         if contour_area < min_area:
-            #print(f"Here {contour_area}")
             continue  # Skip small contours
-        #print(f"Area2 {contour_area}")
 
         box = box[box[:, 0].argsort()]
         x_mean = (np.clip(box[0][0], 0, camera_x) + np.clip(box[3][0], 0, camera_x)) / 2
@@ -165,38 +161,25 @@ def getLineAndCrop(contours_blk):
 
         candidates.append([i, bottom_y, x_y_distance, x_mean, y_mean])
 
-    #candidates = np.array(candidates)
+
     candidates = np.array(candidates, dtype=np.int32).reshape(-1, 5)
 
-    #print(f"Candidates {candidates}")
-
-    """if len(candidates) == 0: # No valid contours found
-        #print(f"Are we here??-------------------- {candidates}")
-        #return None, None
-        lineDetected.value = False
-        x_last, y_last = camera_x // 2, camera_y * 0.25
-        return np.array([[[x_last, y_last]]]), np.array([[[x_last, y_last]]])  # Fake contour at center
-    """
 
     if off_bottom < 2:
         candidates = candidates[candidates[:, 1].argsort()[::-1]]  # Sort candidates by their bottom_y
-        #print(f"Candidates5 {candidates}")
     else:
         off_bottom_candidates = candidates[np.where(candidates[:, 1] >= (camera_y * 0.25))] # initially * 0.75
-        #print(f"Candidates3 {off_bottom_candidates}")
         candidates = off_bottom_candidates[off_bottom_candidates[:, 2].argsort()]
-        #print(f"Candidates4 {candidates}")
-
-    #print(f"Candidates2 {candidates}")
+        
 
     if len(candidates) == 0: # No valid contours found
-        #print(f"Are we here??-------------------- {candidates}")
-        #return None, None
         lineDetected.value = False
         x_last, y_last = camera_x // 2, camera_y * 0.75
         return np.array([[[x_last, y_last]]]), np.array([[[x_last, y_last]]])  # Fake contour at center
     
+
     lineDetected.value = True
+
 
     if turnDirection.value == "left":
         x_last = np.clip(candidates[0][3] - 150, 0, camera_x)
@@ -207,76 +190,6 @@ def getLineAndCrop(contours_blk):
 
     y_last = candidates[0][4]
     blackline = contours_blk[int( candidates[0][0] )]
-    blackline_crop = blackline[np.where(blackline[:, 0, 1] > camera_y * lineCropPercentage.value)]
-
-    cv2.drawContours(cv2_img, blackline, -1, (255, 0, 0), 2)
-    cv2.drawContours(cv2_img, blackline_crop, -1, (255, 255, 0), 2)
-
-    cv2.circle(cv2_img, (int(x_last), int(y_last)), 3, (0, 0, 255), -1)
-
-    return blackline, blackline_crop
-
-
-def getLineAndCrop2(contours_blk):
-    global x_last, y_last
-    candidates = np.zeros((len(contours_blk), 5), dtype=np.int32)
-    off_bottom = 0
-    min_area = 2500
-
-    for i, contour in enumerate(contours_blk):
-        box = cv2.boxPoints(cv2.minAreaRect(contour))
-        box = box[box[:, 1].argsort()[::-1]]  # Sort them by their y values and reverse
-        bottom_y = box[0][1]
-        y_mean = (np.clip(box[0][1], 0, camera_y) + np.clip(box[3][1], 0, camera_y)) / 2
-        contour_area = cv2.contourArea(contour)  # Get contour area
-
-        if box[0][1] >= (camera_y * 0.75):
-            off_bottom += 1
-
-        print(f"Area {contour_area}")
-        if contour_area < min_area:
-            print(f"Here {contour_area}")
-            continue  # Skip small contours
-        print(f"Area2 {contour_area}")
-
-        box = box[box[:, 0].argsort()]
-        x_mean = (np.clip(box[0][0], 0, camera_x) + np.clip(box[3][0], 0, camera_x)) / 2
-        x_y_distance = abs(x_last - x_mean) + abs(y_last - y_mean)  # Distance between the last x/y and current x/y
-
-        candidates[i] = i, bottom_y, x_y_distance, x_mean, y_mean
-
-    #print(f"Candidates {candidates}")
-
-
-    if off_bottom < 2:
-        candidates = candidates[candidates[:, 1].argsort()[::-1]]  # Sort candidates by their bottom_y
-        #print(f"Candidates5 {candidates}")
-    else:
-        off_bottom_candidates = candidates[np.where(candidates[:, 1] >= (camera_y * 0.25))] # initially * 0.75
-        #print(f"Candidates3 {off_bottom_candidates}")
-        candidates = off_bottom_candidates[off_bottom_candidates[:, 2].argsort()]
-        #print(f"Candidates4 {candidates}")
-
-    #print(f"Candidates2 {candidates}")
-
-    if len(candidates) == 0: # No valid contours found
-        print(f"Are we here??-------------------- {candidates}")
-        #return None, None
-        lineDetected.value = False
-        x_last, y_last = camera_x // 2, camera_y * 0.75
-        return np.array([[[x_last, y_last]]]), np.array([[[x_last, y_last]]])  # Fake contour at center
-    
-    lineDetected.value = True
-
-    if turnDirection.value == "left":
-        x_last = np.clip(candidates[0][3] - 150, 0, camera_x)
-    elif turnDirection.value == "right":
-        x_last = np.clip(candidates[0][3] + 150, 0, camera_x)
-    else:
-        x_last = candidates[0][3]
-
-    y_last = candidates[0][4]
-    blackline = contours_blk[candidates[0][0]]
     blackline_crop = blackline[np.where(blackline[:, 0, 1] > camera_y * lineCropPercentage.value)]
 
     cv2.drawContours(cv2_img, blackline, -1, (255, 0, 0), 2)
@@ -415,54 +328,44 @@ def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, average_lin
         turnReason.value = 102
 
     elif not timer_manager.is_timer_expired("test_timer"): # Not Expired
-        #print(f'Still in Turn {"left" if lastDirection == "left" else "right"}')
         final_poi = poi[1] if lastDirection == "left" else poi[2]
 
         turnReason.value = 100
 
     else:
         if black_top:
-            #print(f"Here 12 {is_crop} {maxBlackTop}")
             final_poi = poiCropped[0] if is_crop and not maxBlackTop else poi[0]
             turnReason.value = 2
 
             if (poi[1][0] < camera_x * 0.05 and poi[1][1] > camera_y * (lineCropPercentage.value * .75)) or (poi[2][0] > camera_x * 0.95 and poi[2][1] > camera_y * (lineCropPercentage.value * .75)):
-                #print(f"Here 13")
                 final_poi = poi[0]
                 turnReason.value = 3
 
                 if black_l_high or black_r_high:
-                    #print(f"Here 11")
                     near_high_index = 0
                     turnReason.value = 4
 
                     if black_l_high and not black_r_high:
-                        #print(f"Here 7")
                         near_high_index = 1
                         turnReason.value = 5
 
                     elif not black_l_high and black_r_high:
-                        #print(f"Here 8")
                         near_high_index = 2
                         turnReason.value = 6
 
                     elif black_l_high and black_r_high:
                         if np.abs(poi[1][0] - average_line_point) < np.abs(poi[2][0] - average_line_point):
-                            #print(f"Here 9")
                             near_high_index = 1
                             turnReason.value = 7
                         else:
-                            #print(f"Here 10")
                             near_high_index = 2
                             turnReason.value = 8
 
                     if np.abs(poi[near_high_index][0] - average_line_point) < np.abs(poi[0][0] - average_line_point):
-                        #print(f"Here 14")
                         final_poi = poi[near_high_index]
                         turnReason.value = 9
 
         else:
-            #print(f"Here 15 - Is Crop {is_crop}")
             final_poi = poiCropped[0] if is_crop else poi[0]
             turnReason.value = 10
 
@@ -495,13 +398,11 @@ def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, average_lin
 
             #elif poi[1][0] < camera_x * 0.05:
             if poi[1][0] < camera_x * 0.05:
-                #print(f"Here 5")
                 # final_poi = poiCropped[1] if is_crop else poi[1] # Removed because constant lineCropPercentage
                 final_poi = poi[1]
                 turnReason.value = 16
 
             elif poi[2][0] > camera_x * 0.95:
-                #print(f"Here 6")
                 # final_poi = poiCropped[2] if is_crop else poi[2] # Removed because constant lineCropPercentage
                 final_poi = poi[2]
                 turnReason.value = 17
@@ -517,13 +418,6 @@ def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, average_lin
                     turnReason.value = 19
                 timer.set_timer("multiple_bottom", .6)
 
-    """
-    print(f"POI: {poi}")
-    print(f"POI Cropped: {poiCropped}")
-    print(f"Bottom Point: {bottomPoint}")
-    print(f"Multiple Bottom: {multiple_bottom}")
-    print(f"Final POI: {final_poi}")"""
-
     if (final_poi == poiCropped[0]).all():
         #angle = computeMoments(blackLineCrop)
         angle = np.pi / 2
@@ -535,15 +429,7 @@ def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, average_lin
     return angle, final_poi, bottomPoint
 
 
-def LoPController():
-    pass
-
-
-def gapController():
-    pass
-
-
-def check_black(black_around_sign, i, green_box):
+def checkBlack(black_around_sign, i, green_box):
     global cv2_img, blackImage
 
     green_box = green_box[green_box[:, 1].argsort()]
@@ -613,7 +499,7 @@ def check_black(black_around_sign, i, green_box):
     return black_around_sign
 
 
-def determine_turn_direction(black_around_sign):
+def determineTurnDirection(black_around_sign):
     turn_left = False
     turn_right = False
     left_bottom = False
@@ -661,9 +547,9 @@ def checkGreen(contours_grn):
         draw_box = np.intp(green_box)
         cv2.drawContours(cv2_img, [draw_box], -1, (0, 0, 255), 2)
 
-        black_around_sign = check_black(black_around_sign, i, green_box)
+        black_around_sign = checkBlack(black_around_sign, i, green_box)
 
-    turn_left, turn_right, left_bottom, right_bottom = determine_turn_direction(black_around_sign)
+    turn_left, turn_right, left_bottom, right_bottom = determineTurnDirection(black_around_sign)
 
     if turn_left and not turn_right and not left_bottom:
         return "left"
@@ -687,10 +573,6 @@ def intersectionDetector():
 
 
 def obstacleController():
-    pass
-
-
-def redLineCheck():
     pass
 
 
@@ -751,8 +633,6 @@ def lineCamLoop():
         t1 = t0 + config.lineDelayMS * 0.001
 
         # Loop
-
-        LoPController()
         
         if robot.objective == "Follow Line":
             raw_capture = camera.capture_array()
@@ -819,9 +699,7 @@ def lineCamLoop():
             cv2.imwrite("./InProgress3/latest_frame_black.jpg", blackImage)
             cv2.imwrite("./InProgress3/latest_frame_red.jpg", redImage)
 
-            gapController()
             obstacleController()
-            redLineCheck()
             silverLineCheck()
 
             savecv2_img("Frames", cv2_img)
