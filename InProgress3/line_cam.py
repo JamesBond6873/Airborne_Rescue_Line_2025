@@ -115,11 +115,33 @@ def ignoreHighFOVCorners(blackImage, xPercentage=0.25, yPercentage=0.15):
     return blackImage
 
 
+def checkContourSize(contours, contour_color="red", size=15000):
+    global cv2_img
+
+    if contour_color == "red":
+        color = (0, 255, 0) # Green
+    elif contour_color == "green":
+        color = (0, 0, 255) # Red
+    else:
+        color = (255, 0, 0)
+
+    for contour in contours:
+        contour_size = cv2.contourArea(contour)
+
+        if contour_size > size:
+            x, y, w, h = cv2.boundingRect(contour)
+            cv2.rectangle(cv2_img, (x, y), (x + w, y + h), color, 2)
+            return True
+
+    return False
+
+
 def getLineAndCrop(contours_blk):
     global x_last, y_last
-    candidates = np.zeros((len(contours_blk), 5), dtype=np.int32)
+    #candidates = np.zeros((len(contours_blk), 5), dtype=np.int32)
+    candidates = []
     off_bottom = 0
-    min_area = 2500
+    min_area = 1500
 
     for i, contour in enumerate(contours_blk):
         box = cv2.boxPoints(cv2.minAreaRect(contour))
@@ -135,6 +157,87 @@ def getLineAndCrop(contours_blk):
         if contour_area < min_area:
             #print(f"Here {contour_area}")
             continue  # Skip small contours
+        #print(f"Area2 {contour_area}")
+
+        box = box[box[:, 0].argsort()]
+        x_mean = (np.clip(box[0][0], 0, camera_x) + np.clip(box[3][0], 0, camera_x)) / 2
+        x_y_distance = abs(x_last - x_mean) + abs(y_last - y_mean)  # Distance between the last x/y and current x/y
+
+        candidates.append([i, bottom_y, x_y_distance, x_mean, y_mean])
+
+    #candidates = np.array(candidates)
+    candidates = np.array(candidates, dtype=np.int32).reshape(-1, 5)
+
+    #print(f"Candidates {candidates}")
+
+    """if len(candidates) == 0: # No valid contours found
+        #print(f"Are we here??-------------------- {candidates}")
+        #return None, None
+        lineDetected.value = False
+        x_last, y_last = camera_x // 2, camera_y * 0.25
+        return np.array([[[x_last, y_last]]]), np.array([[[x_last, y_last]]])  # Fake contour at center
+    """
+
+    if off_bottom < 2:
+        candidates = candidates[candidates[:, 1].argsort()[::-1]]  # Sort candidates by their bottom_y
+        #print(f"Candidates5 {candidates}")
+    else:
+        off_bottom_candidates = candidates[np.where(candidates[:, 1] >= (camera_y * 0.25))] # initially * 0.75
+        #print(f"Candidates3 {off_bottom_candidates}")
+        candidates = off_bottom_candidates[off_bottom_candidates[:, 2].argsort()]
+        #print(f"Candidates4 {candidates}")
+
+    #print(f"Candidates2 {candidates}")
+
+    if len(candidates) == 0: # No valid contours found
+        print(f"Are we here??-------------------- {candidates}")
+        #return None, None
+        lineDetected.value = False
+        x_last, y_last = camera_x // 2, camera_y * 0.75
+        return np.array([[[x_last, y_last]]]), np.array([[[x_last, y_last]]])  # Fake contour at center
+    
+    lineDetected.value = True
+
+    if turnDirection.value == "left":
+        x_last = np.clip(candidates[0][3] - 150, 0, camera_x)
+    elif turnDirection.value == "right":
+        x_last = np.clip(candidates[0][3] + 150, 0, camera_x)
+    else:
+        x_last = candidates[0][3]
+
+    y_last = candidates[0][4]
+    blackline = contours_blk[int( candidates[0][0] )]
+    blackline_crop = blackline[np.where(blackline[:, 0, 1] > camera_y * lineCropPercentage.value)]
+
+    cv2.drawContours(cv2_img, blackline, -1, (255, 0, 0), 2)
+    cv2.drawContours(cv2_img, blackline_crop, -1, (255, 255, 0), 2)
+
+    cv2.circle(cv2_img, (int(x_last), int(y_last)), 3, (0, 0, 255), -1)
+
+    return blackline, blackline_crop
+
+
+def getLineAndCrop2(contours_blk):
+    global x_last, y_last
+    candidates = np.zeros((len(contours_blk), 5), dtype=np.int32)
+    off_bottom = 0
+    min_area = 2500
+
+    for i, contour in enumerate(contours_blk):
+        box = cv2.boxPoints(cv2.minAreaRect(contour))
+        box = box[box[:, 1].argsort()[::-1]]  # Sort them by their y values and reverse
+        bottom_y = box[0][1]
+        y_mean = (np.clip(box[0][1], 0, camera_y) + np.clip(box[3][1], 0, camera_y)) / 2
+        contour_area = cv2.contourArea(contour)  # Get contour area
+
+        if box[0][1] >= (camera_y * 0.75):
+            off_bottom += 1
+
+        print(f"Area {contour_area}")
+        if contour_area < min_area:
+            print(f"Here {contour_area}")
+            continue  # Skip small contours
+        print(f"Area2 {contour_area}")
 
         box = box[box[:, 0].argsort()]
         x_mean = (np.clip(box[0][0], 0, camera_x) + np.clip(box[3][0], 0, camera_x)) / 2
@@ -157,13 +260,13 @@ def getLineAndCrop(contours_blk):
     #print(f"Candidates2 {candidates}")
 
     if len(candidates) == 0: # No valid contours found
-        #print(f"Are we here??-------------------- {candidates}")
+        print(f"Are we here??-------------------- {candidates}")
         #return None, None
-        line_detected.value = False
+        lineDetected.value = False
         x_last, y_last = camera_x // 2, camera_y * 0.75
         return np.array([[[x_last, y_last]]]), np.array([[[x_last, y_last]]])  # Fake contour at center
     
-    line_detected.value = True
+    lineDetected.value = True
 
     if turnDirection.value == "left":
         x_last = np.clip(candidates[0][3] - 150, 0, camera_x)
@@ -623,8 +726,8 @@ def lineCamLoop():
     white_gray = cv2.cvtColor(white_img, cv2.COLOR_RGB2GRAY)
     white_gray += (white_gray == 0)
 
-    x_last = camera_x / 2
-    y_last = camera_y / 2
+    x_last = int( camera_x / 2 )
+    y_last = int( camera_y / 2 )
     lastBottomPoint_x = camera_x / 2
     lastLineAngle = 90
     lastLinePoint = camera_x / 2
@@ -665,14 +768,20 @@ def lineCamLoop():
             
             # Black Processing
             grayImage = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
-            _, blackImage = cv2.threshold(grayImage, 75, 255, cv2.THRESH_BINARY_INV)
+            _, blackImage = cv2.threshold(grayImage, 65, 255, cv2.THRESH_BINARY_INV)
             
-            blackImage = ignoreHighFOVCorners(blackImage, 0.25, 0.15)
+            blackImage = ignoreHighFOVCorners(blackImage, 0.25, 0.20)
                   
-            # Deal with intersections
+
+            # -- INTERSECTIONS -- Deal with intersections
             intersectionDetector()
 
 
+            # -- RED STRIP -- Check for Red Line - Stop
+            contoursRed, _ = cv2.findContours(redImage, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+            redDetected.value = checkContourSize(contoursRed)
+
+            # -- Black Line --
             # Get Black Contours
             contoursBlack, _ = cv2.findContours(blackImage, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
             # Calculate Black Line (cropped and not) + Points of Interest
@@ -708,6 +817,7 @@ def lineCamLoop():
             cv2.imwrite("./InProgress3/latest_frame_hsv.jpg", hsvImage)
             cv2.imwrite("./InProgress3/latest_frame_green.jpg", greenImage)
             cv2.imwrite("./InProgress3/latest_frame_black.jpg", blackImage)
+            cv2.imwrite("./InProgress3/latest_frame_red.jpg", redImage)
 
             gapController()
             obstacleController()

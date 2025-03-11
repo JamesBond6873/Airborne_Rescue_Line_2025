@@ -16,6 +16,8 @@ print("Robot Functions: \t \t OK")
 objective = "Follow Line"
 lastTurn = "Straight"
 rotateTo = "left" # When it needs to do 180 it rotates to ...
+inGap = False
+lastLineDetected = True  # Assume robot starts detecting a line
 
 # Loop Vars
 notWaiting = True
@@ -194,7 +196,13 @@ def setMotorsSpeeds():
     motorSpeedDiference = PID2(lineCenterX.value, lineAngle.value)
     M1, M2 = calculateMotorSpeeds(motorSpeedDiference)
 
-    if not timer_manager.is_timer_expired("uTurn"): # if in uTurn (timer not expired)
+    if redDetected.value:
+        M1, M2 = 1520, 1520
+
+    if inGap: # Currently in gap
+        M1, M2 = config.DEFAULT_FORWARD_SPEED, config.DEFAULT_FORWARD_SPEED
+
+    elif not timer_manager.is_timer_expired("uTurn"): # if in uTurn (timer not expired)
         if rotateTo == "left":
             M1, M2 = 1000, 2000
         elif rotateTo == "right":
@@ -225,7 +233,6 @@ def controlMotors():
         mySerial.sendSerial(message)
 
 
-
 def intersectionController():
     global lastTurn
     if turnDirection.value != lastTurn:
@@ -238,13 +245,28 @@ def intersectionController():
         lastTurn = turnDirection.value
 
 
+def gapController():
+    global inGap, lastLineDetected
+
+    if not lineDetected.value: # No line detected
+        if lastLineDetected: # Just lost the line (last state was true)
+            timer_manager.set_timer("noLine", 0.35) # Start a timer
+        elif timer_manager.is_timer_expired("noLine"): # Timer expired
+            inGap = True # Confirm gap
+
+    else:  # Line detected
+        inGap = False  # Here to reset flag
+        timer_manager.set_timer("noLine", 0)  # Force timer expiration
+
+    lastLineDetected = lineDetected.value  # Update previous state
+
 
 #############################################################################
 #                           Robot Control Loop
 #############################################################################
 
 def controlLoop():
-    global switchState, M1, M2, M1info, M2info, oldM1, oldM2, motorSpeedDiference, error_theta, error_x, errorAcc, lastError
+    global switchState, M1, M2, M1info, M2info, oldM1, oldM2, motorSpeedDiference, error_theta, error_x, errorAcc, lastError, inGap
 
     switchState = is_switch_on()
     motorSpeedDiference = 0
@@ -259,6 +281,7 @@ def controlLoop():
     # Timers
     timer_manager.add_timer("uTurn", 0.05)
     timer_manager.add_timer("backwards", 0.05)
+    timer_manager.add_timer("noLine", 0.05)
     time.sleep(0.1)
 
     t0 = time.perf_counter()
@@ -267,6 +290,7 @@ def controlLoop():
 
         # Loop
         LoPSwitchController()
+        gapController()
 
         printDebug(f"Robot Not Waiting: {notWaiting}", config.DEBUG)
         if notWaiting:
@@ -290,7 +314,8 @@ def controlLoop():
             f"AngBias: {round(config.KP_THETA*error_theta,2)}     \t"
             f"Reason: {turnReason.value} \t"
             #f"isCrop: {isCropped.value} \t"
-            #f"lineDetected: {line_detected.value} \t"
+            f"line: {lineDetected.value} \t"
+            f"inGap: {inGap}"
             f"Turn: {turnDirection.value}     \t"
             f"Motor D: {round(motorSpeedDiference, 2)}   \t"
             f"M1: {int(M1info)} \t"
