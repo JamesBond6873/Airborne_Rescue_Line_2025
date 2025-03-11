@@ -16,8 +16,8 @@ buzzerOffMs = 5000
 buzzerState = False
 
 # Time Delays
-lineDelayMS = 50 # Frame Rate = 20
-controlDelayMS = 25 # 100 Hz
+lineDelayMS = 25 # Frame Rate = 40 FPS
+controlDelayMS = 20 # 50 Hz
 
 intersectionMaxTime = 1.000 #s
 

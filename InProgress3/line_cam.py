@@ -190,7 +190,7 @@ def getLineAndCrop(contours_blk):
     #print(f"Candidates2 {candidates}")
 
     if len(candidates) == 0: # No valid contours found
-        print(f"Are we here??-------------------- {candidates}")
+        #print(f"Are we here??-------------------- {candidates}")
         #return None, None
         lineDetected.value = False
         x_last, y_last = camera_x // 2, camera_y * 0.75
