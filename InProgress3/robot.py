@@ -211,8 +211,8 @@ def setMotorsSpeeds():
 
     M1info, M2info = M1, M2
 
-    if True:
-    #if switchState: #LoP On - GamepadControl
+    #if True:
+    if switchState: #LoP On - GamepadControl
         M1 = gamepadM1.value
         M2 = gamepadM2.value
  
