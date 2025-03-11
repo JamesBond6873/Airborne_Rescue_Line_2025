@@ -58,11 +58,14 @@ def savecv2_img(folder, cv2_img):
 def computeMoments(contour):
     # Compute cv2_img moments for the largest contour
 
+    """if not (contour is not None and len(contour) > 0): # No contour/line protection
+        theta = np.pi / 2"""
+    if (contour == np.array([[[x_last, y_last]]])).all():  # Fake Contour Protection (needed by cv2.moments)
+        return np.pi / 2  # Fallback value 90
+
     theta = np.pi / 2
 
-    finalContour = cv2.cvtColor(contour, cv2.COLOR_BGR2GRAY)
-
-    M = cv2.moments(finalContour)
+    M = cv2.moments(contour)
     if M["m00"] != 0:
         # Centroid (First Moment)
         cx = int(M["m10"] / M["m00"])
@@ -78,19 +81,6 @@ def computeMoments(contour):
         if theta < 0:
             printDebug(f"theta og: {round(theta,2)} {round(np.rad2deg(theta),2)}, new {round(np.pi + theta,2)} {round(np.rad2deg(np.pi + theta),2)}", config.DEBUG)
             theta = np.pi + theta
-
-        # Define line endpoints along the principal axis
-        length = 100  # Adjust for visualization
-        x1 = int(cx + length * np.cos(theta))
-        y1 = int(cy + length * np.sin(theta))
-        x2 = int(cx - length * np.cos(theta))
-        y2 = int(cy - length * np.sin(theta))
-
-        # Draw centroid
-        cv2.circle(cv2_img, (cx, cy), 5, (0, 255, 255), -1)
-
-        # Draw principal axis line
-        cv2.line(cv2_img, (x1, y1), (x2, y2), (255, 0, 0), 2)
 
     return theta
 
@@ -302,6 +292,8 @@ def calculatePointsOfInterest(blackline, blackline_crop, last_bottom_point, aver
 def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, average_line_angle, turn_direction, average_line_point, blackLine, blackLineCrop):
     global multiple_bottom_side, lastDirection
 
+    angle = np.pi / 2
+
     black_top = poi[0][1] < camera_y * .05
 
     multiple_bottom = not (poi[3][0] == 0 and poi[3][1] == 0)
@@ -363,6 +355,7 @@ def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, average_lin
 
                     if np.abs(poi[near_high_index][0] - average_line_point) < np.abs(poi[0][0] - average_line_point):
                         final_poi = poi[near_high_index]
+                        angle = np.pi / 2
                         turnReason.value = 9
 
         else:
@@ -418,13 +411,21 @@ def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, average_lin
                     turnReason.value = 19
                 timer.set_timer("multiple_bottom", .6)
 
-    if (final_poi == poiCropped[0]).all():
-        #angle = computeMoments(blackLineCrop)
-        angle = np.pi / 2
-    else: 
-        angle = np.pi / 2 # don't know how to calculate angle in other cases
+    # Define line endpoints along the principal axis
+    length = 100  # Adjust for visualization
+    #lineCenter = (camera_x // 2, camera_y // 2)
+    #lineCenter = final_poi
+    lineCenter = poiCropped[0] if is_crop else (camera_x // 2, camera_y // 2)
+    x1 = int(lineCenter[0] + length * np.cos(angle))
+    y1 = int(lineCenter[1] + length * np.sin(angle))
+    x2 = int(lineCenter[0] - length * np.cos(angle))
+    y2 = int(lineCenter[1] - length * np.sin(angle))
 
-    angle = int((final_poi[0] - camera_x / 2) / (camera_x / 2) * 180)
+    # Draw centroid
+    #cv2.circle(cv2_img, (cx, cy), 5, (0, 255, 255), -1)
+
+    # Draw principal axis line
+    cv2.line(cv2_img, (x1, y1), (x2, y2), (255, 0, 0), 2)
 
     return angle, final_poi, bottomPoint
 
@@ -669,9 +670,10 @@ def lineCamLoop():
             poiCropped, poi, isCrop, maxBlackTop, bottomPoint = calculatePointsOfInterest(blackLine, blackLineCrop, lastBottomPoint_x, lastLinePoint)
             lineAngle2, finalPoi, bottomPoint = interpretPOI(poiCropped, poi, isCrop, maxBlackTop, bottomPoint, lastLineAngle, turnDirection.value, lastLinePoint, blackLine, blackLineCrop)
             lineCenterX.value = finalPoi[0]
+            lineAngle.value = lineAngle2
             isCropped.value = isCrop
 
-            lineAngle.value = np.pi / 2 # Means ignore line angle when in this situation
+            #lineAngle.value = np.pi / 2 # Means ignore line angle when in this situation
 
             # Update Image
             cv2.circle(cv2_img, (int(poiCropped[0][0]), int(poiCropped[0][1])), 5, (0, 0, 255), -1)
