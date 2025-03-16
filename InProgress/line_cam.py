@@ -37,7 +37,7 @@ lastDirection = "Straight!"
 timer = Timer()
 timer_manager = TimerManager()
 
-
+kernel = np.ones((3, 3), np.uint8)
 
 def savecv2_img(folder, cv2_img):
     if saveFrame.value:
@@ -639,7 +639,7 @@ def lineCamLoop():
             raw_capture = cv2.resize(raw_capture, (camera_x, camera_y))
             cv2_img = cv2.cvtColor(raw_capture, cv2.COLOR_RGBA2BGR)
 
-            cv2.imwrite("./InProgress3/latest_frame_original.jpg", cv2_img)
+            cv2.imwrite("./InProgress/latest_frame_original.jpg", cv2_img)
 
             # Color Processing
             hsvImage = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2HSV)
@@ -651,7 +651,21 @@ def lineCamLoop():
             _, blackImage = cv2.threshold(grayImage, 65, 255, cv2.THRESH_BINARY_INV)
             
             blackImage = ignoreHighFOVCorners(blackImage, 0.25, 0.20)
-                  
+            
+
+            # Noise Reduction
+            blackImage = cv2.erode(blackImage, kernel, iterations=5)
+            blackImage = cv2.dilate(blackImage, kernel, iterations=17) # Previous values: 12 | 16
+            blackImage = cv2.erode(blackImage, kernel, iterations=9)  # Previous values: 4 | 8
+
+            greenImage = cv2.erode(greenImage, kernel, iterations=1)
+            greenImage = cv2.dilate(greenImage, kernel, iterations=11)
+            greenImage = cv2.erode(greenImage, kernel, iterations=9)
+                                    
+            redImage = cv2.erode(redImage, kernel, iterations=1)
+            redImage = cv2.dilate(redImage, kernel, iterations=11)
+            redImage = cv2.erode(redImage, kernel, iterations=9)
+
 
             # -- INTERSECTIONS -- Deal with intersections
             intersectionDetector()
@@ -693,11 +707,11 @@ def lineCamLoop():
             
 
             # Show cv2_imgs
-            cv2.imwrite("./InProgress3/latest_frame_cv2.jpg", cv2_img)
-            cv2.imwrite("./InProgress3/latest_frame_hsv.jpg", hsvImage)
-            cv2.imwrite("./InProgress3/latest_frame_green.jpg", greenImage)
-            cv2.imwrite("./InProgress3/latest_frame_black.jpg", blackImage)
-            cv2.imwrite("./InProgress3/latest_frame_red.jpg", redImage)
+            cv2.imwrite("./InProgress/latest_frame_cv2.jpg", cv2_img)
+            cv2.imwrite("./InProgress/latest_frame_hsv.jpg", hsvImage)
+            cv2.imwrite("./InProgress/latest_frame_green.jpg", greenImage)
+            cv2.imwrite("./InProgress/latest_frame_black.jpg", blackImage)
+            cv2.imwrite("./InProgress/latest_frame_red.jpg", redImage)
 
             obstacleController()
             silverLineCheck()
