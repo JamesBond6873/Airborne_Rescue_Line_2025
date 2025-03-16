@@ -14,8 +14,12 @@ commandToExecute = manager.Value("i", "none") #"none",""
 lineCenterX = manager.Value("i", 600)
 lineAngle = manager.Value("i", 0.)
 line_angle_y = manager.Value("i", -1)
-line_detected = manager.Value("i", False)
+lineDetected = manager.Value("i", False)
+turnReason = manager.Value("i", 0)
+redDetected = manager.Value("i", False)
 
+isCropped = manager.Value("i", False)
+lineCropPercentage = manager.Value("i", 0.6)
 onIntersection = manager.Value("i", False)
 turnDirection = manager.Value("i", "straight") # "straight", "left", "right", "uTurn"
 objective = manager.Value("i", "follow_line")  # "follow_line"; "zone"; "debug"

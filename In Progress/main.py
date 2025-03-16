@@ -5,12 +5,8 @@ import time
 from multiprocessing import Process
 
 
-"""import config
-import utils
-import mySerial
-import robot"""
 from gamepad import gamepadLoop
-from Line_Cam import lineCamLoop
+from line_cam import lineCamLoop
 from robot import controlLoop
 
 

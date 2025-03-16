@@ -12,8 +12,8 @@ def pick_color(event,x,y,flags,param):
         #you might want to adjust the ranges(+-10, etc):
         upper =  np.array([pixel[0] + 20, pixel[1] + 20, pixel[2] + 30])
         lower =  np.array([pixel[0] - 30, pixel[1] - 30, pixel[2] - 30])
-        lower = np.array([45, 45, 35])
-        upper = np.array([105, 218, 146])
+        lower = np.array([40, 75, 35])
+        upper = np.array([105, 255, 170])
         #lower = np.array([0,0,0]) # Black only
         print(pixel, lower, upper)
 

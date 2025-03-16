@@ -6,7 +6,7 @@ import time
 import utils
 import config
 import mySerial
-from MP_Manager import *
+from mp_manager import *
 import robot
 
 
