@@ -36,6 +36,6 @@
 
 -> Victim detection NPU
 
--> 7 Points following
+-> 7 Points following X
 
 -> More LEDs (can't have uneven light source)
