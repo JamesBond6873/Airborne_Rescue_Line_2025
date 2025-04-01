@@ -81,3 +81,9 @@ class TimerManager:
             return self.timers[name]["duration"] - elapsed_time
         return None  # Timer doesn't exist
 
+    def clear_all_timers(self):
+        # Force all timers to expire immediately by setting their duration to 0.
+        for timer in self.timers.values():
+            #print(f"here: {timer}")
+            timer["duration"] = 0
+

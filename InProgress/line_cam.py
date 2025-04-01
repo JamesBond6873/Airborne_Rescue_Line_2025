@@ -7,6 +7,8 @@ import cv2
 import numpy as np
 from picamera2 import Picamera2
 from libcamera import controls
+from ultralytics import YOLO
+from ultralytics.utils.plotting import colors
 
 import config
 from utils import printDebug
@@ -95,7 +97,7 @@ def computeMoments(contour):
     return theta
 
 
-def ignoreHighFOVCorners(blackImage, xPercentage=0.25, yPercentage=0.15):
+def ignoreHighFOVCorners(blackImage, xPercentage=0.30, yPercentage=0.25):
     # Define the camera_x and height proportions of the triangular cut
     corner_width = int(camera_x * xPercentage)  # Extend more on x-axis
     corner_height = int(camera_y * yPercentage)  # Less extension on y-axis
@@ -576,8 +578,110 @@ def obstacleController():
     pass
 
 
-def silverLineCheck():
+def silverLineCheck2():
     pass
+
+
+def silverLineCheck3(brightness_threshold=200, min_contour_area=500):
+    global cv2_img
+    """
+    Detects aluminum foil on the floor based on high brightness.
+    
+    Parameters:
+        cv2_img (numpy.ndarray): Input BGR image.
+        brightness_threshold (int): Threshold for brightness detection (0-255).
+        min_contour_area (int): Minimum area for contours to be considered as foil.
+
+    Returns:
+        mask (numpy.ndarray): Binary mask where aluminum foil is detected.
+        contours (list): List of detected contours.
+    """
+    # Convert to grayscale
+    gray = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
+    
+    # Threshold to detect bright areas
+    _, bright_mask = cv2.threshold(gray, brightness_threshold, 255, cv2.THRESH_BINARY)
+    
+    # Find contours
+    contours, _ = cv2.findContours(bright_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    # Filter contours by area
+    filtered_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > min_contour_area]
+    
+    # Create an empty mask
+    mask = np.zeros_like(gray)
+    cv2.drawContours(mask, filtered_contours, -1, 255, thickness=cv2.FILLED)
+    
+    return mask, filtered_contours
+
+
+def silverLineCheck(brightness_threshold=250, minContourArea=700):
+    global cv2_img
+
+    gray = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
+    _, bright_regions = cv2.threshold(gray, brightness_threshold, 255, cv2.THRESH_BINARY)
+    contours, _ = cv2.findContours(bright_regions, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    for contour in contours:
+        area = cv2.contourArea(contour)
+        #print(f"Area: {area}")
+        if area > minContourArea:  # Adjust threshold as needed
+            cv2.drawContours(cv2_img, contour, -1, (0,255,0), thickness=15)
+            print(f"Default True: {area}")
+            return True
+    return False
+
+
+
+def silverLineCheck_HSV(brightness_threshold=250, min_saturation=0, max_saturation=50, min_contour_area=700):
+    """
+    Detects reflective silver regions using HSV filtering.
+    Returns True if a silver-like region is found, otherwise False.
+    """
+    global cv2_img  # Use the global image variable
+
+    hsv = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2HSV)
+    
+    # Create a mask for bright regions with low saturation (silver-like)
+    mask = cv2.inRange(hsv, (0, min_saturation, brightness_threshold), (180, max_saturation, 255))
+
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    for contour in contours:
+        area = cv2.contourArea(contour)
+        if area > min_contour_area:
+            cv2.drawContours(cv2_img, [contour], -1, (0, 255, 0), 3)
+            print(f"HSV True {area}")
+            return True  # Silver strip detected
+            
+    return False  # No silver strip found
+
+
+def silverLineCheck_Adaptive(block_size=11, C=2, min_contour_area=700):
+    """
+    Detects reflective silver regions using Adaptive Thresholding.
+    Returns True if a silver-like region is found, otherwise False.
+    """
+    global cv2_img  # Use the global image variable
+
+    gray = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
+
+    # Adaptive thresholding to detect bright regions dynamically
+    adaptive_thresh = cv2.adaptiveThreshold(
+        gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, block_size, C
+    )
+
+    contours, _ = cv2.findContours(adaptive_thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    for contour in contours:
+        area = cv2.contourArea(contour)
+        if area > min_contour_area:
+            cv2.drawContours(cv2_img, [contour], -1, (0, 255, 0), 3)
+            print(f"Adaptive True {area}")
+            return True  # Silver strip detected
+    
+    return False  # No silver strip found
+
 
 #############################################################################
 #                            Line Camera Loop
@@ -586,6 +690,9 @@ def silverLineCheck():
 def lineCamLoop():
     global cv2_img, blackImage, greenImage, redImage, x_last, y_last
 
+    modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/ball_zone_s/ball_detect_s_edgetpu.tflite', task='detect')
+    modelSilverLine = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/silver_zone_entry/silver_classify_s.onnx', task='classify')
+    
     camera = Picamera2(0)
 
     mode = camera.sensor_modes[0]
@@ -604,15 +711,19 @@ def lineCamLoop():
     time.sleep(0.1)
 
     # Image for brightness normalization
-    white_img = cv2.imread("./InProgress3/White_Image_2.jpg")
-    white_gray = cv2.cvtColor(white_img, cv2.COLOR_RGB2GRAY)
-    white_gray += (white_gray == 0)
+    #white_img = cv2.imread("./InProgress3/White_Image_2.jpg")
+    #white_gray = cv2.cvtColor(white_img, cv2.COLOR_RGB2GRAY)
+    #white_gray += (white_gray == 0)
 
     x_last = int( camera_x / 2 )
     y_last = int( camera_y / 2 )
     lastBottomPoint_x = camera_x / 2
     lastLineAngle = 90
     lastLinePoint = camera_x / 2
+
+    do_inference_limit = 7
+    do_inference_counter = 0
+    last_best_box = None
 
     timer.set_timer("image_similarity", .5)
     timer.set_timer("multiple_bottom", .05)
@@ -626,6 +737,8 @@ def lineCamLoop():
 
     timer_manager.add_timer("test_timer", 0.05)
     timer_manager.add_timer("uTurn", 0.05)
+    timer_manager.add_timer("rightLeft", 0.05)
+    timer_manager.add_timer("rightRight", 0.05)
 
 
     t0 = time.perf_counter()
@@ -633,14 +746,13 @@ def lineCamLoop():
         t1 = t0 + config.lineDelayMS * 0.001
 
         # Loop
-        
-        if robot.objective == "Follow Line":
-            raw_capture = camera.capture_array()
-            raw_capture = cv2.resize(raw_capture, (camera_x, camera_y))
-            cv2_img = cv2.cvtColor(raw_capture, cv2.COLOR_RGBA2BGR)
+        raw_capture = camera.capture_array()
+        raw_capture = cv2.resize(raw_capture, (camera_x, camera_y))
+        cv2_img = cv2.cvtColor(raw_capture, cv2.COLOR_RGBA2BGR)
 
-            cv2.imwrite("./InProgress/latest_frame_original.jpg", cv2_img)
+        cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_original.jpg", cv2_img)
 
+        if objective.value == "follow_line":
             # Color Processing
             hsvImage = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2HSV)
             greenImage = cv2.inRange(hsvImage, green_min, green_max)
@@ -650,7 +762,7 @@ def lineCamLoop():
             grayImage = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
             _, blackImage = cv2.threshold(grayImage, 65, 255, cv2.THRESH_BINARY_INV)
             
-            blackImage = ignoreHighFOVCorners(blackImage, 0.25, 0.20)
+            blackImage = ignoreHighFOVCorners(blackImage)
             
 
             # Noise Reduction
@@ -667,6 +779,23 @@ def lineCamLoop():
             redImage = cv2.erode(redImage, kernel, iterations=9)
 
 
+            # -- SILVER Line --
+            if do_inference_counter >= do_inference_limit:
+                results = modelSilverLine.predict(raw_capture, imgsz=128, conf=0.4, workers=4, verbose=False)
+                result = results[0].numpy()
+
+                confidences = result.probs.top5conf
+                silverValue.value = round(confidences[0] if result.probs.top1 == 1 else confidences[1], 3)  # 0 = Line, 1 = Silver
+                do_inference_counter = 0
+
+            do_inference_counter += 1
+            if silverValue.value > .5:
+                cv2.circle(cv2_img, (10, camera_y - 10), 5, (255, 255, 255), -1, cv2.LINE_AA)
+                objective.value = "zone"
+                zoneStatus.value = "begin"
+                #print(f"HEREEEEEEEEEEEEEEEEEEEEEEE")
+
+
             # -- INTERSECTIONS -- Deal with intersections
             intersectionDetector()
 
@@ -674,6 +803,18 @@ def lineCamLoop():
             # -- RED STRIP -- Check for Red Line - Stop
             contoursRed, _ = cv2.findContours(redImage, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
             redDetected.value = checkContourSize(contoursRed)
+
+
+            # -- SILVER STRIP -- Check for evac zone entrance
+            #if silverLineCheck():
+            #if silverLineCheck_HSV():
+            #if silverLineCheck_Adaptive():
+            #if silverLineCheck() and silverLineCheck_HSV() and silverLineCheck_Adaptive():
+            """if aiSilverLineCheck():
+                print(f"HERE CAUSING PROBLEMS______")
+                objective.value = "zone"
+                zoneStatus.value = "begin"
+                #print(f"HEREEEEEEEEEEEEEEEEEEEEEEE")"""
 
             # -- Black Line --
             # Get Black Contours
@@ -707,17 +848,61 @@ def lineCamLoop():
             
 
             # Show cv2_imgs
-            cv2.imwrite("./InProgress/latest_frame_cv2.jpg", cv2_img)
-            cv2.imwrite("./InProgress/latest_frame_hsv.jpg", hsvImage)
-            cv2.imwrite("./InProgress/latest_frame_green.jpg", greenImage)
-            cv2.imwrite("./InProgress/latest_frame_black.jpg", blackImage)
-            cv2.imwrite("./InProgress/latest_frame_red.jpg", redImage)
+            cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_hsv.jpg", hsvImage)
+            cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_green.jpg", greenImage)
+            cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_black.jpg", blackImage)
+            cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_red.jpg", redImage)
 
             obstacleController()
             silverLineCheck()
 
             savecv2_img("Frames", cv2_img)
             
+
+        elif objective.value == "zone":
+            results = modelVictim.predict(cv2_img, imgsz=(512, 224), conf=0.3, iou=0.2, agnostic_nms=True, workers=4, verbose=False)  # verbose=True to enable debug info
+
+            result = results[0].numpy()
+
+            #print(f"Results: {results} {result}")
+
+            boxes = []
+            for box in result.boxes:
+                x1, y1, x2, y2 = box.xyxy[0].astype(int)
+                class_id = box.cls[0].astype(int)
+                name = result.names[class_id]
+                confidence = box.conf[0].astype(float)
+
+                width = x2 - x1
+                height = y2 - y1
+                area = width * height
+                distance = (x1 + width // 2) - (camera_x // 2)
+                boxes.append([area, distance, name, width])
+
+                color = colors(class_id, True)
+                cv2.rectangle(cv2_img, (x1, y1), (x2, y2), color, 2)
+                cv2.putText(cv2_img, f"{name}: {confidence:.2f}", (x1, y1 - 5), cv2.FONT_HERSHEY_DUPLEX, 0.5, color, 1, cv2.LINE_AA)
+
+            #print(f"boxes {len(boxes)} {boxes}")
+            if len(boxes) > 0:
+                best_box = max(boxes, key=lambda x: x[0])
+                if last_best_box is not None:
+                    best_box = min(boxes, key=lambda x: abs(x[1] - last_best_box[1]))
+
+                last_best_box = best_box
+                ballDistance.value = best_box[1]
+                ballType.value = str.lower(str(best_box[2]))
+                ballWidth.value = best_box[3]
+                print(f"BALLL FOUND: {ballDistance.value} {ballType.value} {ballWidth.value}")
+            else:
+                last_best_box = None
+                ballDistance.value = 0
+                ballType.value = "none"
+                ballWidth.value = -1
+
+
+        cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_cv2.jpg", cv2_img)
+
 
         while (time.perf_counter() <= t1):
             time.sleep(0.0005)
