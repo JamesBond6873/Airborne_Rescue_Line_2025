@@ -321,7 +321,7 @@ def gapController():
 
     if not lineDetected.value: # No line detected
         if lastLineDetected: # Just lost the line (last state was true)
-            timer_manager.set_timer("noLine", 0.35) # Start a timer
+            timer_manager.set_timer("noLine", 0.60) # Start a timer 600ms after last seeing it
         elif timer_manager.is_timer_expired("noLine"): # Timer expired
             inGap = True # Confirm gap
 
@@ -337,11 +337,11 @@ def gapController():
 #############################################################################
 
 def controlLoop():
-    global switchState, M1, M2, M1info, M2info, oldM1, oldM2, motorSpeedDiference, error_theta, error_x, errorAcc, lastError, inGap
+    global switchState, M1, M2, M1info, M2info, oldM1, oldM2, motorSpeedDiference, error_theta, error_x, errorAcc, lastError, inGap, switchState
 
     sendCommandList(["GR","BC", "SF,5,F", "CL", "SF,4,F", "AU", "PA", "SF,0,F", "SF,1,F", "SF,2,F", "SF,3,F"])
 
-    if True: # True if only testing Evac
+    if False: # True if only testing Evac
         objective.value = "zone"
         zoneStatus.value = "findVictims"
         time.sleep(5)
@@ -372,6 +372,7 @@ def controlLoop():
 
         # Loop
         LoPSwitchController()
+        LOPstate.value = 1 if switchState == True else 0
         zoneStatusLoop = zoneStatus.value
         objectiveLoop = objective.value
         
@@ -446,6 +447,7 @@ def controlLoop():
                 f"Loop: {objective.value}\t"
                 f"var: {zoneStatus.value}  "
                 #f"Commands: {commandWaitingList}"
+                #f"LOP: {LOPstate.value}"
             )
         else:
             debugMessage = (

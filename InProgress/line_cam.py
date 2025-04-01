@@ -331,8 +331,16 @@ def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, average_lin
 
     elif not timer_manager.is_timer_expired("test_timer"): # Not Expired
         final_poi = poi[1] if lastDirection == "left" else poi[2]
-
         turnReason.value = 100
+
+    #elif not timer_manager.is_timer_expired("rightLeft"): # Sharp left
+     #   final_poi = poi[1]
+      #  turnReason.value = 160
+
+    #elif not timer_manager.is_timer_expired("rightRight"): # Sharp Right
+     #   final_poi = poi[2]
+      #  turnReason.value = 170
+
 
     else:
         if black_top:
@@ -401,11 +409,15 @@ def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, average_lin
             #elif poi[1][0] < camera_x * 0.05:
             if poi[1][0] < camera_x * 0.05:
                 # final_poi = poiCropped[1] if is_crop else poi[1] # Removed because constant lineCropPercentage
+                if timer_manager.is_timer_expired("rightLeft"):
+                    timer_manager.set_timer("rightLeft", 0.3)
                 final_poi = poi[1]
                 turnReason.value = 16
 
             elif poi[2][0] > camera_x * 0.95:
                 # final_poi = poiCropped[2] if is_crop else poi[2] # Removed because constant lineCropPercentage
+                if timer_manager.is_timer_expired("rightRight"):
+                    timer_manager.set_timer("rightRight", 0.3)
                 final_poi = poi[2]
                 turnReason.value = 17
 
@@ -578,111 +590,6 @@ def obstacleController():
     pass
 
 
-def silverLineCheck2():
-    pass
-
-
-def silverLineCheck3(brightness_threshold=200, min_contour_area=500):
-    global cv2_img
-    """
-    Detects aluminum foil on the floor based on high brightness.
-    
-    Parameters:
-        cv2_img (numpy.ndarray): Input BGR image.
-        brightness_threshold (int): Threshold for brightness detection (0-255).
-        min_contour_area (int): Minimum area for contours to be considered as foil.
-
-    Returns:
-        mask (numpy.ndarray): Binary mask where aluminum foil is detected.
-        contours (list): List of detected contours.
-    """
-    # Convert to grayscale
-    gray = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
-    
-    # Threshold to detect bright areas
-    _, bright_mask = cv2.threshold(gray, brightness_threshold, 255, cv2.THRESH_BINARY)
-    
-    # Find contours
-    contours, _ = cv2.findContours(bright_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    
-    # Filter contours by area
-    filtered_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > min_contour_area]
-    
-    # Create an empty mask
-    mask = np.zeros_like(gray)
-    cv2.drawContours(mask, filtered_contours, -1, 255, thickness=cv2.FILLED)
-    
-    return mask, filtered_contours
-
-
-def silverLineCheck(brightness_threshold=250, minContourArea=700):
-    global cv2_img
-
-    gray = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
-    _, bright_regions = cv2.threshold(gray, brightness_threshold, 255, cv2.THRESH_BINARY)
-    contours, _ = cv2.findContours(bright_regions, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    
-    for contour in contours:
-        area = cv2.contourArea(contour)
-        #print(f"Area: {area}")
-        if area > minContourArea:  # Adjust threshold as needed
-            cv2.drawContours(cv2_img, contour, -1, (0,255,0), thickness=15)
-            print(f"Default True: {area}")
-            return True
-    return False
-
-
-
-def silverLineCheck_HSV(brightness_threshold=250, min_saturation=0, max_saturation=50, min_contour_area=700):
-    """
-    Detects reflective silver regions using HSV filtering.
-    Returns True if a silver-like region is found, otherwise False.
-    """
-    global cv2_img  # Use the global image variable
-
-    hsv = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2HSV)
-    
-    # Create a mask for bright regions with low saturation (silver-like)
-    mask = cv2.inRange(hsv, (0, min_saturation, brightness_threshold), (180, max_saturation, 255))
-
-    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    for contour in contours:
-        area = cv2.contourArea(contour)
-        if area > min_contour_area:
-            cv2.drawContours(cv2_img, [contour], -1, (0, 255, 0), 3)
-            print(f"HSV True {area}")
-            return True  # Silver strip detected
-            
-    return False  # No silver strip found
-
-
-def silverLineCheck_Adaptive(block_size=11, C=2, min_contour_area=700):
-    """
-    Detects reflective silver regions using Adaptive Thresholding.
-    Returns True if a silver-like region is found, otherwise False.
-    """
-    global cv2_img  # Use the global image variable
-
-    gray = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
-
-    # Adaptive thresholding to detect bright regions dynamically
-    adaptive_thresh = cv2.adaptiveThreshold(
-        gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, block_size, C
-    )
-
-    contours, _ = cv2.findContours(adaptive_thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    for contour in contours:
-        area = cv2.contourArea(contour)
-        if area > min_contour_area:
-            cv2.drawContours(cv2_img, [contour], -1, (0, 255, 0), 3)
-            print(f"Adaptive True {area}")
-            return True  # Silver strip detected
-    
-    return False  # No silver strip found
-
-
 #############################################################################
 #                            Line Camera Loop
 #############################################################################
@@ -702,7 +609,7 @@ def lineCamLoop():
     camera.set_controls({
         #"AfMode": controls.AfModeEnum.Manual,
         #"LensPosition": 6.5,
-        "FrameDurationLimits": (1000000 // 50, 1000000 // 50),
+        #"FrameDurationLimits": (1000000 // 50, 1000000 // 50),
         #"AnalogueGain": 3.0,  # Fix gain (default 1.0)
         #"ExposureTime": 10000  # Set exposure in microseconds (adjust as needed)
     })
@@ -789,11 +696,10 @@ def lineCamLoop():
                 do_inference_counter = 0
 
             do_inference_counter += 1
-            if silverValue.value > .5:
+            if silverValue.value > .6 and LOPstate.value == 0:
                 cv2.circle(cv2_img, (10, camera_y - 10), 5, (255, 255, 255), -1, cv2.LINE_AA)
                 objective.value = "zone"
                 zoneStatus.value = "begin"
-                #print(f"HEREEEEEEEEEEEEEEEEEEEEEEE")
 
 
             # -- INTERSECTIONS -- Deal with intersections
@@ -804,17 +710,6 @@ def lineCamLoop():
             contoursRed, _ = cv2.findContours(redImage, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
             redDetected.value = checkContourSize(contoursRed)
 
-
-            # -- SILVER STRIP -- Check for evac zone entrance
-            #if silverLineCheck():
-            #if silverLineCheck_HSV():
-            #if silverLineCheck_Adaptive():
-            #if silverLineCheck() and silverLineCheck_HSV() and silverLineCheck_Adaptive():
-            """if aiSilverLineCheck():
-                print(f"HERE CAUSING PROBLEMS______")
-                objective.value = "zone"
-                zoneStatus.value = "begin"
-                #print(f"HEREEEEEEEEEEEEEEEEEEEEEEE")"""
 
             # -- Black Line --
             # Get Black Contours
@@ -854,7 +749,6 @@ def lineCamLoop():
             cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_red.jpg", redImage)
 
             obstacleController()
-            silverLineCheck()
 
             savecv2_img("Frames", cv2_img)
             
