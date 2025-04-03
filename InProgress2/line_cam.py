@@ -7,10 +7,13 @@ import cv2
 import numpy as np
 from picamera2 import Picamera2
 from libcamera import controls
+from ultralytics import YOLO
+from ultralytics.utils.plotting import colors
 
 import config
-import utils
 from utils import printDebug
+from utils import Timer
+from utils import TimerManager
 import robot
 from mp_manager import *
 
@@ -27,9 +30,16 @@ red_max_1 = np.array(config.red_max_1)
 red_min_2 = np.array(config.red_min_2)
 red_max_2 = np.array(config.red_max_2)
 
-camera_x = 1280
-camera_y = 720
+camera_x = 448
+camera_y = 252
 
+multiple_bottom_side = camera_x / 2
+lastDirection = "Straight!"
+
+timer = Timer()
+timer_manager = TimerManager()
+
+kernel = np.ones((3, 3), np.uint8)
 
 def savecv2_img(folder, cv2_img):
     if saveFrame.value:
@@ -47,35 +57,14 @@ def savecv2_img(folder, cv2_img):
         printDebug(f"File path: {file_path}", config.softDEBUG)
     
 
-def getLine():
-    global cv2_img, blackImage
-
-    contoursblk, _ = cv2.findContours(blackImage, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-    
-    
-    # Define the bottom 70% of the image
-    height, width = blackImage.shape[:2]
-    roi_bottom = blackImage[int(0.2 * height):]  # Crop the bottom 70%
-
-    # Find contours in the cropped image (bottom 70%)
-    contoursblk, _ = cv2.findContours(roi_bottom, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-    
-
-    # No contours
-    if not contoursblk:
-        return lineCenterX.value, lineAngle.value
-    
-    largest_contour = max(contoursblk, key=cv2.contourArea)
-
-    # Shift contour coordinates back to the original image
-    for i in range(len(largest_contour)):
-        largest_contour[i] = (largest_contour[i][0][0], largest_contour[i][0][1] + int(0.2 * height))
-
-    # Draw the largest contour
-    cv2.drawContours(cv2_img, [largest_contour], -1, (0, 255, 0), 2)
-
+def computeMoments(contour):
     # Compute cv2_img moments for the largest contour
-    M = cv2.moments(largest_contour)
+
+    theta = np.pi / 2
+
+    finalContour = cv2.cvtColor(contour, cv2.COLOR_BGR2GRAY)
+
+    M = cv2.moments(finalContour)
     if M["m00"] != 0:
         # Centroid (First Moment)
         cx = int(M["m10"] / M["m00"])
@@ -105,41 +94,94 @@ def getLine():
         # Draw principal axis line
         cv2.line(cv2_img, (x1, y1), (x2, y2), (255, 0, 0), 2)
 
-        #
-        cv2.putText(cv2_img, f"{round(np.rad2deg(theta), 0)}", (1125, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+    return theta
 
-        return cx, theta
-    
+
+def ignoreHighFOVCorners(blackImage, xPercentage=0.30, yPercentage=0.25):
+    # Define the camera_x and height proportions of the triangular cut
+    corner_width = int(camera_x * xPercentage)  # Extend more on x-axis
+    corner_height = int(camera_y * yPercentage)  # Less extension on y-axis
+
+    # Define triangle vertices for the top-left corner
+    top_left_triangle = np.array([[0, 0], [corner_width, 0], [0, corner_height]], np.int32)
+    top_left_triangle = top_left_triangle.reshape((-1, 1, 2))
+
+    # Define triangle vertices for the top-right corner
+    top_right_triangle = np.array([[camera_x, 0], [camera_x - corner_width, 0], [camera_x, corner_height]], np.int32)
+    top_right_triangle = top_right_triangle.reshape((-1, 1, 2))
+
+    # Fill triangles with white inverse of (255)
+    cv2.fillPoly(blackImage, [top_left_triangle], 0)
+    cv2.fillPoly(blackImage, [top_right_triangle], 0)
+
+    return blackImage
+
+
+def checkContourSize(contours, contour_color="red", size=15000):
+    global cv2_img
+
+    if contour_color == "red":
+        color = (0, 255, 0) # Green
+    elif contour_color == "green":
+        color = (0, 0, 255) # Red
     else:
-        return lineCenterX.value, lineAngle.value
+        color = (255, 0, 0)
+
+    for contour in contours:
+        contour_size = cv2.contourArea(contour)
+
+        if contour_size > size:
+            x, y, w, h = cv2.boundingRect(contour)
+            cv2.rectangle(cv2_img, (x, y), (x + w, y + h), color, 2)
+            return True
+
+    return False
 
 
-def getLineAndCrop2(contours_blk):
-    global cv2_img, x_last, y_last
-
-    candidates = np.zeros((len(contours_blk), 5), dtype=np.int32)
+def getLineAndCrop(contours_blk):
+    global x_last, y_last
+    candidates = []
     off_bottom = 0
+    min_area = 1500
 
     for i, contour in enumerate(contours_blk):
         box = cv2.boxPoints(cv2.minAreaRect(contour))
         box = box[box[:, 1].argsort()[::-1]]  # Sort them by their y values and reverse
         bottom_y = box[0][1]
         y_mean = (np.clip(box[0][1], 0, camera_y) + np.clip(box[3][1], 0, camera_y)) / 2
+        contour_area = cv2.contourArea(contour)  # Get contour area
 
         if box[0][1] >= (camera_y * 0.75):
             off_bottom += 1
+
+        if contour_area < min_area:
+            continue  # Skip small contours
 
         box = box[box[:, 0].argsort()]
         x_mean = (np.clip(box[0][0], 0, camera_x) + np.clip(box[3][0], 0, camera_x)) / 2
         x_y_distance = abs(x_last - x_mean) + abs(y_last - y_mean)  # Distance between the last x/y and current x/y
 
-        candidates[i] = i, bottom_y, x_y_distance, x_mean, y_mean
+        candidates.append([i, bottom_y, x_y_distance, x_mean, y_mean])
+
+
+    candidates = np.array(candidates, dtype=np.int32).reshape(-1, 5)
+
 
     if off_bottom < 2:
         candidates = candidates[candidates[:, 1].argsort()[::-1]]  # Sort candidates by their bottom_y
     else:
-        off_bottom_candidates = candidates[np.where(candidates[:, 1] >= (camera_y * 0.75))]
+        off_bottom_candidates = candidates[np.where(candidates[:, 1] >= (camera_y * 0.25))] # initially * 0.75
         candidates = off_bottom_candidates[off_bottom_candidates[:, 2].argsort()]
+        
+
+    if len(candidates) == 0: # No valid contours found
+        lineDetected.value = False
+        x_last, y_last = camera_x // 2, camera_y * 0.75
+        return np.array([[[x_last, y_last]]]), np.array([[[x_last, y_last]]])  # Fake contour at center
+    
+
+    lineDetected.value = True
+
 
     if turnDirection.value == "left":
         x_last = np.clip(candidates[0][3] - 150, 0, camera_x)
@@ -149,7 +191,7 @@ def getLineAndCrop2(contours_blk):
         x_last = candidates[0][3]
 
     y_last = candidates[0][4]
-    blackline = contours_blk[candidates[0][0]]
+    blackline = contours_blk[int( candidates[0][0] )]
     blackline_crop = blackline[np.where(blackline[:, 0, 1] > camera_y * lineCropPercentage.value)]
 
     cv2.drawContours(cv2_img, blackline, -1, (255, 0, 0), 2)
@@ -160,84 +202,9 @@ def getLineAndCrop2(contours_blk):
     return blackline, blackline_crop
 
 
-def getLineAndCrop(contours_blk):
-    global cv2_img, x_last, y_last
-
-    min_area = 100
-    candidates = np.zeros((len(contours_blk), 6), dtype=np.float32)  # Added contour area
-    off_bottom = 0
-
-    for i, contour in enumerate(contours_blk):
-        box = cv2.boxPoints(cv2.minAreaRect(contour))
-        box = box[box[:, 1].argsort()[::-1]]  # Sort by y value (descending)
-        bottom_y = box[0][1]
-        y_mean = (np.clip(box[0][1], 0, camera_y) + np.clip(box[3][1], 0, camera_y)) / 2
-
-        contour_area = cv2.contourArea(contour)  # Get contour area
-
-        if contour_area < min_area:
-            continue  # Skip small contours
-
-        if bottom_y >= (camera_y * 0.75):  
-            off_bottom += 1
-
-        box = box[box[:, 0].argsort()]  
-        x_mean = (np.clip(box[0][0], 0, camera_x) + np.clip(box[3][0], 0, camera_x)) / 2
-        x_y_distance = abs(x_last - x_mean) + abs(y_last - y_mean)
-
-        candidates[i] = i, bottom_y, x_y_distance, x_mean, y_mean, contour_area  # Store values
-
-    if np.all(candidates[:,5] == 0)  or len(candidates) == 0: # No valid contours found
-        #return None, None
-        line_detected.value = False
-        x_last, y_last = camera_x // 2, camera_y * 0.75
-        return np.array([[[x_last, y_last]]]), np.array([[[x_last, y_last]]])  # Fake contour at center
-    
-    line_detected.value = True
-   
-
-    # Normalize values
-    max_area = np.max(candidates[:, 5]) if len(candidates) > 0 else 1
-    max_distance = np.max(candidates[:, 2]) if len(candidates) > 0 else 1
-
-    # Adjust weights for selection
-    w1, w2, w3 = 0.4, 0.3, 0.3  # Adjustable weights
-
-    # Compute probability-based scores
-    scores = (w1 * (candidates[:, 1] / camera_y) +  # Favor lower contours
-              w2 * (1 - (candidates[:, 2] / max_distance)) +  # Prefer closer to last position
-              w3 * (candidates[:, 5] / max_area))  # Favor larger contours
-
-    # Select best contour
-    best_index = np.argmax(scores)
-    best_contour = contours_blk[int(candidates[best_index, 0])]
-    
-    #print(f"contourArea {scores}")
-
-    # Update last known position
-    if turnDirection.value == "left":
-        x_last = np.clip(candidates[best_index, 3] - 150, 0, camera_x)
-    elif turnDirection.value == "right":
-        x_last = np.clip(candidates[best_index, 3] + 150, 0, camera_x)
-    else:
-        x_last = candidates[best_index, 3]
-
-    y_last = candidates[best_index, 4]
-
-    # Crop the selected contour
-    blackline_crop = best_contour[np.where(best_contour[:, 0, 1] > camera_y * lineCropPercentage.value)]
-
-    # Visualization
-    cv2.drawContours(cv2_img, best_contour, -1, (255, 0, 0), 2)
-    cv2.drawContours(cv2_img, blackline_crop, -1, (255, 255, 0), 2)
-    cv2.circle(cv2_img, (int(x_last), int(y_last)), 3, (0, 0, 255), -1)
-
-    return best_contour, blackline_crop
-
-
 def calculatePointsOfInterest(blackline, blackline_crop, last_bottom_point, average_line_point):
     max_gap = 1
-    max_line_width = camera_x * .19
+    max_line_width = camera_x * .3
 
     poi_no_crop = np.zeros((4, 2), dtype=np.int32)  # [t, l, r, b]
 
@@ -334,92 +301,150 @@ def calculatePointsOfInterest(blackline, blackline_crop, last_bottom_point, aver
     return poi, poi_no_crop, is_crop, max_black_top, bottom_point
 
 
-def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, lastLinePoint, bottomPoint):
-    global multiple_bottom_side
+def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, average_line_angle, turn_direction, average_line_point, blackLine, blackLineCrop):
+    global multiple_bottom_side, lastDirection
 
-    black_top = poi[0][1] < camera_y * .1
+    black_top = poi[0][1] < camera_y * .05
 
     multiple_bottom = not (poi[3][0] == 0 and poi[3][1] == 0)
 
     black_l_high = poi[1][1] < camera_y * .5
     black_r_high = poi[2][1] < camera_y * .5
 
-    """if entry:
-        final_poi = poi[0]"""
+    if not timer.get_timer("multiple_bottom"):
+        final_poi = [multiple_bottom_side, camera_y]
+        turnReason.value = 0
 
-    """elif not timer.get_timer("multiple_bottom"):
-        final_poi = [multiple_bottom_side, camera_y]"""
+    elif turn_direction == "left" or turn_direction == "right":
+        final_poi = poi[1] if turn_direction == "left" else poi[2]
+        lastDirection = turn_direction
+        
+        if timer_manager.is_timer_expired("test_timer"): # So only start counting time from the last time it was seen
+            timer_manager.set_timer("test_timer", 1.5) # Give 1.0 s for turn
+        
+        turnReason.value = 1
 
-    if turnDirection.value in ["left", "right"]:
-        index = 1 if turnDirection.value == "left" else 2
-        #final_poi = poiCropped[index] if is_crop else poi[index]
-        final_poi = poi[index]
+    elif turn_direction == "uTurn":
+        # BackUp to Control loop. Meaning it will go forward until control decides otherwise
+        final_poi = (camera_x / 2, camera_y / 2)
+        turnReason.value = 102
+
+    elif not timer_manager.is_timer_expired("test_timer"): # Not Expired
+        final_poi = poi[1] if lastDirection == "left" else poi[2]
+        turnReason.value = 100
+
+    #elif not timer_manager.is_timer_expired("rightLeft"): # Sharp left
+     #   final_poi = poi[1]
+      #  turnReason.value = 160
+
+    #elif not timer_manager.is_timer_expired("rightRight"): # Sharp Right
+     #   final_poi = poi[2]
+      #  turnReason.value = 170
+
 
     else:
         if black_top:
             final_poi = poiCropped[0] if is_crop and not maxBlackTop else poi[0]
+            turnReason.value = 2
 
-            if (poi[1][0] < camera_x * 0.02 and poi[1][1] > camera_y * (lineCropPercentage.value * .75)) or (poi[2][0] > camera_x * 0.98 and poi[2][1] > camera_y * (lineCropPercentage.value * .75)):
+            if (poi[1][0] < camera_x * 0.05 and poi[1][1] > camera_y * (lineCropPercentage.value * .75)) or (poi[2][0] > camera_x * 0.95 and poi[2][1] > camera_y * (lineCropPercentage.value * .75)):
                 final_poi = poi[0]
+                turnReason.value = 3
 
                 if black_l_high or black_r_high:
                     near_high_index = 0
+                    turnReason.value = 4
 
                     if black_l_high and not black_r_high:
                         near_high_index = 1
+                        turnReason.value = 5
 
                     elif not black_l_high and black_r_high:
                         near_high_index = 2
+                        turnReason.value = 6
 
                     elif black_l_high and black_r_high:
-                        if np.abs(poi[1][0] - lastLinePoint) < np.abs(poi[2][0] - lastLinePoint):
+                        if np.abs(poi[1][0] - average_line_point) < np.abs(poi[2][0] - average_line_point):
                             near_high_index = 1
+                            turnReason.value = 7
                         else:
                             near_high_index = 2
+                            turnReason.value = 8
 
-                    if np.abs(poi[near_high_index][0] - lastLinePoint) < np.abs(poi[0][0] - lastLinePoint):
+                    if np.abs(poi[near_high_index][0] - average_line_point) < np.abs(poi[0][0] - average_line_point):
                         final_poi = poi[near_high_index]
+                        turnReason.value = 9
 
         else:
             final_poi = poiCropped[0] if is_crop else poi[0]
+            turnReason.value = 10
 
-            if poi[1][0] < camera_x * 0.02:
+            """
+            if poi[1][0] < camera_x * 0.05 and poi[2][0] > camera_x * 0.95 and timer.get_timer("multiple_side_r") and timer.get_timer("multiple_side_l"):
+                #print(f"Here {average_line_angle}")
+                if average_line_angle >= 0:
+                    #print(f"Here 1")
+                    turnReason.value = 11
+                    index = 2
+                    timer.set_timer("multiple_side_r", .6)
+                else:
+                    #print(f"Here 2")
+                    turnReason.value = 12
+                    index = 1
+                    timer.set_timer("multiple_side_l", .6)
+
+                final_poi = poiCropped[index] if is_crop else poi[index]
+                turnReason.value = 13
+
+            elif not timer.get_timer("multiple_side_l"):
+                #print(f"Here 3")
                 final_poi = poiCropped[1] if is_crop else poi[1]
+                turnReason.value = 14
 
-            elif poi[2][0] > camera_x * 0.98:
+            elif not timer.get_timer("multiple_side_r"):
+                #print(f"Here 4")
                 final_poi = poiCropped[2] if is_crop else poi[2]
+                turnReason.value = 15"""
+
+            #elif poi[1][0] < camera_x * 0.05:
+            if poi[1][0] < camera_x * 0.05:
+                # final_poi = poiCropped[1] if is_crop else poi[1] # Removed because constant lineCropPercentage
+                if timer_manager.is_timer_expired("rightLeft"):
+                    timer_manager.set_timer("rightLeft", 0.3)
+                final_poi = poi[1]
+                turnReason.value = 16
+
+            elif poi[2][0] > camera_x * 0.95:
+                # final_poi = poiCropped[2] if is_crop else poi[2] # Removed because constant lineCropPercentage
+                if timer_manager.is_timer_expired("rightRight"):
+                    timer_manager.set_timer("rightRight", 0.3)
+                final_poi = poi[2]
+                turnReason.value = 17
+
+            elif multiple_bottom and timer.get_timer("multiple_bottom"):
+                if poi[3][0] < bottomPoint[0]:
+                    final_poi = [0, camera_y]
+                    multiple_bottom_side = 0
+                    turnReason.value = 18
+                else:
+                    final_poi = [camera_x, camera_y]
+                    multiple_bottom_side = camera_x
+                    turnReason.value = 19
+                timer.set_timer("multiple_bottom", .6)
+
+    if (final_poi == poiCropped[0]).all():
+        #angle = computeMoments(blackLineCrop)
+        angle = np.pi / 2
+    else: 
+        angle = np.pi / 2 # don't know how to calculate angle in other cases
+
+    angle = int((final_poi[0] - camera_x / 2) / (camera_x / 2) * 180)
+
+    return angle, final_poi, bottomPoint
 
 
-    lineAngle = np.arctan2(final_poi[1] - bottomPoint[1], final_poi[0] - bottomPoint[0])
-
-    if lineAngle < 0:
-        lineAngle = np.pi + lineAngle
-
-    cv2.line(cv2_img, (int(final_poi[0]), int(final_poi[1])), (int(bottomPoint[0]), int(bottomPoint[1])), (255, 0, 0), 2)
-
-    #return int((final_poi[0] - camera_x / 2) / (camera_x / 2) * 180), final_poi
-    #return int((final_poi[0] / camera_x) * 180), final_poi
-    return lineAngle, final_poi
-
-
-def choosePOI(poiCropped, poi, cropAvailable):
-    chosenPOI = poiCropped[0]
-
-    if poiCropped[0][1] < camera_y * lineCropPercentage.value:
-        pass
-
-    return chosenPOI
-
-def LoPController():
-    pass
-
-
-def gapController():
-    pass
-
-
-def check_black(black_around_sign, i, green_box):
-    global blackImage
+def checkBlack(black_around_sign, i, green_box):
+    global cv2_img, blackImage
 
     green_box = green_box[green_box[:, 1].argsort()]
 
@@ -427,36 +452,68 @@ def check_black(black_around_sign, i, green_box):
 
     black_around_sign[i, 4] = int(green_box[2][1])
 
+    roi_mean_comparison = 125
+    marker_height_search_factor = 0.3
+
     # Bottom
-    roi_b = blackImage[int(green_box[2][1]):np.minimum(int(green_box[2][1] + (marker_height * 0.8)), camera_y), np.minimum(int(green_box[2][0]), int(green_box[3][0])):np.maximum(int(green_box[2][0]), int(green_box[3][0]))]
+    roi_b_top_left = (np.minimum(int(green_box[2][0]), int(green_box[3][0])), int(green_box[2][1]))
+    roi_b_bottom_right = (np.maximum(int(green_box[2][0]), int(green_box[3][0])), np.minimum(int(green_box[2][1] + (marker_height * marker_height_search_factor)), camera_y))
+
+    # Draw the bounding box for the bottom region
+    cv2.rectangle(cv2_img, roi_b_top_left, roi_b_bottom_right, (0, 255, 0), 2)  # Green color box
+    
+    
+    # Bottom
+    roi_b = blackImage[int(green_box[2][1]):np.minimum(int(green_box[2][1] + (marker_height * marker_height_search_factor)), camera_y), np.minimum(int(green_box[2][0]), int(green_box[3][0])):np.maximum(int(green_box[2][0]), int(green_box[3][0]))]
     if roi_b.size > 0:
-        if np.mean(roi_b[:]) > 125:
+        if np.mean(roi_b[:]) > roi_mean_comparison:
             black_around_sign[i, 0] = 1
 
     # Top
-    roi_t = blackImage[np.maximum(int(green_box[1][1] - (marker_height * 0.8)), 0):int(green_box[1][1]), np.minimum(np.maximum(int(green_box[0][0]), 0), np.maximum(int(green_box[1][0]), 0)):np.maximum(np.maximum(int(green_box[0][0]), 0), np.maximum(int(green_box[1][0]), 0))]
+    roi_t_top_left = (np.minimum(np.maximum(int(green_box[0][0]), 0), np.maximum(int(green_box[1][0]), 0)), np.maximum(int(green_box[1][1] - (marker_height * marker_height_search_factor)), 0))
+    roi_t_bottom_right = (np.maximum(np.maximum(int(green_box[0][0]), 0), np.maximum(int(green_box[1][0]), 0)), int(green_box[1][1]))
+
+    # Draw the bounding box for the top region
+    cv2.rectangle(cv2_img, roi_t_top_left, roi_t_bottom_right, (0, 255, 0), 2)  # Green color box
+    
+
+    roi_t = blackImage[np.maximum(int(green_box[1][1] - (marker_height * marker_height_search_factor)), 0):int(green_box[1][1]), np.minimum(np.maximum(int(green_box[0][0]), 0), np.maximum(int(green_box[1][0]), 0)):np.maximum(np.maximum(int(green_box[0][0]), 0), np.maximum(int(green_box[1][0]), 0))]
     if roi_t.size > 0:
-        if np.mean(roi_t[:]) > 125:
+        if np.mean(roi_t[:]) > roi_mean_comparison:
             black_around_sign[i, 1] = 1
 
     green_box = green_box[green_box[:, 0].argsort()]
 
     # Left
-    roi_l = blackImage[np.minimum(int(green_box[0][1]), int(green_box[1][1])):np.maximum(int(green_box[0][1]), int(green_box[1][1])), np.maximum(int(green_box[1][0] - (marker_height * 0.8)), 0):int(green_box[1][0])]
+    roi_l_top_left = (np.maximum(int(green_box[1][0] - (marker_height * marker_height_search_factor)), 0), np.minimum(int(green_box[0][1]), int(green_box[1][1])))
+    roi_l_bottom_right = (int(green_box[1][0]), np.maximum(int(green_box[0][1]), int(green_box[1][1])))
+
+    # Draw the bounding box for the left region
+    cv2.rectangle(cv2_img, roi_l_top_left, roi_l_bottom_right, (0, 255, 0), 2)  # Green color box
+    
+
+    roi_l = blackImage[np.minimum(int(green_box[0][1]), int(green_box[1][1])):np.maximum(int(green_box[0][1]), int(green_box[1][1])), np.maximum(int(green_box[1][0] - (marker_height * marker_height_search_factor)), 0):int(green_box[1][0])]
     if roi_l.size > 0:
-        if np.mean(roi_l[:]) > 125:
+        if np.mean(roi_l[:]) > roi_mean_comparison:
             black_around_sign[i, 2] = 1
 
     # Right
-    roi_r = blackImage[np.minimum(int(green_box[2][1]), int(green_box[3][1])):np.maximum(int(green_box[2][1]), int(green_box[3][1])), int(green_box[2][0]):np.minimum(int(green_box[2][0] + (marker_height * 0.8)), camera_x)]
+    roi_r_top_left = (int(green_box[2][0]), np.minimum(int(green_box[2][1]), int(green_box[3][1])))
+    roi_r_bottom_right = (np.minimum(int(green_box[2][0] + (marker_height * marker_height_search_factor)), camera_x), np.maximum(int(green_box[2][1]), int(green_box[3][1])))
+
+    # Draw the bounding box for the right region
+    cv2.rectangle(cv2_img, roi_r_top_left, roi_r_bottom_right, (0, 255, 0), 2)  # Green color box
+    
+
+    roi_r = blackImage[np.minimum(int(green_box[2][1]), int(green_box[3][1])):np.maximum(int(green_box[2][1]), int(green_box[3][1])), int(green_box[2][0]):np.minimum(int(green_box[2][0] + (marker_height * marker_height_search_factor)), camera_x)]
     if roi_r.size > 0:
-        if np.mean(roi_r[:]) > 125:
+        if np.mean(roi_r[:]) > roi_mean_comparison:
             black_around_sign[i, 3] = 1
 
     return black_around_sign
 
 
-def determine_turn_direction(black_around_sign):
+def determineTurnDirection(black_around_sign):
     turn_left = False
     turn_right = False
     left_bottom = False
@@ -479,20 +536,34 @@ def determine_turn_direction(black_around_sign):
 def checkGreen(contours_grn):
     global cv2_img, blackImage
 
+    height, width = cv2_img.shape[:2]  # Get the height and width of the image
+    bottom_percent_threshold = int(0.15 * height)  # This is the pixel line separating the top 20% from the bottom 80%
+
     black_around_sign = np.zeros((len(contours_grn), 5), dtype=np.int16)  # [[b,t,l,r,lp], [b,t,l,r,lp]]
 
     for i, contour in enumerate(contours_grn):
         area = cv2.contourArea(contour)
-        if area <= 2500:
+
+        # Get the y-coordinate of the center of the bounding box
+        center, _, _ = cv2.minAreaRect(contour)  # center is a tuple (x, y)
+        y_center = center[1]  # Extract the y-coordinate
+
+        if area <= 1500:  # Changed to 1500 # Later Changed to 1000 # Changed to 750
+                continue
+        
+        # Only process contours in the bottom 80% of the image
+        if y_center < bottom_percent_threshold:
+            #print(f"Here {y_center} {bottom_percent_threshold}")
             continue
+            
 
         green_box = cv2.boxPoints(cv2.minAreaRect(contour))
         draw_box = np.intp(green_box)
         cv2.drawContours(cv2_img, [draw_box], -1, (0, 0, 255), 2)
 
-        black_around_sign = check_black(black_around_sign, i, green_box)
+        black_around_sign = checkBlack(black_around_sign, i, green_box)
 
-    turn_left, turn_right, left_bottom, right_bottom = determine_turn_direction(black_around_sign)
+    turn_left, turn_right, left_bottom, right_bottom = determineTurnDirection(black_around_sign)
 
     if turn_left and not turn_right and not left_bottom:
         return "left"
@@ -504,44 +575,13 @@ def checkGreen(contours_grn):
         return "straight"
 
 
-def onTopIntersection(contours_grn):
-    global cv2_img
-
-    closeToIntersection = onIntersection.value
-
-    for i, contour in enumerate(contours_grn):
-        area = cv2.contourArea(contour)
-        if area <= 2500:
-            continue
-
-        # Compute Green Contours moments
-        M = cv2.moments(contour)
-        if M["m00"] != 0:
-            # Centroid (First Moment)
-            cx = int(M["m10"] / M["m00"])
-            cy = int(M["m01"] / M["m00"])
-
-            cv2.circle(cv2_img, (cx, cy), 5, (255, 0, 0), -1)
-
-            if cy > 0.5 * camera_y:
-                closeToIntersection = True 
-
-    return closeToIntersection
-
-
 def intersectionDetector():
-    global greenImage, blackImage, intersectionTakeOverStart
+    global greenImage, blackImage
     contoursGreen, _ = cv2.findContours(greenImage, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
-    onIntersection.value = onTopIntersection(contoursGreen)
-
     if len(contoursGreen) > 0:
-        turnDirectionNew = checkGreen(contoursGreen)
-        if turnDirectionNew != turnDirection.value:
-            turnDirection.value = turnDirectionNew
-            if turnDirectionNew != "straight":
-                intersectionTakeOverStart = time.perf_counter()
-                print(f"New Intersection Time: {intersectionTakeOverStart}")
+        turnDirection.value = checkGreen(contoursGreen)
+                    
     else:
         turnDirection.value = "straight"
 
@@ -550,120 +590,212 @@ def obstacleController():
     pass
 
 
-def redLineCheck():
-    pass
-
-
-def silverLineCheck():
-    pass
-
 #############################################################################
 #                            Line Camera Loop
 #############################################################################
 
 def lineCamLoop():
-    global cv2_img, blackImage, greenImage, redImage, x_last, y_last, intersectionTakeOverStart
+    global cv2_img, blackImage, greenImage, redImage, x_last, y_last
 
+    modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/ball_zone_s/ball_detect_s_edgetpu.tflite', task='detect')
+    modelSilverLine = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/silver_zone_entry/silver_classify_s.onnx', task='classify')
+    
     camera = Picamera2(0)
 
     mode = camera.sensor_modes[0]
     camera.configure(camera.create_video_configuration(sensor={'output_size': mode['size'], 'bit_depth': mode['bit_depth']}))
 
     #camera.set_controls({"AfMode": controls.AfModeEnum.Manual, "ExposureTime":10000})
-
-    # Fix exposure to avoid automatic adjustments
-    """camera.set_controls({
-        "ExposureTime": 5000,  # Increase from 500 to 5000 (5ms) or more
-        "AnalogueGain": 4.0    # Boost brightness (increase if still too dark)
-    })"""
-
-    """
-    camera.configure(camera.create_video_configuration(sensor={'output_size': mode['size'], 'bit_depth': mode['bit_depth']}))
-    #camera.set_controls({"AfMode": 2})  # 2 corresponds to "Auto" mode
-    camera.set_controls({"AfMode": controls.AfModeEnum.Continuous})
-
-    # Enable Autofocus and Adjust Exposure
-    #camera.set_controls({"AfMode": controls.AfModeEnum.Continuous, "LensPosition": 2.5, "FrameDurationLimits": (1000000 // 50, 1000000 // 50)})
-    #camera.set_controls({"LensPosition": 2.5, "FrameDurationLimits": (1000000 // 50, 1000000 // 50)})"""
+    camera.set_controls({
+        #"AfMode": controls.AfModeEnum.Manual,
+        #"LensPosition": 6.5,
+        #"FrameDurationLimits": (1000000 // 50, 1000000 // 50),
+        #"AnalogueGain": 3.0,  # Fix gain (default 1.0)
+        #"ExposureTime": 10000  # Set exposure in microseconds (adjust as needed)
+    })
 
     camera.start()
     time.sleep(0.1)
 
+    # Image for brightness normalization
+    #white_img = cv2.imread("./InProgress3/White_Image_2.jpg")
+    #white_gray = cv2.cvtColor(white_img, cv2.COLOR_RGB2GRAY)
+    #white_gray += (white_gray == 0)
 
-    x_last = camera_x / 2
-    y_last = camera_y / 2
+    x_last = int( camera_x / 2 )
+    y_last = int( camera_y / 2 )
     lastBottomPoint_x = camera_x / 2
     lastLineAngle = 90
     lastLinePoint = camera_x / 2
 
-    intersectionTakeOverStart = - config.intersectionMaxTime
+    do_inference_limit = 7
+    do_inference_counter = 0
+    last_best_box = None
+
+    timer.set_timer("image_similarity", .5)
+    timer.set_timer("multiple_bottom", .05)
+    timer.set_timer("multiple_side_l", .05)
+    timer.set_timer("multiple_side_r", .05)
+    timer.set_timer("right_marker", .05)
+    timer.set_timer("left_marker", .05)
+    timer.set_timer("right_marker_up", .05)
+    timer.set_timer("left_marker_up", .05)
+    timer.set_timer("turn_persistence_timer", .05)  # Initialize if not present
+
+    timer_manager.add_timer("test_timer", 0.05)
+    timer_manager.add_timer("uTurn", 0.05)
+    timer_manager.add_timer("rightLeft", 0.05)
+    timer_manager.add_timer("rightRight", 0.05)
+
 
     t0 = time.perf_counter()
     while not terminate.value:
         t1 = t0 + config.lineDelayMS * 0.001
 
         # Loop
+        raw_capture = camera.capture_array()
+        raw_capture = cv2.resize(raw_capture, (camera_x, camera_y))
+        cv2_img = cv2.cvtColor(raw_capture, cv2.COLOR_RGBA2BGR)
 
-        LoPController()
-        
-        if robot.objective == "Follow Line":
-            raw_capture = camera.capture_array()
-            cv2_img = cv2.cvtColor(raw_capture, cv2.COLOR_RGBA2BGR)
+        cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_original.jpg", cv2_img)
 
+        if objective.value == "follow_line":
+            # Color Processing
             hsvImage = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2HSV)
             greenImage = cv2.inRange(hsvImage, green_min, green_max)
             redImage = cv2.inRange(hsvImage, red_min_1, red_max_1) + cv2.inRange(hsvImage, red_min_2, red_max_2)
-            blackImage = cv2.inRange(hsvImage, black_min, black_max)
-            #blackImage = cv2.subtract(blackImage, greenImage) # Improve black image quality by removing green
+            
+            # Black Processing
+            grayImage = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
+            _, blackImage = cv2.threshold(grayImage, 65, 255, cv2.THRESH_BINARY_INV)
+            
+            blackImage = ignoreHighFOVCorners(blackImage)
+            
 
-            # Deal with intersections
+            # Noise Reduction
+            blackImage = cv2.erode(blackImage, kernel, iterations=5)
+            blackImage = cv2.dilate(blackImage, kernel, iterations=17) # Previous values: 12 | 16
+            blackImage = cv2.erode(blackImage, kernel, iterations=9)  # Previous values: 4 | 8
+
+            greenImage = cv2.erode(greenImage, kernel, iterations=1)
+            greenImage = cv2.dilate(greenImage, kernel, iterations=11)
+            greenImage = cv2.erode(greenImage, kernel, iterations=9)
+                                    
+            redImage = cv2.erode(redImage, kernel, iterations=1)
+            redImage = cv2.dilate(redImage, kernel, iterations=11)
+            redImage = cv2.erode(redImage, kernel, iterations=9)
+
+
+            # -- SILVER Line --
+            if do_inference_counter >= do_inference_limit:
+                results = modelSilverLine.predict(raw_capture, imgsz=128, conf=0.4, workers=4, verbose=False)
+                result = results[0].numpy()
+
+                confidences = result.probs.top5conf
+                silverValue.value = round(confidences[0] if result.probs.top1 == 1 else confidences[1], 3)  # 0 = Line, 1 = Silver
+                do_inference_counter = 0
+
+            do_inference_counter += 1
+            if silverValue.value > .6 and LOPstate.value == 0:
+                cv2.circle(cv2_img, (10, camera_y - 10), 5, (255, 255, 255), -1, cv2.LINE_AA)
+                objective.value = "zone"
+                zoneStatus.value = "begin"
+
+
+            # -- INTERSECTIONS -- Deal with intersections
             intersectionDetector()
 
-            if turnDirection.value != "straight" or time.perf_counter() < intersectionTakeOverStart + config.intersectionMaxTime:
-                # Get blackline and blackline contours
-                print(f"Intersection Time: {time.perf_counter()} {intersectionTakeOverStart}")
-                contoursBlack, _ = cv2.findContours(blackImage, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-                blackLine, blackLineCrop = getLineAndCrop(contoursBlack)
-                poiCropped, poi, isCrop, maxBlackTop, bottomPoint = calculatePointsOfInterest(blackLine, blackLineCrop, lastBottomPoint_x, lastLinePoint)
-                lineAngle.value, finalPoi = interpretPOI(poiCropped, poi, isCrop, maxBlackTop, lastLinePoint, bottomPoint)
-                lineCenterX.value = finalPoi[0]
-                isCropped.value = isCrop
 
-                lineAngle.value = np.pi / 2 # Means ignore line angle when in this situation
+            # -- RED STRIP -- Check for Red Line - Stop
+            contoursRed, _ = cv2.findContours(redImage, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+            redDetected.value = checkContourSize(contoursRed)
 
-                cv2.circle(cv2_img, (int(poiCropped[0][0]), int(poiCropped[0][1])), 10, (0, 0, 255), -1)
-                cv2.circle(cv2_img, (int(poiCropped[1][0]), int(poiCropped[1][1])), 10, (0, 255, 0), -1)
-                cv2.circle(cv2_img, (int(poiCropped[2][0]), int(poiCropped[2][1])), 10, (255, 0, 0), -1)
 
-                cv2.circle(cv2_img, (int(poi[0][0]), int(poi[0][1])), 5, (0, 0, 255), -1)
-                cv2.circle(cv2_img, (int(poi[1][0]), int(poi[1][1])), 5, (255, 0, 0), -1)
-                cv2.circle(cv2_img, (int(poi[2][0]), int(poi[2][1])), 5, (0, 255, 0), -1)
+            # -- Black Line --
+            # Get Black Contours
+            contoursBlack, _ = cv2.findContours(blackImage, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+            # Calculate Black Line (cropped and not) + Points of Interest
+            blackLine, blackLineCrop = getLineAndCrop(contoursBlack)
+            poiCropped, poi, isCrop, maxBlackTop, bottomPoint = calculatePointsOfInterest(blackLine, blackLineCrop, lastBottomPoint_x, lastLinePoint)
+            lineAngle2, finalPoi, bottomPoint = interpretPOI(poiCropped, poi, isCrop, maxBlackTop, bottomPoint, lastLineAngle, turnDirection.value, lastLinePoint, blackLine, blackLineCrop)
+            lineCenterX.value = finalPoi[0]
+            isCropped.value = isCrop
 
-                cv2.circle(cv2_img, (int(bottomPoint[0]), int(bottomPoint[1])), 10, (0, 255, 255), -1)
+            lineAngle.value = np.pi / 2 # Means ignore line angle when in this situation
 
-                cv2.circle(cv2_img, (int(finalPoi[0]), int(finalPoi[1])), 20, (0, 0, 255), -1)
+            # Update Image
+            cv2.circle(cv2_img, (int(poiCropped[0][0]), int(poiCropped[0][1])), 5, (0, 0, 255), -1)
+            cv2.circle(cv2_img, (int(poiCropped[1][0]), int(poiCropped[1][1])), 5, (0, 255, 0), -1)
+            cv2.circle(cv2_img, (int(poiCropped[2][0]), int(poiCropped[2][1])), 5, (255, 0, 0), -1)
 
-                lastBottomPoint_x = bottomPoint[0]
-                lastLineAngle = lineAngle.value
-                lastLinePoint = finalPoi[0]
-                
-            else:
-                # Follow Line - Get Centroid and Line Angle            
-                lineCenterX.value, lineAngle.value = getLine()
+            cv2.circle(cv2_img, (int(poi[0][0]), int(poi[0][1])), 2, (0, 0, 255), -1)
+            cv2.circle(cv2_img, (int(poi[1][0]), int(poi[1][1])), 2, (255, 0, 0), -1)
+            cv2.circle(cv2_img, (int(poi[2][0]), int(poi[2][1])), 2, (0, 255, 0), -1)
+
+            cv2.circle(cv2_img, (int(bottomPoint[0]), int(bottomPoint[1])), 5, (0, 255, 255), -1)
+
+            cv2.circle(cv2_img, (int(finalPoi[0]), int(finalPoi[1])), 10, (0, 0, 255), -1)
+
+
+            lastBottomPoint_x = bottomPoint[0]
+            lastLineAngle = lineAngle2
+            lastLinePoint = finalPoi[0]
+            
 
             # Show cv2_imgs
-            cv2.imwrite("./InProgress2/latest_frame_cv2.jpg", cv2_img)
-            cv2.imwrite("./InProgress2/latest_frame_hsv.jpg", hsvImage)
-            cv2.imwrite("./InProgress2/latest_frame_green.jpg", greenImage)
-            cv2.imwrite("./InProgress2/latest_frame_black.jpg", blackImage)
+            cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_hsv.jpg", hsvImage)
+            cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_green.jpg", greenImage)
+            cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_black.jpg", blackImage)
+            cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_red.jpg", redImage)
 
-            gapController()
             obstacleController()
-            redLineCheck()
-            silverLineCheck()
 
             savecv2_img("Frames", cv2_img)
-            #savecv2_img("Frames", cv2_img)
+            
+
+        elif objective.value == "zone":
+            results = modelVictim.predict(cv2_img, imgsz=(512, 224), conf=0.3, iou=0.2, agnostic_nms=True, workers=4, verbose=False)  # verbose=True to enable debug info
+
+            result = results[0].numpy()
+
+            #print(f"Results: {results} {result}")
+
+            boxes = []
+            for box in result.boxes:
+                x1, y1, x2, y2 = box.xyxy[0].astype(int)
+                class_id = box.cls[0].astype(int)
+                name = result.names[class_id]
+                confidence = box.conf[0].astype(float)
+
+                width = x2 - x1
+                height = y2 - y1
+                area = width * height
+                distance = (x1 + width // 2) - (camera_x // 2)
+                boxes.append([area, distance, name, width])
+
+                color = colors(class_id, True)
+                cv2.rectangle(cv2_img, (x1, y1), (x2, y2), color, 2)
+                cv2.putText(cv2_img, f"{name}: {confidence:.2f}", (x1, y1 - 5), cv2.FONT_HERSHEY_DUPLEX, 0.5, color, 1, cv2.LINE_AA)
+
+            #print(f"boxes {len(boxes)} {boxes}")
+            if len(boxes) > 0:
+                best_box = max(boxes, key=lambda x: x[0])
+                if last_best_box is not None:
+                    best_box = min(boxes, key=lambda x: abs(x[1] - last_best_box[1]))
+
+                last_best_box = best_box
+                ballDistance.value = best_box[1]
+                ballType.value = str.lower(str(best_box[2]))
+                ballWidth.value = best_box[3]
+                print(f"BALLL FOUND: {ballDistance.value} {ballType.value} {ballWidth.value}")
+            else:
+                last_best_box = None
+                ballDistance.value = 0
+                ballType.value = "none"
+                ballWidth.value = -1
+
+
+        cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_cv2.jpg", cv2_img)
 
 
         while (time.perf_counter() <= t1):
