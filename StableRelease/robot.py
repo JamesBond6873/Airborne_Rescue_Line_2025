@@ -5,7 +5,7 @@ import numpy as np
 
 import config
 from utils import *
-from line_cam import camera_x
+from line_cam import camera_x, camera_y
 import mySerial
 from mp_manager import *
 
@@ -233,13 +233,13 @@ def setMotorsSpeeds2():
         M2 = gamepadM2.value
 
 
-def setMotorsSpeeds():
+def setMotorsSpeeds(guidanceFactor):
     global M1, M2, M1info, M2info, motorSpeedDiference
     
-    motorSpeedDiference = PID2(lineCenterX.value, lineAngle.value)
+    motorSpeedDiference = PID2(guidanceFactor, lineAngle.value)
     M1, M2 = calculateMotorSpeeds(motorSpeedDiference)
 
-    if redDetected.value:
+    if redDetected.value and not objective.value == "zone":
         M1, M2 = 1520, 1520
 
     if inGap:
@@ -278,7 +278,6 @@ def controlMotors2():
         message = f"M({config.DEFAULT_STOPPED_SPEED}, {config.DEFAULT_STOPPED_SPEED})"
 
     mySerial.sendSerial(message)
-
 
 
 
@@ -383,7 +382,7 @@ def controlLoop():
             if objectiveLoop == "follow_line":
                 gapController()
 
-                setMotorsSpeeds()
+                setMotorsSpeeds(lineCenterX.value)
                 intersectionController()
                 controlMotors()
             
@@ -413,6 +412,22 @@ def controlLoop():
                     #print(f"Here 4-----------------")
                     setManualMotorsSpeeds(1250 if rotateTo == "left" else 1750, 1750 if rotateTo == "left" else 1250)
                     controlMotors()
+                
+                elif zoneStatusLoop == "goToBall":
+                    setMotorsSpeeds(ballCenterX.value)
+                    #M1, M2 = 1520, 1520
+                    controlMotors()
+                    print(f"here 3 {ballBottomY.value} {ballBottomY.value >= camera_y * 0.95}")
+                    if ballBottomY.value >= camera_y * 0.80 and not LOPstate.value:
+                        print(f"Here?? {ballBottomY.value} {ballType.value}")
+                        if ballType.value == "silver ball":
+                            print(f"Here1")
+                            pickVictim("A")
+                        elif ballType.value == "black ball":
+                            print(f"Here2")
+                            pickVictim("D")
+                        zoneStatus.value = "findVictim"
+                        
 
 
         intrepretCommand()
@@ -428,7 +443,7 @@ def controlLoop():
 
         lastObjective = objective.value
         
-        if objectiveLoop == "follow_line":
+        if objectiveLoop == "follow_line" and notWaiting:
             debugMessage = (
                 f"Center: {lineCenterX.value} \t"
                 #f"Angle: {round(np.rad2deg(lineAngle.value),2)} \t"
@@ -449,21 +464,26 @@ def controlLoop():
                 #f"Commands: {commandWaitingList}"
                 #f"LOP: {LOPstate.value}"
             )
-        else:
+            printDebug(f"{debugMessage}", config.softDEBUG)
+        if objectiveLoop == "zone" and notWaiting:
             debugMessage = (
-                f"Center: {lineCenterX.value} \t"
-                f"LineBias: {int(config.KP * error_x + config.KD * (error_x - lastError) + config.KI * errorAcc)}   \t"
+                #f"Center: {lineCenterX.value} \t"
+                #f"LineBias: {int(config.KP * error_x + config.KD * (error_x - lastError) + config.KI * errorAcc)}   \t"
                 f"ballType: {ballType.value} \t"
-                f"ballDistance: {ballDistance.value} \t"
+                f"ballCenter: {ballCenterX.value} \t"
+                f"ballBottom: {ballBottomY.value} {ballBottomY.value >= camera_y * 0.95}\t"
                 f"ballWidth: {ballWidth.value} \t"
                 f"M1: {int(M1info)} \t"
                 f"M2: {int(M2info)} \t"
-                f"LOP: {switchState} \t"
-                f"Loop: {objective.value}\t"
+                #f"LOP: {switchState} \t"
+                #f"Loop: {objective.value}\t"
                 f"var: {zoneStatus.value}  "
                 #f"Commands: {commandWaitingList}"
-            ) 
-        printDebug(f"{debugMessage}", config.softDEBUG)
+            )
+            printDebug(f"{debugMessage}", config.softDEBUG)
+        if not notWaiting:
+            printDebug(f"Not Waiting: {notWaiting}", config.softDEBUG)
+        
 
 
         while (time.perf_counter() <= t1):

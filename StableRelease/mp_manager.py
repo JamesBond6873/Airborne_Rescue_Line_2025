@@ -19,9 +19,11 @@ turnReason = manager.Value("i", 0)
 redDetected = manager.Value("i", False)
 silverValue = manager.Value("i", 0) # 0 = Line, 1 = Silver
 
-ballDistance = manager.Value("i", -1)
+ballCenterX = manager.Value("i", -1)
+ballBottomY = manager.Value("i", -1)
 ballWidth = manager.Value("i", -1)
 ballType = manager.Value("i", "none") # "none"; "silver ball"; "black ball"
+ballConfidence = manager.Value("i", -1)
 
 isCropped = manager.Value("i", False)
 lineCropPercentage = manager.Value("i", 0.6)
