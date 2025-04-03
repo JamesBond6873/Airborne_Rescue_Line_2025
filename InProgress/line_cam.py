@@ -41,6 +41,9 @@ timer_manager = TimerManager()
 
 kernel = np.ones((3, 3), np.uint8)
 
+lastSide = -1
+
+
 def savecv2_img(folder, cv2_img):
     if saveFrame.value:
         # Create the "fotos" directory if it doesn't exist
@@ -97,7 +100,7 @@ def computeMoments(contour):
     return theta
 
 
-def ignoreHighFOVCorners(blackImage, xPercentage=0.30, yPercentage=0.25):
+def ignoreHighFOVCorners(blackImage, xPercentage=0.25, yPercentage=0.15):
     # Define the camera_x and height proportions of the triangular cut
     corner_width = int(camera_x * xPercentage)  # Extend more on x-axis
     corner_height = int(camera_y * yPercentage)  # Less extension on y-axis
@@ -117,7 +120,7 @@ def ignoreHighFOVCorners(blackImage, xPercentage=0.30, yPercentage=0.25):
     return blackImage
 
 
-def checkContourSize(contours, contour_color="red", size=15000):
+def checkContourSize(contours, contour_color="red", size=20000):
     global cv2_img
 
     if contour_color == "red":
@@ -301,8 +304,11 @@ def calculatePointsOfInterest(blackline, blackline_crop, last_bottom_point, aver
     return poi, poi_no_crop, is_crop, max_black_top, bottom_point
 
 
-def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, average_line_angle, turn_direction, average_line_point, blackLine, blackLineCrop):
-    global multiple_bottom_side, lastDirection
+def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, turn_direction, last_line_point):
+    global multiple_bottom_side, lastDirection, lastSide
+
+    average_line_point = last_line_point[0]
+    average_line_point_y = last_line_point[1]
 
     black_top = poi[0][1] < camera_y * .05
 
@@ -314,6 +320,8 @@ def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, average_lin
     if not timer.get_timer("multiple_bottom"):
         final_poi = [multiple_bottom_side, camera_y]
         turnReason.value = 0
+        lastSide = 0  # Reset turning preference
+
 
     elif turn_direction == "left" or turn_direction == "right":
         final_poi = poi[1] if turn_direction == "left" else poi[2]
@@ -323,15 +331,18 @@ def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, average_lin
             timer_manager.set_timer("test_timer", 1.5) # Give 1.0 s for turn
         
         turnReason.value = 1
+        lastSide = 0  # Reset turning preference
 
     elif turn_direction == "uTurn":
         # BackUp to Control loop. Meaning it will go forward until control decides otherwise
         final_poi = (camera_x / 2, camera_y / 2)
         turnReason.value = 102
+        lastSide = 0  # Reset turning preference
 
     elif not timer_manager.is_timer_expired("test_timer"): # Not Expired
         final_poi = poi[1] if lastDirection == "left" else poi[2]
         turnReason.value = 100
+        lastSide = 0  # Reset turning preference
 
     #elif not timer_manager.is_timer_expired("rightLeft"): # Sharp left
      #   final_poi = poi[1]
@@ -346,6 +357,7 @@ def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, average_lin
         if black_top:
             final_poi = poiCropped[0] if is_crop and not maxBlackTop else poi[0]
             turnReason.value = 2
+            lastSide = 0  # Reset turning preference
 
             if (poi[1][0] < camera_x * 0.05 and poi[1][1] > camera_y * (lineCropPercentage.value * .75)) or (poi[2][0] > camera_x * 0.95 and poi[2][1] > camera_y * (lineCropPercentage.value * .75)):
                 final_poi = poi[0]
@@ -379,8 +391,48 @@ def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, average_lin
             final_poi = poiCropped[0] if is_crop else poi[0]
             turnReason.value = 10
 
-            """
-            if poi[1][0] < camera_x * 0.05 and poi[2][0] > camera_x * 0.95 and timer.get_timer("multiple_side_r") and timer.get_timer("multiple_side_l"):
+            if poi[1][0] < camera_x * 0.10 and poi[2][0] > camera_x * 0.90 and timer_manager.is_timer_expired("rightLeft") and timer_manager.is_timer_expired("rightRight"):
+                if lastSide == 2:
+                    index = 2
+                    timer_manager.set_timer("rightRight", 0.6)
+                    turnReason.value = 17.5
+                    final_poi = poi[index]
+                elif lastSide == 1:
+                    index = 1
+                    timer_manager.set_timer("rightLeft", 0.6)
+                    turnReason.value = 16.5
+                    final_poi = poi[index]
+                
+
+            #elif poi[1][0] < camera_x * 0.05:
+            elif poi[1][0] < camera_x * 0.05 and timer_manager.is_timer_expired("rightRight"): # Do not go for left if we were going right
+                # final_poi = poiCropped[1] if is_crop else poi[1] # Removed because constant lineCropPercentage
+                if timer_manager.is_timer_expired("rightLeft"):
+                    timer_manager.set_timer("rightLeft", 0.3)
+                final_poi = poi[1]
+                lastSide = 1
+                turnReason.value = 16
+
+            elif poi[2][0] > camera_x * 0.95 and timer_manager.is_timer_expired("rightLeft"): # Do not go for right if we were going left
+                # final_poi = poiCropped[2] if is_crop else poi[2] # Removed because constant lineCropPercentage
+                if timer_manager.is_timer_expired("rightRight"):
+                    timer_manager.set_timer("rightRight", 0.3)
+                final_poi = poi[2]
+                lastSide = 2
+                turnReason.value = 17
+
+            elif multiple_bottom and timer.get_timer("multiple_bottom"):
+                if poi[3][0] < bottomPoint[0]:
+                    final_poi = [0, camera_y]
+                    multiple_bottom_side = 0
+                    turnReason.value = 18
+                else:
+                    final_poi = [camera_x, camera_y]
+                    multiple_bottom_side = camera_x
+                    turnReason.value = 19
+                timer.set_timer("multiple_bottom", .6)
+            
+            """if poi[1][0] < camera_x * 0.05 and poi[2][0] > camera_x * 0.95 and timer.get_timer("multiple_side_r") and timer.get_timer("multiple_side_l"):
                 #print(f"Here {average_line_angle}")
                 if average_line_angle >= 0:
                     #print(f"Here 1")
@@ -405,32 +457,6 @@ def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, average_lin
                 #print(f"Here 4")
                 final_poi = poiCropped[2] if is_crop else poi[2]
                 turnReason.value = 15"""
-
-            #elif poi[1][0] < camera_x * 0.05:
-            if poi[1][0] < camera_x * 0.05:
-                # final_poi = poiCropped[1] if is_crop else poi[1] # Removed because constant lineCropPercentage
-                if timer_manager.is_timer_expired("rightLeft"):
-                    timer_manager.set_timer("rightLeft", 0.3)
-                final_poi = poi[1]
-                turnReason.value = 16
-
-            elif poi[2][0] > camera_x * 0.95:
-                # final_poi = poiCropped[2] if is_crop else poi[2] # Removed because constant lineCropPercentage
-                if timer_manager.is_timer_expired("rightRight"):
-                    timer_manager.set_timer("rightRight", 0.3)
-                final_poi = poi[2]
-                turnReason.value = 17
-
-            elif multiple_bottom and timer.get_timer("multiple_bottom"):
-                if poi[3][0] < bottomPoint[0]:
-                    final_poi = [0, camera_y]
-                    multiple_bottom_side = 0
-                    turnReason.value = 18
-                else:
-                    final_poi = [camera_x, camera_y]
-                    multiple_bottom_side = camera_x
-                    turnReason.value = 19
-                timer.set_timer("multiple_bottom", .6)
 
     if (final_poi == poiCropped[0]).all():
         #angle = computeMoments(blackLineCrop)
@@ -626,7 +652,7 @@ def lineCamLoop():
     y_last = int( camera_y / 2 )
     lastBottomPoint_x = camera_x / 2
     lastLineAngle = 90
-    lastLinePoint = camera_x / 2
+    lastLinePoint = [x_last, y_last] # center points 
 
     do_inference_limit = 7
     do_inference_counter = 0
@@ -646,6 +672,7 @@ def lineCamLoop():
     timer_manager.add_timer("uTurn", 0.05)
     timer_manager.add_timer("rightLeft", 0.05)
     timer_manager.add_timer("rightRight", 0.05)
+    timer_manager.add_timer("goToBall", 0.05)
 
 
     t0 = time.perf_counter()
@@ -675,7 +702,7 @@ def lineCamLoop():
             # Noise Reduction
             blackImage = cv2.erode(blackImage, kernel, iterations=5)
             blackImage = cv2.dilate(blackImage, kernel, iterations=17) # Previous values: 12 | 16
-            blackImage = cv2.erode(blackImage, kernel, iterations=9)  # Previous values: 4 | 8
+            blackImage = cv2.erode(blackImage, kernel, iterations=9)  # Previous values: 4 | 8"""
 
             greenImage = cv2.erode(greenImage, kernel, iterations=1)
             greenImage = cv2.dilate(greenImage, kernel, iterations=11)
@@ -687,7 +714,7 @@ def lineCamLoop():
 
 
             # -- SILVER Line --
-            if do_inference_counter >= do_inference_limit:
+            """if do_inference_counter >= do_inference_limit:
                 results = modelSilverLine.predict(raw_capture, imgsz=128, conf=0.4, workers=4, verbose=False)
                 result = results[0].numpy()
 
@@ -700,8 +727,8 @@ def lineCamLoop():
                 cv2.circle(cv2_img, (10, camera_y - 10), 5, (255, 255, 255), -1, cv2.LINE_AA)
                 objective.value = "zone"
                 zoneStatus.value = "begin"
-
-
+            """
+            
             # -- INTERSECTIONS -- Deal with intersections
             intersectionDetector()
 
@@ -716,8 +743,8 @@ def lineCamLoop():
             contoursBlack, _ = cv2.findContours(blackImage, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
             # Calculate Black Line (cropped and not) + Points of Interest
             blackLine, blackLineCrop = getLineAndCrop(contoursBlack)
-            poiCropped, poi, isCrop, maxBlackTop, bottomPoint = calculatePointsOfInterest(blackLine, blackLineCrop, lastBottomPoint_x, lastLinePoint)
-            lineAngle2, finalPoi, bottomPoint = interpretPOI(poiCropped, poi, isCrop, maxBlackTop, bottomPoint, lastLineAngle, turnDirection.value, lastLinePoint, blackLine, blackLineCrop)
+            poiCropped, poi, isCrop, maxBlackTop, bottomPoint = calculatePointsOfInterest(blackLine, blackLineCrop, lastBottomPoint_x, lastLinePoint[0])
+            lineAngle2, finalPoi, bottomPoint = interpretPOI(poiCropped, poi, isCrop, maxBlackTop, bottomPoint, turnDirection.value, lastLinePoint)
             lineCenterX.value = finalPoi[0]
             isCropped.value = isCrop
 
@@ -739,8 +766,8 @@ def lineCamLoop():
 
             lastBottomPoint_x = bottomPoint[0]
             lastLineAngle = lineAngle2
-            lastLinePoint = finalPoi[0]
-            
+            lastLinePoint = finalPoi
+
 
             # Show cv2_imgs
             cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_hsv.jpg", hsvImage)
@@ -767,11 +794,17 @@ def lineCamLoop():
                 name = result.names[class_id]
                 confidence = box.conf[0].astype(float)
 
+                ballConfidence.value = confidence
+
                 width = x2 - x1
                 height = y2 - y1
                 area = width * height
-                distance = (x1 + width // 2) - (camera_x // 2)
-                boxes.append([area, distance, name, width])
+                distance = (x1 + x2) // 2
+
+                if width >= 400: # Precarius attempt at ignoring random silver balls
+                    continue
+
+                boxes.append([area, distance, name, width, y2])
 
                 color = colors(class_id, True)
                 cv2.rectangle(cv2_img, (x1, y1), (x2, y2), color, 2)
@@ -784,15 +817,22 @@ def lineCamLoop():
                     best_box = min(boxes, key=lambda x: abs(x[1] - last_best_box[1]))
 
                 last_best_box = best_box
-                ballDistance.value = best_box[1]
+                ballCenterX.value = best_box[1]
                 ballType.value = str.lower(str(best_box[2]))
                 ballWidth.value = best_box[3]
-                print(f"BALLL FOUND: {ballDistance.value} {ballType.value} {ballWidth.value}")
+                ballBottomY.value = best_box[4]
+                print(f"BALLL FOUND: {ballCenterX.value} {ballBottomY.value} {ballType.value} {ballWidth.value} {ballConfidence.value}")
+                zoneStatus.value = "goToBall"
+                timer_manager.set_timer("goToBall", 0.750)
             else:
-                last_best_box = None
-                ballDistance.value = 0
-                ballType.value = "none"
-                ballWidth.value = -1
+                if timer_manager.is_timer_expired("goToBall"):
+                    last_best_box = None
+                    ballCenterX.value = 0
+                    ballType.value = "none"
+                    ballWidth.value = -1
+                    zoneStatus.value = "findVictims"
+                else: # Not expired
+                    pass
 
 
         cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_cv2.jpg", cv2_img)
