@@ -120,13 +120,13 @@ def ignoreHighFOVCorners(blackImage, xPercentage=0.25, yPercentage=0.15):
     return blackImage
 
 
-def checkContourSize(contours, contour_color="red", size=20000):
+def checkContourSize(contours, contour_color="red", size=15000, crop_offset=0):
     global cv2_img
 
     if contour_color == "red":
-        color = (0, 255, 0) # Green
+        color = (0, 255, 0)  # Green
     elif contour_color == "green":
-        color = (0, 0, 255) # Red
+        color = (0, 0, 255)  # Red
     else:
         color = (255, 0, 0)
 
@@ -135,17 +135,23 @@ def checkContourSize(contours, contour_color="red", size=20000):
 
         if contour_size > size:
             x, y, w, h = cv2.boundingRect(contour)
+            
+            # Adjust the y-coordinate for the original image's full size
+            y += crop_offset  # Add the crop offset to the y-coordinate
+            
+            # Draw the rectangle on the original image (cv2_img)
             cv2.rectangle(cv2_img, (x, y), (x + w, y + h), color, 2)
             return True
 
     return False
 
 
+
 def getLineAndCrop(contours_blk):
     global x_last, y_last
     candidates = []
     off_bottom = 0
-    min_area = 1500
+    min_area = 2000
 
     for i, contour in enumerate(contours_blk):
         box = cv2.boxPoints(cv2.minAreaRect(contour))
@@ -694,7 +700,7 @@ def lineCamLoop():
             
             # Black Processing
             grayImage = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
-            _, blackImage = cv2.threshold(grayImage, 65, 255, cv2.THRESH_BINARY_INV)
+            _, blackImage = cv2.threshold(grayImage, 75, 255, cv2.THRESH_BINARY_INV)
             
             blackImage = ignoreHighFOVCorners(blackImage)
             
@@ -715,7 +721,7 @@ def lineCamLoop():
 
             # -- SILVER Line --
             """if do_inference_counter >= do_inference_limit:
-                results = modelSilverLine.predict(raw_capture, imgsz=128, conf=0.4, workers=4, verbose=False)
+                results = modelSilverLine.predict(raw_capture, imgsz=128, conf=0.7, workers=4, verbose=False)
                 result = results[0].numpy()
 
                 confidences = result.probs.top5conf
@@ -724,19 +730,32 @@ def lineCamLoop():
 
             do_inference_counter += 1
             if silverValue.value > .6 and LOPstate.value == 0:
+                print(f"Detected Silver: {silverValue.value} {LOPstate.value}")
                 cv2.circle(cv2_img, (10, camera_y - 10), 5, (255, 255, 255), -1, cv2.LINE_AA)
                 objective.value = "zone"
                 zoneStatus.value = "begin"
             """
+            
             
             # -- INTERSECTIONS -- Deal with intersections
             intersectionDetector()
 
 
             # -- RED STRIP -- Check for Red Line - Stop
-            contoursRed, _ = cv2.findContours(redImage, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-            redDetected.value = checkContourSize(contoursRed)
 
+            # Define the crop percentage
+            crop_percentage = 0.8  # For example, 20% of the image from the bottom
+            height, width = redImage.shape[:2] # Get the height and width of the image
+
+            cropHeight = int(height * crop_percentage) # Calculate the cropping range (bottom X% of the image)
+
+            croppedRedImage = redImage[height - cropHeight:height, 0:width] # Crop the image to the bottom X% (from bottom to top)
+
+            crop_height = int(height * crop_percentage) # Calculate the crop height
+            crop_offset = height - crop_height # Calculate the offset (the part of the image you cropped off)
+
+            contoursRed, _ = cv2.findContours(croppedRedImage, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+            redDetected.value = checkContourSize(contoursRed, crop_offset=crop_offset)
 
             # -- Black Line --
             # Get Black Contours

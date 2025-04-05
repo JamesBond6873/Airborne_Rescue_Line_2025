@@ -252,7 +252,7 @@ def setMotorsSpeeds(guidanceFactor):
         M1, M2 = 1000, 1000
 
     elif -0.2 < timer_manager.get_remaining_time('uTurn') < 0:
-        timer_manager.set_timer('backwards', 1.0)
+        timer_manager.set_timer('backwards', 0.8)
 
     M1info, M2info = M1, M2
 
@@ -455,7 +455,7 @@ def controlLoop():
                 f"inGap: {inGap}\t"
                 #f"Turn: {turnDirection.value}     \t"
                 #f"Motor D: {round(motorSpeedDiference, 2)}   \t"
-                f"Siver: {round(float(silverValue.value),3)} \t"
+                f"Silver: {round(float(silverValue.value),3)} \t"
                 f"M1: {int(M1info)} \t"
                 f"M2: {int(M2info)} \t"
                 f"LOP: {switchState} \t"
@@ -482,7 +482,7 @@ def controlLoop():
             )
             printDebug(f"{debugMessage}", config.softDEBUG)
         if not notWaiting:
-            printDebug(f"Not Waiting: {notWaiting}", config.softDEBUG)
+            printDebug(f"Not Waiting: {notWaiting}", config.DEBUG)
         
 
 
