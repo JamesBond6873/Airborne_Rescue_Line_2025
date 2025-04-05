@@ -141,10 +141,15 @@ def checkContourSize(contours, contour_color="red", size=15000, crop_offset=0):
             
             # Draw the rectangle on the original image (cv2_img)
             cv2.rectangle(cv2_img, (x, y), (x + w, y + h), color, 2)
+
+            if w > camera_x * 0.8:
+                endDetected.value = True
+            else:
+                endDetected.value = False
+
             return True
 
     return False
-
 
 
 def getLineAndCrop(contours_blk):
@@ -328,24 +333,23 @@ def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, turn_direct
         turnReason.value = 0
         lastSide = 0  # Reset turning preference
 
-
-    elif turn_direction == "left" or turn_direction == "right":
+    if (turn_direction == "left" or turn_direction == "right") and not config.easyTrack:
         final_poi = poi[1] if turn_direction == "left" else poi[2]
         lastDirection = turn_direction
-        
+            
         if timer_manager.is_timer_expired("test_timer"): # So only start counting time from the last time it was seen
             timer_manager.set_timer("test_timer", 1.5) # Give 1.0 s for turn
-        
+            
         turnReason.value = 1
         lastSide = 0  # Reset turning preference
 
-    elif turn_direction == "uTurn":
+    elif turn_direction == "uTurn" and not config.easyTrack:
         # BackUp to Control loop. Meaning it will go forward until control decides otherwise
         final_poi = (camera_x / 2, camera_y / 2)
         turnReason.value = 102
         lastSide = 0  # Reset turning preference
 
-    elif not timer_manager.is_timer_expired("test_timer"): # Not Expired
+    elif not timer_manager.is_timer_expired("test_timer") and not config.easyTrack: # Not Expired
         final_poi = poi[1] if lastDirection == "left" else poi[2]
         turnReason.value = 100
         lastSide = 0  # Reset turning preference
@@ -359,7 +363,7 @@ def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, turn_direct
       #  turnReason.value = 170
 
 
-    else:
+    else: # Poor condition... quick solve
         if black_top:
             final_poi = poiCropped[0] if is_crop and not maxBlackTop else poi[0]
             turnReason.value = 2
@@ -718,6 +722,11 @@ def lineCamLoop():
             redImage = cv2.dilate(redImage, kernel, iterations=11)
             redImage = cv2.erode(redImage, kernel, iterations=9)
 
+            if redDetected.value:
+                newBlackImage = cv2.add(blackImage, redImage)
+                newBlackImage = cv2.threshold(newBlackImage, 1, 255, cv2.THRESH_BINARY)[1]
+            else:
+                newBlackImage = blackImage
 
             # -- SILVER Line --
             """if do_inference_counter >= do_inference_limit:
@@ -759,7 +768,7 @@ def lineCamLoop():
 
             # -- Black Line --
             # Get Black Contours
-            contoursBlack, _ = cv2.findContours(blackImage, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+            contoursBlack, _ = cv2.findContours(newBlackImage, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
             # Calculate Black Line (cropped and not) + Points of Interest
             blackLine, blackLineCrop = getLineAndCrop(contoursBlack)
             poiCropped, poi, isCrop, maxBlackTop, bottomPoint = calculatePointsOfInterest(blackLine, blackLineCrop, lastBottomPoint_x, lastLinePoint[0])
@@ -793,6 +802,7 @@ def lineCamLoop():
             cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_green.jpg", greenImage)
             cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_black.jpg", blackImage)
             cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_red.jpg", redImage)
+            cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_newBlackImage.jpg", newBlackImage)
 
             obstacleController()
 

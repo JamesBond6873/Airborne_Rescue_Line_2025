@@ -18,6 +18,7 @@ lineDetected = manager.Value("i", False)
 turnReason = manager.Value("i", 0)
 redDetected = manager.Value("i", False)
 silverValue = manager.Value("i", 0) # 0 = Line, 1 = Silver
+endDetected = manager.Value("i", False)
 
 ballCenterX = manager.Value("i", -1)
 ballBottomY = manager.Value("i", -1)

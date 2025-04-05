@@ -60,3 +60,5 @@ KP = 2.50 #1.50
 KD = 2.80 #2.05
 KI = 0
 KP_THETA = 250 # 407 = 1280/3.14159
+
+easyTrack = False

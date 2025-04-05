@@ -18,6 +18,7 @@ lastTurn = "Straight"
 rotateTo = "left" # When it needs to do 180 it rotates to ...
 inGap = False
 lastLineDetected = True  # Assume robot starts detecting a line
+lastRed = False
 
 # Loop Vars
 notWaiting = True
@@ -205,7 +206,10 @@ def setMotorsSpeeds2():
     M1, M2 = calculateMotorSpeeds(motorSpeedDiference)
 
     if redDetected.value:
-        M1, M2 = 1520, 1520
+        #M1, M2 = 1520, 1520
+        config.DEFAULT_FORWARD_SPEED = 1650
+    else:
+        config.DEFAULT_FORWARD_SPEED = 1750
 
     if inGap: # Currently in gap
         M1, M2 = config.DEFAULT_FORWARD_SPEED, config.DEFAULT_FORWARD_SPEED
@@ -239,20 +243,35 @@ def setMotorsSpeeds(guidanceFactor):
     motorSpeedDiference = PID2(guidanceFactor, lineAngle.value)
     M1, M2 = calculateMotorSpeeds(motorSpeedDiference)
 
-    if redDetected.value and not objective.value == "zone":
-        M1, M2 = 1520, 1520
+    if redDetected.value or timer_manager.is_timer_expired("redDetected"):
+        #M1, M2 = 1520, 1520
+
+        if timer_manager.is_timer_expired("redDetected"):
+            timer_manager.set_timer("redDetected", 0.3)
+
+        config.DEFAULT_FORWARD_SPEED = 1600
+        config.KP = 1.50
+        config.KD = 1.80
+
+    else:
+        config.DEFAULT_FORWARD_SPEED = 1750
+        config.KP = 2.50
+        config.KD = 2.80
 
     if inGap:
         M1, M2 = config.DEFAULT_FORWARD_SPEED, config.DEFAULT_FORWARD_SPEED
 
-    elif not timer_manager.is_timer_expired("uTurn"):
+    elif not timer_manager.is_timer_expired("uTurn") and not config.easyTask:
         M1, M2 = (1000, 2000) if rotateTo == "left" else (2000, 1000)
     
-    elif not timer_manager.is_timer_expired('backwards'):
+    elif not timer_manager.is_timer_expired('backwards') and not config.easyTask:
         M1, M2 = 1000, 1000
 
     elif -0.2 < timer_manager.get_remaining_time('uTurn') < 0:
         timer_manager.set_timer('backwards', 0.8)
+
+    if endDetected.value:
+        M1, M2 = 1520, 1520
 
     M1info, M2info = M1, M2
 
@@ -447,20 +466,22 @@ def controlLoop():
             debugMessage = (
                 f"Center: {lineCenterX.value} \t"
                 #f"Angle: {round(np.rad2deg(lineAngle.value),2)} \t"
-                f"LineBias: {int(config.KP * error_x + config.KD * (error_x - lastError) + config.KI * errorAcc)}   \t"
-                f"AngBias: {round(config.KP_THETA*error_theta,2)}     \t"
+                #f"LineBias: {int(config.KP * error_x + config.KD * (error_x - lastError) + config.KI * errorAcc)}   \t"
+                #f"AngBias: {round(config.KP_THETA*error_theta,2)}     \t"
                 f"Reason: {turnReason.value} \t"
                 #f"isCrop: {isCropped.value} \t"
                 #f"line: {lineDetected.value} \t"
                 f"inGap: {inGap}\t"
                 #f"Turn: {turnDirection.value}     \t"
                 #f"Motor D: {round(motorSpeedDiference, 2)}   \t"
-                f"Silver: {round(float(silverValue.value),3)} \t"
+                #f"Silver: {round(float(silverValue.value),3)} \t"
                 f"M1: {int(M1info)} \t"
                 f"M2: {int(M2info)} \t"
                 f"LOP: {switchState} \t"
-                f"Loop: {objective.value}\t"
-                f"var: {zoneStatus.value}  "
+                f"redDetected: {redDetected.value} \t"
+                f"endDetected: {endDetected.value} \t"
+                #f"Loop: {objective.value}\t"
+                #f"var: {zoneStatus.value}  "
                 #f"Commands: {commandWaitingList}"
                 #f"LOP: {LOPstate.value}"
             )
