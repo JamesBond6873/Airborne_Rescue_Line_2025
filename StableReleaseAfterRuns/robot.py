@@ -481,8 +481,8 @@ def controlLoop():
                 #f"Commands: {commandWaitingList}"
             )
             printDebug(f"{debugMessage}", config.softDEBUG)
-        if not notWaiting:
-            printDebug(f"Not Waiting: {notWaiting}", config.softDEBUG)
+        #if not notWaiting:
+         #   printDebug(f"Not Waiting: {notWaiting}", config.softDEBUG)
         
 
 
