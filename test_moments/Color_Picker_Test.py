@@ -12,8 +12,8 @@ def pick_color(event,x,y,flags,param):
         #you might want to adjust the ranges(+-10, etc):
         upper =  np.array([pixel[0] + 20, pixel[1] + 20, pixel[2] + 30])
         lower =  np.array([pixel[0] - 30, pixel[1] - 30, pixel[2] - 30])
-        lower = np.array([40, 75, 35])
-        upper = np.array([105, 255, 170])
+        lower = np.array([0, 0, 253])
+        upper = np.array([255, 255, 255])
         #lower = np.array([0,0,0]) # Black only
         print(pixel, lower, upper)
 
@@ -25,7 +25,7 @@ def main():
     global image_hsv, pixel # so we can use it in mouse callback
 
     image_src = cv2.imread("C:\\Users\\Francisco\\Projects\\RoboCup Junior Rescue Line\\2025\\Frames\\Frames_7Points_Test\\latest_frame_Original_Intersection_2.jpg")  # pick.py my.png
-    image_src = cv2.imread("test_moments\latest_frame_original.jpg")
+    image_src = cv2.imread("test_moments\Silver_Line_2.jpg")
     if image_src is None:
         print ("the image read is None............")
         return
