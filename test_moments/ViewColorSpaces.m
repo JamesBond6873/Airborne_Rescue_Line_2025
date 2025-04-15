@@ -1,5 +1,5 @@
 function ViewColorSpaces
-rgbim = imread('test_moments\latest_frame_original_Intersection_2.jpg');
+rgbim = imread('test_moments\silver_line.jpg');
 ViewColorSpaces2(rgbim)
 
 
@@ -17,7 +17,7 @@ yuvim = rgb2ycbcr(rgb_image);
 cform = makecform('srgb2lab');
 cieim = applycform(rgb_image,cform);
 
-figure();
+h= figure();
 %rgb
 subplot(3,4,1);imshow(rgb_image(:,:,1));title(sprintf('RGB Space\n\nred'))
 subplot(3,4,5);imshow(rgb_image(:,:,2));title('green')
@@ -27,6 +27,8 @@ subplot(3,4,9);imshow(rgb_image(:,:,3));title('blue')
 subplot(3,4,2);imshow(hsvim(:,:,1));title(sprintf('HSV Space\n\nhue'))
 subplot(3,4,6);imshow(hsvim(:,:,2));title('saturation')
 subplot(3,4,10);imshow(hsvim(:,:,3));title('brightness')
+figure; mesh(hsvim(:,:,3))
+figure(h)
 
 %ycbcr / yuv
 subplot(3,4,3);imshow(yuvim(:,:,1));title(sprintf('YCbCr Space\n\nLuminance'))

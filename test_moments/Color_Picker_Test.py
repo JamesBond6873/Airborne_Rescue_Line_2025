@@ -7,13 +7,15 @@ pixel = (20,60,80) # some stupid default
 # mouse callback function
 def pick_color(event,x,y,flags,param):
     if event == cv2.EVENT_LBUTTONDOWN:
-        pixel = image_hsv[y,x]
+        pixel = image_hsv[y, x].astype(int)
 
         #you might want to adjust the ranges(+-10, etc):
-        upper =  np.array([pixel[0] + 20, pixel[1] + 20, pixel[2] + 30])
-        lower =  np.array([pixel[0] - 30, pixel[1] - 30, pixel[2] - 30])
-        lower = np.array([40, 75, 35])
-        upper = np.array([105, 255, 170])
+        #upper =  np.array([pixel[0] + 20, pixel[1] + 20, pixel[2] + 30], dtype=np.uint8)
+        #lower =  np.array([pixel[0] - 30, pixel[1] - 30, pixel[2] - 30], dtype=np.uint8)
+        upper = np.array([min(pixel[0] + 20, 255), min(pixel[1] + 20, 255), min(pixel[2] + 30, 255)], dtype=np.uint8)
+        lower = np.array([max(pixel[0] - 30, 0), max(pixel[1] - 30, 0), max(pixel[2] - 30, 0)], dtype=np.uint8)
+        lower = np.array([50, 120, 70], dtype=np.uint8)
+        upper = np.array([100,255,200], dtype=np.uint8)
         #lower = np.array([0,0,0]) # Black only
         print(pixel, lower, upper)
 
@@ -24,8 +26,8 @@ def main():
     import sys
     global image_hsv, pixel # so we can use it in mouse callback
 
-    image_src = cv2.imread("C:\\Users\\Francisco\\Projects\\RoboCup Junior Rescue Line\\2025\\Frames\\Frames_7Points_Test\\latest_frame_Original_Intersection_2.jpg")  # pick.py my.png
-    image_src = cv2.imread("test_moments\latest_frame_original.jpg")
+    image_src = cv2.imread("C:\\Users\\Francisco\\Projects\\RoboCup Junior Rescue Line\\2025\\SoftwareRepo\\test_moments\\latest_frame_original.jpg")  # pick.py my.png
+    #image_src = cv2.imread("test_moments\Silver_Line_2.jpg")
     if image_src is None:
         print ("the image read is None............")
         return
