@@ -795,7 +795,7 @@ def lineCamLoop():
             
 
         elif objective.value == "zone":
-            results = modelVictim.predict(cv2_img, imgsz=(448, 252), conf=0.3, iou=0.2, agnostic_nms=True, workers=4, verbose=False)  # verbose=True to enable debug info
+            results = modelVictim.predict(cv2_img, imgsz=448, conf=0.3, iou=0.2, agnostic_nms=True, workers=4, verbose=False)  # verbose=True to enable debug info
 
             result = results[0].numpy()
 
