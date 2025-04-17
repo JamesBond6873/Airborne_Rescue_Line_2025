@@ -634,7 +634,8 @@ def obstacleController():
 def lineCamLoop():
     global cv2_img, blackImage, greenImage, redImage, x_last, y_last
 
-    modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/ball_zone_s/ball_detect_s_edgetpu.tflite', task='detect')
+    #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/ball_zone_s/ball_detect_s_edgetpu.tflite', task='detect')
+    modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v3/victim_ball_detection_int8_edgetpu.tflite', task='detect')
     modelSilverLine = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/silver_zone_entry/silver_classify_s.onnx', task='classify')
     
     camera = Picamera2(0)

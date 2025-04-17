@@ -340,7 +340,7 @@ def controlLoop():
 
     sendCommandList(["GR","BC", "SF,5,F", "CL", "SF,4,F", "AU", "PA", "SF,0,F", "SF,1,F", "SF,2,F", "SF,3,F"])
 
-    if False: # True if only testing Evac
+    if True: # True if only testing Evac
         objective.value = "zone"
         zoneStatus.value = "findVictims"
         time.sleep(5)
