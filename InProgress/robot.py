@@ -464,7 +464,7 @@ def controlLoop():
                 #f"Commands: {commandWaitingList}"
                 #f"LOP: {LOPstate.value}"
             )
-            printDebug(f"{debugMessage}", config.softDEBUG)
+            #printDebug(f"{debugMessage}", config.softDEBUG)
         if objectiveLoop == "zone" and notWaiting:
             debugMessage = (
                 #f"Center: {lineCenterX.value} \t"
@@ -480,7 +480,7 @@ def controlLoop():
                 f"var: {zoneStatus.value}  "
                 #f"Commands: {commandWaitingList}"
             )
-            printDebug(f"{debugMessage}", config.softDEBUG)
+            #printDebug(f"{debugMessage}", config.softDEBUG)
         #if not notWaiting:
          #   printDebug(f"Not Waiting: {notWaiting}", config.softDEBUG)
         

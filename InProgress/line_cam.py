@@ -43,10 +43,17 @@ kernel = np.ones((3, 3), np.uint8)
 
 lastSide = -1
 
+photoCounter = 0
+
 
 def savecv2_img(folder, cv2_img):
+    global photoCounter
     if saveFrame.value:
         # Create the "fotos" directory if it doesn't exist
+
+        #if not timer_manager.is_timer_expired("saveImageCoolDown"):
+        #    return
+        
         folder_name = folder
         os.makedirs(folder_name, exist_ok=True)
         
@@ -57,7 +64,11 @@ def savecv2_img(folder, cv2_img):
         # Save the cv2_img using OpenCV
         cv2.imwrite(file_path, cv2_img)
 
-        printDebug(f"File path: {file_path}", config.softDEBUG)
+        photoCounter += 1
+        printDebug(f"Saved Image {photoCounter}: {file_path}", config.softDEBUG)
+
+        #timer_manager.set_timer("saveImageCoolDown", 10)
+        saveFrame.value = False
     
 
 def computeMoments(contour):
@@ -673,6 +684,7 @@ def lineCamLoop():
     timer_manager.add_timer("rightLeft", 0.05)
     timer_manager.add_timer("rightRight", 0.05)
     timer_manager.add_timer("goToBall", 0.05)
+    timer_manager.add_timer("saveImageCoolDown", 0.05)
 
 
     t0 = time.perf_counter()
@@ -684,6 +696,7 @@ def lineCamLoop():
         raw_capture = cv2.resize(raw_capture, (camera_x, camera_y))
         cv2_img = cv2.cvtColor(raw_capture, cv2.COLOR_RGBA2BGR)
 
+        savecv2_img("VictimsDataSet", cv2_img)
         cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_original.jpg", cv2_img)
 
         if objective.value == "follow_line":
@@ -777,7 +790,7 @@ def lineCamLoop():
 
             obstacleController()
 
-            savecv2_img("Frames", cv2_img)
+            #savecv2_img("VictimsDataSet", cv2_img)
             
 
         elif objective.value == "zone":
