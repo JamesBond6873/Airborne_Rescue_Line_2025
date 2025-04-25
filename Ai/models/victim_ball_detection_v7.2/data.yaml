@@ -1,0 +1,13 @@
+names:
+- Black Ball
+- Silver Ball
+nc: 2
+roboflow:
+  license: MIT
+  project: evacuation-zone-victim-detection
+  url: https://universe.roboflow.com/airborne-robocup/evacuation-zone-victim-detection/dataset/7
+  version: 7
+  workspace: airborne-robocup
+test: ../test/images
+train: ../train/images
+val: ../valid/images
