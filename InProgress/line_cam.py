@@ -31,7 +31,7 @@ red_min_2 = np.array(config.red_min_2)
 red_max_2 = np.array(config.red_max_2)
 
 camera_x = 448
-camera_y = 252
+camera_y = 256
 
 multiple_bottom_side = camera_x / 2
 lastDirection = "Straight!"
@@ -635,7 +635,18 @@ def lineCamLoop():
     global cv2_img, blackImage, greenImage, redImage, x_last, y_last
 
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/ball_zone_s/ball_detect_s_edgetpu.tflite', task='detect')
-    modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v3/victim_ball_detection_int8_edgetpu.tflite', task='detect')
+    #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v3/victim_ball_detection_int8_edgetpu.tflite', task='detect')
+    #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v3/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect')
+    #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect')
+    #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.1/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect')
+    #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.1/victim_ball_detection_full_integer_quant_with_metadata_edgetpu.tflite', task='detect')
+    #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.1/victim_ball_detection.pt', task='detect')
+    modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.2/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect')
+
+    """modelVictim.names = {0: "Black Ball", 1: "Silver Ball"}
+    modelVictim.nc = 2  # number of classes"""
+
+
     modelSilverLine = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/silver_zone_entry/silver_classify_s.onnx', task='classify')
     
     camera = Picamera2(0)
@@ -795,7 +806,14 @@ def lineCamLoop():
             
 
         elif objective.value == "zone":
-            results = modelVictim.predict(cv2_img, imgsz=448, conf=0.3, iou=0.2, agnostic_nms=True, workers=4, verbose=False)  # verbose=True to enable debug info
+            #print("Model class names:", getattr(modelVictim, "names", "No names found"))
+            #print("Number of classes:", getattr(modelVictim, "nc", "Unknown"))
+
+            img_rgb = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
+            #results = modelVictim.predict(img_rgb, imgsz=(448,256), conf=0.3, iou=0.2, agnostic_nms=True, workers=4, verbose=False)  # verbose=True to enable debug info
+            results = modelVictim.predict(img_rgb, imgsz=448, conf=0.3, iou=0.2, agnostic_nms=True, workers=4, verbose=False)  # verbose=True to enable debug info
+            
+            #results = modelVictim.predict(img_rgb, imgsz=(512, 224), conf=0.3, iou=0.2, agnostic_nms=True, workers=4, verbose=False)  # verbose=True to enable debug info
 
             result = results[0].numpy()
 
@@ -815,8 +833,8 @@ def lineCamLoop():
                 area = width * height
                 distance = (x1 + x2) // 2
 
-                if width >= 400: # Precarius attempt at ignoring random silver balls
-                    continue
+                """if width >= 400: # Precarius attempt at ignoring random silver balls
+                    continue"""
 
                 boxes.append([area, distance, name, width, y2])
 
