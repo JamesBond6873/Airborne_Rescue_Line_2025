@@ -10,6 +10,7 @@ terminate = manager.Value("i", False)
 gamepadM1 = manager.Value("i", 1520)
 gamepadM2 = manager.Value("i", 1520)
 commandToExecute = manager.Value("i", "none") #"none",""
+CLIcommandToExecute = manager.Value("i", "none") 
 
 lineCenterX = manager.Value("i", 600)
 lineAngle = manager.Value("i", 0.)

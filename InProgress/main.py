@@ -10,6 +10,7 @@ import threading
 from gamepad import gamepadLoop
 from line_cam import lineCamLoop
 from robot import controlLoop
+from mp_manager import *
 #from zone_cam import zoneCamLoop
 
 input_queue = mp.Queue()
@@ -20,7 +21,8 @@ def inputThread(queue):
         line = sys.stdin.readline()
         if line:
             queue.put(line.strip())
-            print(f"Input Thread: {line.strip()}")
+            #print(f"Input Thread: {line.strip()}")
+            CLIcommandToExecute.value = line.strip()
 
  
 if __name__ == "__main__":

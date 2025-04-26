@@ -36,6 +36,44 @@ error = errorAcc = lastError = 0
 
 timer_manager = TimerManager()
 
+
+def CLIinterpretCommand():
+    global MotorOverride, LOPOverride
+
+    message = CLIcommandToExecute.value
+
+    if message == "exit": # Exit command
+        print("Exiting...")
+        terminate.value = True
+        return
+    elif message == "list":
+        print("Command List: ")
+        print(f"  - exit")
+        """print(f"  - Drop Alive")
+        print(f"  - Drop Dead")
+        print(f"  - Close Ball Storage")
+        print(f"  - Pick Alive")
+        print(f"  - Pick Dead")
+        print(f"  - Camera Evacuation")
+        print(f"  - Camera Line")"""
+        print(f"  - motorOverride <0 or 1>")
+        print(f"  - LOPOverride <0 or 1>")
+    elif message.startswith("motorOverride"):
+        try:
+            MotorOverride = bool(int(message.split()[1]))
+            print(f"Motor Override set to {MotorOverride}")
+        except (ValueError, IndexError):
+            print("Invalid motorOverride command. Use 'motorOverride <0 or 1>'")
+    elif message.startswith("LOPOverride"):
+        try:
+            LOPOverride = bool(int(message.split()[1]))
+            print(f"LOP Override set to {LOPOverride}")
+        except (ValueError, IndexError):
+            print("Invalid LOPOverride command. Use 'LOPOverride <0 or 1>'")
+
+    CLIcommandToExecute.value = "none" # Reset command to none
+
+
 # Command Intrepreter
 def intrepretCommand():
     command = commandToExecute.value
@@ -289,7 +327,6 @@ def controlMotors2():
     mySerial.sendSerial(message)
 
 
-
 def controlMotors():
     global oldM1, oldM2
 
@@ -438,14 +475,10 @@ def controlLoop():
                         zoneStatus.value = "findVictim"
                         
 
-
+        CLIinterpretCommand()
         intrepretCommand()
         receivedMessage = mySerial.readSerial(DEBUG)
         interpretMessage(receivedMessage)
-
-
-        #oldM1 = M1
-        #oldM2 = M2
 
         M1info = M1
         M2info = M2
