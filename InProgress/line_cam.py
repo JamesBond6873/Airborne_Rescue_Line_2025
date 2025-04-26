@@ -641,14 +641,12 @@ def lineCamLoop():
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.1/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect')
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.1/victim_ball_detection_full_integer_quant_with_metadata_edgetpu.tflite', task='detect')
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.1/victim_ball_detection.pt', task='detect')
-    modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.2/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect')
-
-    """modelVictim.names = {0: "Black Ball", 1: "Silver Ball"}
-    modelVictim.nc = 2  # number of classes"""
-
+    #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.2/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect') # Used ultralytics 8.3.66 (nms not an argument)
+    modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.3/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect') # Used format = edgetpu
 
     modelSilverLine = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/silver_zone_entry/silver_classify_s.onnx', task='classify')
     
+
     camera = Picamera2(0)
 
     mode = camera.sensor_modes[0]
@@ -665,11 +663,6 @@ def lineCamLoop():
 
     camera.start()
     time.sleep(0.1)
-
-    # Image for brightness normalization
-    #white_img = cv2.imread("./InProgress3/White_Image_2.jpg")
-    #white_gray = cv2.cvtColor(white_img, cv2.COLOR_RGB2GRAY)
-    #white_gray += (white_gray == 0)
 
     x_last = int( camera_x / 2 )
     y_last = int( camera_y / 2 )
@@ -806,23 +799,20 @@ def lineCamLoop():
             
 
         elif objective.value == "zone":
-            #print("Model class names:", getattr(modelVictim, "names", "No names found"))
-            #print("Number of classes:", getattr(modelVictim, "nc", "Unknown"))
-
             img_rgb = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
-            #results = modelVictim.predict(img_rgb, imgsz=(448,256), conf=0.3, iou=0.2, agnostic_nms=True, workers=4, verbose=False)  # verbose=True to enable debug info
-            results = modelVictim.predict(img_rgb, imgsz=448, conf=0.3, iou=0.2, agnostic_nms=True, workers=4, verbose=False)  # verbose=True to enable debug info
+            results = modelVictim.predict(img_rgb, imgsz=448, conf=0.3, iou=0.2, agnostic_nms=False, workers=4, verbose=False)  # verbose=True to enable debug info
             
-            #results = modelVictim.predict(img_rgb, imgsz=(512, 224), conf=0.3, iou=0.2, agnostic_nms=True, workers=4, verbose=False)  # verbose=True to enable debug info
+            """print("Model class names:", getattr(modelVictim, "names", "No names found"))
+            print("Number of classes:", getattr(modelVictim, "nc", "Unknown"))
+            print(f"Results: {results}")"""
 
             result = results[0].numpy()
-
-            #print(f"Results: {results} {result}")
 
             boxes = []
             for box in result.boxes:
                 x1, y1, x2, y2 = box.xyxy[0].astype(int)
                 class_id = box.cls[0].astype(int)
+                #name = "black ball" if class_id == 0 else "silver ball" if class_id == 1 else "unknown"
                 name = result.names[class_id]
                 confidence = box.conf[0].astype(float)
 
