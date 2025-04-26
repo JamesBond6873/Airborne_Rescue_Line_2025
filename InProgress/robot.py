@@ -308,44 +308,34 @@ def setManualMotorsSpeeds(M1_manual, M2_manual):
     global M1, M2
     M1, M2 = M1_manual, M2_manual
 
-       
+
 # Control Motors
-def controlMotors2():
-    global oldM1, oldM2
-
-    if not timer_manager.is_timer_expired("stop"):
-        message = f"M({DEFAULT_STOPPED_SPEED}, {DEFAULT_STOPPED_SPEED})"
-        oldM1, oldM2 = 0, 0 # impossible values so it gets reassigned as soon as timer ends
-    elif M1 != oldM1 or M2 != oldM2:
-        message = f"M({int(M1)}, {int(M2)})"
-    else:
-        return    
-    
-    if switchState and (M1 != DEFAULT_STOPPED_SPEED or M2 != DEFAULT_STOPPED_SPEED): # LOP ON
-        message = f"M({DEFAULT_STOPPED_SPEED}, {DEFAULT_STOPPED_SPEED})"
-
-    mySerial.sendSerial(message)
-
-
 def controlMotors():
     global oldM1, oldM2
+    def sendMotorsIfNew(m1, m2):
+        """Send motor command only if values changed."""
+        global oldM1, oldM2
+        if m1 != oldM1 or m2 != oldM2:
+            mySerial.sendSerial(f"M({int(m1)}, {int(m2)})")
+            oldM1, oldM2 = m1, m2
+    def canGamepadControlMotors():
+        """Determine if user input should control motors."""
+        return switchState or MotorOverride
 
-    if switchState:
-        if gamepadM1.value != oldM1 or gamepadM2.value != oldM2:
-            mySerial.sendSerial(f"M({gamepadM1.value}, {gamepadM2.value})")
-            oldM1, oldM2 = gamepadM1.value, gamepadM2.value
+    if not canGamepadControlMotors():
+        # No gamepad control
+        if not timer_manager.is_timer_expired("stop"): # Force Automatic Stop
+            printDebug("Motors: LOP OFF + No Override -> TIMER active -> STOP Motors", False) # Debug
+            sendMotorsIfNew(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)
+        else:
+            sendMotorsIfNew(int(M1), int(M2)) # Default Autonumous control
         return
 
-    if not timer_manager.is_timer_expired("stop"):
-        mySerial.sendSerial(f"M({DEFAULT_STOPPED_SPEED}, {DEFAULT_STOPPED_SPEED})")
-        oldM1, oldM2 = 0, 0  # Force re-evaluation when the timer ends
-        return
+    # Gamepad control allowed
+    printDebug("Motors: Gamepad Control Active (LOP ON or Override ON)", False) # Debug
+    sendMotorsIfNew(gamepadM1.value, gamepadM2.value)
 
-    # Only send a new command if motor values changed
-    if M1 != oldM1 or M2 != oldM2:
-        mySerial.sendSerial(f"M({int(M1)}, {int(M2)})")
-    
-    oldM1, oldM2 = M1, M2
+
 
 
 def intersectionController():
