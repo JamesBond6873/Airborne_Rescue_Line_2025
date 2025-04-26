@@ -217,6 +217,7 @@ def gamepadLoop():
             t1 = t0 + config.delayTimeMS * 0.001
 
             utils.printDebug(robot.gamepadLoopValue, config.DEBUG)
+
             if robot.gamepadLoopValue:
                 handleEvents(joystick)
 
@@ -235,6 +236,7 @@ def gamepadLoop():
             
 
     except KeyboardInterrupt:
+        terminate.value = True
         print(f"Shutting Down")
         pygame.quit()
-        sys.exit()
+        #sys.exit()

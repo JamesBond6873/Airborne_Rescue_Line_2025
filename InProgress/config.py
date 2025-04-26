@@ -5,6 +5,8 @@ print("Robot Configurations: \t \t OK")
 # Is it DEBUG?
 DEBUG = False
 softDEBUG = True
+LOPOverride = False # If True, LOP state will be updated virtually
+MotorOverride = False # If True, the robot will not move
 
 # Serial Port Vars
 SERIAL_PORT = '/dev/ttyACM0'
@@ -18,15 +20,10 @@ buzzerState = False
 # Time Delays
 lineDelayMS = 25 # Frame Rate = 40 FPS
 controlDelayMS = 20 # 50 Hz
-
 intersectionMaxTime = 1.000 #s
 
 # Color Configs
-black_min = [0, 0, 0] # 82 83 84
-black_max = [255, 255, 130] # 133 133 135
-#black_min = 0
-#black_max = 80
-
+blackThreshold = 55
 #green_min = [50, 95, 40]    # 58, 95, 39 Night | 126, 94, 145 Day
 #green_max = [100, 255, 255] # 98, 255, 255 Night | 155, 130, 180 Day
 green_min = [50, 120, 70] # 50, 95, 40 # 40, 75, 35

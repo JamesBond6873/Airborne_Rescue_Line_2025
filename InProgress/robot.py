@@ -3,7 +3,7 @@ import time
 from gpiozero import Button
 import numpy as np
 
-import config
+from config import *
 from utils import *
 from line_cam import camera_x, camera_y
 import mySerial
@@ -57,9 +57,9 @@ def intrepretCommand():
 def interpretMessage(message):
     global notWaiting, waitingResponse, commandWaitingList
     if "-Nothing-" not in message:
-        printDebug(f"Received Message: {message}", config.softDEBUG)
+        printDebug(f"Received Message: {message}", softDEBUG)
     if "Ok" in message:
-        printDebug(f"Command List: {commandWaitingList}", config.softDEBUG)
+        printDebug(f"Command List: {commandWaitingList}", softDEBUG)
         if len(commandWaitingList) == 0:
             notWaiting = True
         else:
@@ -75,7 +75,7 @@ def sendCommandList(commandList):
     for command in commandList:
         commandWaitingList.append(command)
 
-    printDebug(f"Command List: {commandWaitingList}", config.softDEBUG)
+    printDebug(f"Command List: {commandWaitingList}", softDEBUG)
 
     # Do first Cycle
     mySerial.sendSerial(commandWaitingList[0])
@@ -84,21 +84,26 @@ def sendCommandList(commandList):
 
 # Pick Victim Function (takes "Alive" or "Dead")
 def pickVictim(type):
-    printDebug(f"Pick {type}", config.softDEBUG)
-    
-    sendCommandList([f"AD", f"P{type}", "SF,0,F", "SF,1,F", "SF,2,F", "SF,3,F"])
+    if timer_manager.is_timer_expired("armCooldown"): # if cooldown expired
+        if not LOPstate.value:
+            printDebug(f"Pick {type}", softDEBUG)
+            sendCommandList([f"AD", f"P{type}", "SF,0,F", "SF,1,F", "SF,2,F", "SF,3,F"])
+        else:
+            printDebug(f"I Would have Picked {type}", softDEBUG)
+
+        timer_manager.set_timer("armCooldown", 5) # 5 seconds of wait before picking the victim    
 
 
 # Drop Function (takes "Alive" or "Dead")
 def ballRelease(type):
-    printDebug(f"Drop {type}", config.softDEBUG)
+    printDebug(f"Drop {type}", softDEBUG)
 
     sendCommandList([f"D{type}", f"SF,5,F"])
 
 
 # Closes Ball Storage
 def closeBallStorage():
-    printDebug(f"Close Ball Storage", config.softDEBUG)
+    printDebug(f"Close Ball Storage", softDEBUG)
 
     sendCommandList([f"BC", f"SF,5,F"])
 
@@ -106,11 +111,11 @@ def closeBallStorage():
 # Moves Camera to Default Position: Line or Evacuation
 def cameraDefault(position):
     if position == "Line":
-        printDebug(f"Set Camera to Line Following Mode", config.softDEBUG)
+        printDebug(f"Set Camera to Line Following Mode", softDEBUG)
         sendCommandList(["CL", "SF,4,F"])
 
     elif position == "Evacuation":
-        printDebug(f"Set Camera to Evacaution Zone Mode", config.softDEBUG)
+        printDebug(f"Set Camera to Evacaution Zone Mode", softDEBUG)
         sendCommandList(["CE", "SF,4,F"])
 
 
@@ -123,10 +128,14 @@ def is_switch_on():
 def LoPSwitchController():
     global switchState, rotateTo
 
+    if LOPOverride: # If LOPOverride is True, LoP state will be updated virtually
+        switchState = LOPstate.value
+        return
+    
     if is_switch_on():
         if switchState == False: # First time detected as on
             switchState = True
-            printDebug(f"LoP Switch is now ON: {switchState}", config.softDEBUG)
+            printDebug(f"LoP Switch is now ON: {switchState}", softDEBUG)
             objective.value = "follow_line"
             zoneStatus.value = "notStarted"
             timer_manager.clear_all_timers()
@@ -136,7 +145,7 @@ def LoPSwitchController():
     else:
         if switchState == True:
             switchState = False
-            printDebug(f"LoP Switch is now OFF: {switchState}", config.softDEBUG)
+            printDebug(f"LoP Switch is now OFF: {switchState}", softDEBUG)
             objective.value = "follow_line"
             zoneStatus.value = "notStarted"
             rotateTo = "right" if rotateTo == "left" else "left" # Toggles rotate To
@@ -148,7 +157,7 @@ def PID(lineCenterX):
     error = lineCenterX - 1280 / 2 # Camera view is 1280 pixels
     errorAcc = errorAcc + error
 
-    motorSpeed = config.KP * error + config.KD * (error - lastError) + config.KI * errorAcc
+    motorSpeed = KP * error + KD * (error - lastError) + KI * errorAcc
 
     lastError = error
 
@@ -165,10 +174,10 @@ def PID2(lineCenterX, lineAngle):
     errorAcc += error_x
 
     # Compute motor speed adjustment (mixing both errors)
-    motorSpeed = (config.KP * error_x + 
-                  config.KD * (error_x - lastError) + 
-                  config.KI * errorAcc + 
-                  config.KP_THETA * error_theta)  # New term for angle correction
+    motorSpeed = (KP * error_x + 
+                  KD * (error_x - lastError) + 
+                  KI * errorAcc + 
+                  KP_THETA * error_theta)  # New term for angle correction
 
     lastError = error_x  # Only update last error for x
 
@@ -178,20 +187,20 @@ def PID2(lineCenterX, lineAngle):
 # Calculate motor Speed
 def calculateMotorSpeeds(motorSpeed):
     global M1, M2
-    m1Speed = config.DEFAULT_FORWARD_SPEED + motorSpeed
-    m2Speed = config.DEFAULT_FORWARD_SPEED - motorSpeed
+    m1Speed = DEFAULT_FORWARD_SPEED + motorSpeed
+    m2Speed = DEFAULT_FORWARD_SPEED - motorSpeed
 
     # Ensure values are within ESC_MIN and ESC_MAX
-    m1Speed = max(config.MIN_GENERAL_SPEED, min(config.MAX_DEFAULT_SPEED, m1Speed))
-    m2Speed = max(config.MIN_GENERAL_SPEED, min(config.MAX_DEFAULT_SPEED, m2Speed))
+    m1Speed = max(MIN_GENERAL_SPEED, min(MAX_DEFAULT_SPEED, m1Speed))
+    m2Speed = max(MIN_GENERAL_SPEED, min(MAX_DEFAULT_SPEED, m2Speed))
 
     # Adjust for dead zone (avoid 1450-1550)
     if 1450 <= m1Speed <= 1550:
-        m1Speed = config.DEFAULT_STOPPED_SPEED + config.ESC_DEADZONE if m1Speed > config.DEFAULT_STOPPED_SPEED else config.DEFAULT_STOPPED_SPEED - config.ESC_DEADZONE
+        m1Speed = DEFAULT_STOPPED_SPEED + ESC_DEADZONE if m1Speed > DEFAULT_STOPPED_SPEED else DEFAULT_STOPPED_SPEED - ESC_DEADZONE
     if 1450 <= m2Speed <= 1550:
-        m2Speed = config.DEFAULT_STOPPED_SPEED + config.ESC_DEADZONE if m2Speed > config.DEFAULT_STOPPED_SPEED else config.DEFAULT_STOPPED_SPEED - config.ESC_DEADZONE
+        m2Speed = DEFAULT_STOPPED_SPEED + ESC_DEADZONE if m2Speed > DEFAULT_STOPPED_SPEED else DEFAULT_STOPPED_SPEED - ESC_DEADZONE
     
-    #printDebug(f"Line Center: {lineCenterX.value}, Angle: {round(np.rad2deg(lineAngle.value), 0)} motorSpeed: {motorSpeed}, M1: {m1Speed}, M2: {m2Speed}", config.softDEBUG)
+    #printDebug(f"Line Center: {lineCenterX.value}, Angle: {round(np.rad2deg(lineAngle.value), 0)} motorSpeed: {motorSpeed}, M1: {m1Speed}, M2: {m2Speed}", softDEBUG)
 
     return m1Speed, m2Speed
 
@@ -208,7 +217,7 @@ def setMotorsSpeeds2():
         M1, M2 = 1520, 1520
 
     if inGap: # Currently in gap
-        M1, M2 = config.DEFAULT_FORWARD_SPEED, config.DEFAULT_FORWARD_SPEED
+        M1, M2 = DEFAULT_FORWARD_SPEED, DEFAULT_FORWARD_SPEED
 
     elif not timer_manager.is_timer_expired("uTurn"): # if in uTurn (timer not expired)
         if rotateTo == "left":
@@ -243,7 +252,7 @@ def setMotorsSpeeds(guidanceFactor):
         M1, M2 = 1520, 1520
 
     if inGap:
-        M1, M2 = config.DEFAULT_FORWARD_SPEED, config.DEFAULT_FORWARD_SPEED
+        M1, M2 = DEFAULT_FORWARD_SPEED, DEFAULT_FORWARD_SPEED
 
     elif not timer_manager.is_timer_expired("uTurn"):
         M1, M2 = (1000, 2000) if rotateTo == "left" else (2000, 1000)
@@ -267,15 +276,15 @@ def controlMotors2():
     global oldM1, oldM2
 
     if not timer_manager.is_timer_expired("stop"):
-        message = f"M({config.DEFAULT_STOPPED_SPEED}, {config.DEFAULT_STOPPED_SPEED})"
+        message = f"M({DEFAULT_STOPPED_SPEED}, {DEFAULT_STOPPED_SPEED})"
         oldM1, oldM2 = 0, 0 # impossible values so it gets reassigned as soon as timer ends
     elif M1 != oldM1 or M2 != oldM2:
         message = f"M({int(M1)}, {int(M2)})"
     else:
         return    
     
-    if switchState and (M1 != config.DEFAULT_STOPPED_SPEED or M2 != config.DEFAULT_STOPPED_SPEED): # LOP ON
-        message = f"M({config.DEFAULT_STOPPED_SPEED}, {config.DEFAULT_STOPPED_SPEED})"
+    if switchState and (M1 != DEFAULT_STOPPED_SPEED or M2 != DEFAULT_STOPPED_SPEED): # LOP ON
+        message = f"M({DEFAULT_STOPPED_SPEED}, {DEFAULT_STOPPED_SPEED})"
 
     mySerial.sendSerial(message)
 
@@ -291,7 +300,7 @@ def controlMotors():
         return
 
     if not timer_manager.is_timer_expired("stop"):
-        mySerial.sendSerial(f"M({config.DEFAULT_STOPPED_SPEED}, {config.DEFAULT_STOPPED_SPEED})")
+        mySerial.sendSerial(f"M({DEFAULT_STOPPED_SPEED}, {DEFAULT_STOPPED_SPEED})")
         oldM1, oldM2 = 0, 0  # Force re-evaluation when the timer ends
         return
 
@@ -302,11 +311,10 @@ def controlMotors():
     oldM1, oldM2 = M1, M2
 
 
-
 def intersectionController():
     global lastTurn
     if turnDirection.value != lastTurn:
-        printDebug(f"New Turn direction {turnDirection.value} {lastTurn}", config.DEBUG)
+        printDebug(f"New Turn direction {turnDirection.value} {lastTurn}", DEBUG)
         
         if turnDirection.value == "uTurn":
             if timer_manager.is_timer_expired("uTurn"):
@@ -363,11 +371,12 @@ def controlLoop():
     timer_manager.add_timer("backwards", 0.05)
     timer_manager.add_timer("noLine", 0.05)
     timer_manager.add_timer("zoneEntry", 0.05)
+    timer_manager.add_timer("armCooldown", 0.05)
     time.sleep(0.1)
 
     t0 = time.perf_counter()
     while not terminate.value:
-        t1 = t0 + config.controlDelayMS * 0.001
+        t1 = t0 + controlDelayMS * 0.001
 
         # Loop
         LoPSwitchController()
@@ -375,7 +384,7 @@ def controlLoop():
         zoneStatusLoop = zoneStatus.value
         objectiveLoop = objective.value
         
-        printDebug(f"Robot Not Waiting: {notWaiting}", config.DEBUG)
+        printDebug(f"Robot Not Waiting: {notWaiting}", DEBUG)
         if notWaiting:
 
             # ----- LINE FOLLOWING ----- 
@@ -418,20 +427,20 @@ def controlLoop():
                     #M1, M2 = 1520, 1520
                     controlMotors()
                     #print(f"here 3 {ballBottomY.value} {ballBottomY.value >= camera_y * 0.95}")
-                    if ballBottomY.value >= camera_y * 0.95 and not LOPstate.value:
-                        print(f"Here?? {ballBottomY.value} {ballType.value}")
+                    if ballBottomY.value >= camera_y * 0.95: # Ball is close to the bottom of the camera
+                        #print(f"Here?? {ballBottomY.value} {ballType.value}")
                         if ballType.value == "silver ball":
-                            print(f"Here1")
-                            #pickVictim("A")
+                            #print(f"Here1")
+                            pickVictim("A")
                         elif ballType.value == "black ball":
-                            print(f"Here2")
-                            #pickVictim("D")
+                            #print(f"Here2")
+                            pickVictim("D")
                         zoneStatus.value = "findVictim"
                         
 
 
         intrepretCommand()
-        receivedMessage = mySerial.readSerial(config.DEBUG)
+        receivedMessage = mySerial.readSerial(DEBUG)
         interpretMessage(receivedMessage)
 
 
@@ -447,8 +456,8 @@ def controlLoop():
             debugMessage = (
                 f"Center: {lineCenterX.value} \t"
                 #f"Angle: {round(np.rad2deg(lineAngle.value),2)} \t"
-                f"LineBias: {int(config.KP * error_x + config.KD * (error_x - lastError) + config.KI * errorAcc)}   \t"
-                f"AngBias: {round(config.KP_THETA*error_theta,2)}     \t"
+                f"LineBias: {int(KP * error_x + KD * (error_x - lastError) + KI * errorAcc)}   \t"
+                f"AngBias: {round(KP_THETA*error_theta,2)}     \t"
                 f"Reason: {turnReason.value} \t"
                 #f"isCrop: {isCropped.value} \t"
                 #f"line: {lineDetected.value} \t"
@@ -464,11 +473,11 @@ def controlLoop():
                 #f"Commands: {commandWaitingList}"
                 #f"LOP: {LOPstate.value}"
             )
-            #printDebug(f"{debugMessage}", config.softDEBUG)
+            #printDebug(f"{debugMessage}", softDEBUG)
         if objectiveLoop == "zone" and notWaiting:
             debugMessage = (
                 #f"Center: {lineCenterX.value} \t"
-                #f"LineBias: {int(config.KP * error_x + config.KD * (error_x - lastError) + config.KI * errorAcc)}   \t"
+                #f"LineBias: {int(KP * error_x + KD * (error_x - lastError) + KI * errorAcc)}   \t"
                 f"ballType: {ballType.value} \t"
                 f"ballCenter: {ballCenterX.value} \t"
                 f"ballBottom: {ballBottomY.value} {ballBottomY.value >= camera_y * 0.95}\t"
@@ -480,12 +489,15 @@ def controlLoop():
                 f"var: {zoneStatus.value}  "
                 #f"Commands: {commandWaitingList}"
             )
-            #printDebug(f"{debugMessage}", config.softDEBUG)
+            #printDebug(f"{debugMessage}", softDEBUG)
         #if not notWaiting:
-         #   printDebug(f"Not Waiting: {notWaiting}", config.softDEBUG)
+         #   printDebug(f"Not Waiting: {notWaiting}", softDEBUG)
         
 
 
         while (time.perf_counter() <= t1):
             time.sleep(0.0005)
         t0 = t1
+    
+
+    print(f"Shutting Down Robot Control Loop")

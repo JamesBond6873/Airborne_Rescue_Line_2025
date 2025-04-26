@@ -11,6 +11,7 @@ from ultralytics import YOLO
 from ultralytics.utils.plotting import colors
 
 import config
+from config import *
 from utils import printDebug
 from utils import Timer
 from utils import TimerManager
@@ -21,14 +22,12 @@ print("Line Camera: \t \t \t OK")
 
 
 # Color Configs
-black_min = np.array(config.black_min)
-black_max = np.array(config.black_max)
-green_min = np.array(config.green_min)
-green_max = np.array(config.green_max)
-red_min_1 = np.array(config.red_min_1)
-red_max_1 = np.array(config.red_max_1)
-red_min_2 = np.array(config.red_min_2)
-red_max_2 = np.array(config.red_max_2)
+green_min = np.array(green_min)
+green_max = np.array(green_max)
+red_min_1 = np.array(red_min_1)
+red_max_1 = np.array(red_max_1)
+red_min_2 = np.array(red_min_2)
+red_max_2 = np.array(red_max_2)
 
 camera_x = 448
 camera_y = 256
@@ -65,7 +64,7 @@ def savecv2_img(folder, cv2_img):
         cv2.imwrite(file_path, cv2_img)
 
         photoCounter += 1
-        printDebug(f"Saved Image {photoCounter}: {file_path}", config.softDEBUG)
+        printDebug(f"Saved Image {photoCounter}: {file_path}", softDEBUG)
 
         #timer_manager.set_timer("saveImageCoolDown", 10)
         saveFrame.value = False
@@ -92,7 +91,7 @@ def computeMoments(contour):
         theta = 0.5 * np.arctan2(2 * mu11, mu20 - mu02)  # Principal axis angle
 
         if theta < 0:
-            printDebug(f"theta og: {round(theta,2)} {round(np.rad2deg(theta),2)}, new {round(np.pi + theta,2)} {round(np.rad2deg(np.pi + theta),2)}", config.DEBUG)
+            printDebug(f"theta og: {round(theta,2)} {round(np.rad2deg(theta),2)}, new {round(np.pi + theta,2)} {round(np.rad2deg(np.pi + theta),2)}", DEBUG)
             theta = np.pi + theta
 
         # Define line endpoints along the principal axis
@@ -643,6 +642,7 @@ def lineCamLoop():
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.1/victim_ball_detection.pt', task='detect')
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.2/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect') # Used ultralytics 8.3.66 (nms not an argument)
     modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.3/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect') # Used format = edgetpu
+    #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.4/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect') # Used format = edgetpu
 
     modelSilverLine = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/silver_zone_entry/silver_classify_s.onnx', task='classify')
     
@@ -694,7 +694,7 @@ def lineCamLoop():
 
     t0 = time.perf_counter()
     while not terminate.value:
-        t1 = t0 + config.lineDelayMS * 0.001
+        t1 = t0 + lineDelayMS * 0.001
 
         # Loop
         raw_capture = camera.capture_array()
@@ -712,7 +712,7 @@ def lineCamLoop():
             
             # Black Processing
             grayImage = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
-            _, blackImage = cv2.threshold(grayImage, 55, 255, cv2.THRESH_BINARY_INV)
+            _, blackImage = cv2.threshold(grayImage, blackThreshold, 255, cv2.THRESH_BINARY_INV)
             
             blackImage = ignoreHighFOVCorners(blackImage)
             
@@ -800,7 +800,7 @@ def lineCamLoop():
 
         elif objective.value == "zone":
             img_rgb = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
-            results = modelVictim.predict(img_rgb, imgsz=448, conf=0.3, iou=0.2, agnostic_nms=False, workers=4, verbose=False)  # verbose=True to enable debug info
+            results = modelVictim.predict(img_rgb, imgsz=448, conf=0.3, iou=0.2, agnostic_nms=True, workers=4, verbose=False)  # verbose=True to enable debug info
             
             """print("Model class names:", getattr(modelVictim, "names", "No names found"))
             print("Number of classes:", getattr(modelVictim, "nc", "Unknown"))
@@ -843,7 +843,7 @@ def lineCamLoop():
                 ballType.value = str.lower(str(best_box[2]))
                 ballWidth.value = best_box[3]
                 ballBottomY.value = best_box[4]
-                print(f"BALLL FOUND: {ballCenterX.value} {ballBottomY.value} {ballType.value} {ballWidth.value} {ballConfidence.value}")
+                #print(f"BALLL FOUND: {ballCenterX.value} {ballBottomY.value} {ballType.value} {ballWidth.value} {ballConfidence.value}")
                 zoneStatus.value = "goToBall"
                 timer_manager.set_timer("goToBall", 0.750)
             else:
@@ -863,6 +863,8 @@ def lineCamLoop():
         while (time.perf_counter() <= t1):
             time.sleep(0.0005)
 
-        printDebug(f"\t\t\t\t\t\t\t\tLine Cam Loop Time: {t0} | {t1} | {time.perf_counter()}", config.DEBUG)
+        printDebug(f"\t\t\t\t\t\t\t\tLine Cam Loop Time: {t0} | {t1} | {time.perf_counter()}", DEBUG)
         t0 = t1
-            
+
+    print(f"Shutting Down Line Cam Loop")
+    camera.stop()
