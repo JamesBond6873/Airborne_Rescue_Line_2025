@@ -6,6 +6,7 @@ print("Robot Configurations: \t \t OK")
 DEBUG = False
 softDEBUG = True
 LOPOverride = False # If True, LOP state will be updated virtually
+LOPVirtualState = True
 MotorOverride = False # If True, the robot will not move
 
 # Serial Port Vars

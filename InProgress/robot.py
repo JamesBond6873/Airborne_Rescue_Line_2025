@@ -36,9 +36,9 @@ error = errorAcc = lastError = 0
 
 timer_manager = TimerManager()
 
-
+# Interpret CLI Commands
 def CLIinterpretCommand():
-    global MotorOverride, LOPOverride
+    global MotorOverride, LOPOverride, LOPVirtualState
 
     message = CLIcommandToExecute.value
 
@@ -49,6 +49,7 @@ def CLIinterpretCommand():
     elif message == "list":
         print("Command List: ")
         print(f"  - exit")
+        print(f"  - vars")
         """print(f"  - Drop Alive")
         print(f"  - Drop Dead")
         print(f"  - Close Ball Storage")
@@ -56,9 +57,18 @@ def CLIinterpretCommand():
         print(f"  - Pick Dead")
         print(f"  - Camera Evacuation")
         print(f"  - Camera Line")"""
-        print(f"  - motorOverride <0 or 1>")
+        print(f"  - MotorOverride <0 or 1>")
         print(f"  - LOPOverride <0 or 1>")
-    elif message.startswith("motorOverride"):
+        print(f"  - LOPState <0 or 1>")
+        print(f"  - Objective <FL or EZ>")
+        print(f"  - ZoneStatus <notStarted, begin, entry, findVictims, pickup_ball, deposit_red, deposit_green, exit>")
+    elif message == "vars":
+        print(f"  - LOPOverride: {LOPOverride}")
+        print(f"  - LOPVirtualState: {LOPVirtualState}")
+        print(f"  - MotorOverride: {MotorOverride}")
+        print(f"  - Objective: {objective.value}")
+        print(f"  - Zone Status: {zoneStatus.value}")
+    elif message.startswith("MotorOverride"):
         try:
             MotorOverride = bool(int(message.split()[1]))
             print(f"Motor Override set to {MotorOverride}")
@@ -70,7 +80,47 @@ def CLIinterpretCommand():
             print(f"LOP Override set to {LOPOverride}")
         except (ValueError, IndexError):
             print("Invalid LOPOverride command. Use 'LOPOverride <0 or 1>'")
+    elif message.startswith("LOPState"):
+        try:
+            LOPVirtualState = bool(int(message.split()[1]))
+            print(f"LOP State set to {LOPVirtualState}")
+            if not LOPOverride:
+                print(f"LOP Override is OFF. LOP State will not change anything.")
+                print(f"Run LOPOverride <1> to be able to change LOP State.")
+        except (ValueError, IndexError):
+            print("Invalid LOPState command. Use 'LOPState <0 or 1>'")
+    elif message.startswith("Objective"):
+        try:
+            _, objectiveCode = message.split(maxsplit=1)
+            objectiveCode = objectiveCode.strip().upper()
 
+            if objectiveCode == "FL":
+                objective.value = "follow_line"
+                print("Objective set to FOLLOW LINE.")
+            elif objectiveCode == "EZ":
+                objective.value = "zone"
+                print("Objective set to ZONE.")
+            else:
+                print(f"Unknown Objective '{objectiveCode}'. Use 'FL' or 'EZ'.")
+        except (ValueError, IndexError):
+            print("Invalid Objective command. Use 'Objective FL' or 'Objective EZ'.")
+    elif message.startswith("ZoneStatus"):
+        try:
+            _, zoneCode = message.split(maxsplit=1)
+            zoneCode = zoneCode.strip().lower()
+
+            allowedZoneStatuses = [
+                "notstarted", "begin", "entry", "findvictims",
+                "pickup_ball", "deposit_red", "deposit_green", "exit"
+            ]
+
+            if zoneCode in allowedZoneStatuses:
+                zoneStatus.value = zoneCode
+                print(f"ZoneStatus set to '{zoneCode}'.")
+            else:
+                print(f"Unknown ZoneStatus '{zoneCode}'. Allowed: {allowedZoneStatuses}")
+        except (ValueError, IndexError):
+            print("Invalid ZoneStatus command. Example: 'ZoneStatus begin'")
     CLIcommandToExecute.value = "none" # Reset command to none
 
 
@@ -158,19 +208,22 @@ def cameraDefault(position):
 
 
 #Returns True if the switch is ON, False otherwise.
-def is_switch_on(): 
-    return switch.is_pressed
+def isSwitchOn():
+    if not LOPOverride: # Not LOP Override
+        return switch.is_pressed
+    else: # LOP Override == True
+        return LOPVirtualState
 
 
 # Controller for LoP
 def LoPSwitchController():
     global switchState, rotateTo
-
-    if LOPOverride: # If LOPOverride is True, LoP state will be updated virtually
-        switchState = LOPstate.value
-        return
     
-    if is_switch_on():
+    if LOPOverride: # LOP Override == True
+        switchState = LOPVirtualState
+        return # Skips updates
+
+    if isSwitchOn():
         if switchState == False: # First time detected as on
             switchState = True
             printDebug(f"LoP Switch is now ON: {switchState}", softDEBUG)
@@ -244,42 +297,6 @@ def calculateMotorSpeeds(motorSpeed):
 
 
 # Update Motor Vars accordingly
-def setMotorsSpeeds2():
-    global M1, M2, M1info, M2info, switchState, motorSpeedDiference, commandWaitingList
-    
-    #motorSpeedDiference = PID(lineCenterX.value)
-    motorSpeedDiference = PID2(lineCenterX.value, lineAngle.value)
-    M1, M2 = calculateMotorSpeeds(motorSpeedDiference)
-
-    if redDetected.value:
-        M1, M2 = 1520, 1520
-
-    if inGap: # Currently in gap
-        M1, M2 = DEFAULT_FORWARD_SPEED, DEFAULT_FORWARD_SPEED
-
-    elif not timer_manager.is_timer_expired("uTurn"): # if in uTurn (timer not expired)
-        if rotateTo == "left":
-            M1, M2 = 1000, 2000
-        elif rotateTo == "right":
-            M1, M2 = 2000, 1000
-    
-    elif not timer_manager.is_timer_expired('backwards'):
-        M1, M2 = 1000, 1000
-
-    elif timer_manager.get_remaining_time('uTurn') < 0 and timer_manager.get_remaining_time('uTurn') > -0.2:
-        # Left uTurn Routine a few moments prior
-        timer_manager.set_timer('backwards', 1.0)
-
-    #print(f"Remaining Time: {timer_manager.get_remaining_time('uTurn')}")
-
-    M1info, M2info = M1, M2
-
-    #if True:
-    if switchState: #LoP On - GamepadControl
-        M1 = gamepadM1.value
-        M2 = gamepadM2.value
-
-
 def setMotorsSpeeds(guidanceFactor):
     global M1, M2, M1info, M2info, motorSpeedDiference
     
@@ -336,8 +353,6 @@ def controlMotors():
     sendMotorsIfNew(gamepadM1.value, gamepadM2.value)
 
 
-
-
 def intersectionController():
     global lastTurn
     if turnDirection.value != lastTurn:
@@ -371,7 +386,7 @@ def gapController():
 #############################################################################
 
 def controlLoop():
-    global switchState, M1, M2, M1info, M2info, oldM1, oldM2, motorSpeedDiference, error_theta, error_x, errorAcc, lastError, inGap, switchState
+    global switchState, M1, M2, M1info, M2info, oldM1, oldM2, motorSpeedDiference, error_theta, error_x, errorAcc, lastError, inGap
 
     sendCommandList(["GR","BC", "SF,5,F", "CL", "SF,4,F", "AU", "PA", "SF,0,F", "SF,1,F", "SF,2,F", "SF,3,F"])
 
@@ -381,7 +396,7 @@ def controlLoop():
         time.sleep(5)
         cameraDefault("Evacuation")
 
-    switchState = is_switch_on()
+    switchState = isSwitchOn()
     motorSpeedDiference = 0
     M1info = 0
     M2info = 0

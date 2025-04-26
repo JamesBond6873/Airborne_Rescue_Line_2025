@@ -33,8 +33,8 @@ turnDirection = manager.Value("i", "straight") # "straight", "left", "right", "u
 objective = manager.Value("i", "follow_line")  # "follow_line"; "zone"; "debug"
 line_status = manager.Value("i", "line_detected")  # "line_detected"; "gap_detected"; "gap_avoid"; "obstacle_detected"; "obstacle_avoid"; "obstacle_orientate"; "check_silver"; "position_entry"; "position_entry_1"; "position_entry_2"; "stop"
 zoneStatus = manager.Value("i", "notStarted")  # "notStarted"; "begin"; "entry"; "findVictims"; "pickup_ball"; "deposit_red"; "deposit_green"; "exit"
-LOPstate = manager.Value("i", 0)
 # WARNING -- SHOULD BE NOT STARTED
+LOPstate = manager.Value("i", 0)
 
 
 status = manager.Value("i", "Stopped")

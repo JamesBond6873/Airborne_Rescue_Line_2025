@@ -26,9 +26,6 @@ def inputThread(queue):
 
  
 if __name__ == "__main__":
-
-    
-
     processes = [
         Process(target=gamepadLoop, args=()),
         Process(target=lineCamLoop, args=()),
