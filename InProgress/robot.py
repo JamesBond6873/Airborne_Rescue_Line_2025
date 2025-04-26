@@ -418,14 +418,14 @@ def controlLoop():
                     #M1, M2 = 1520, 1520
                     controlMotors()
                     #print(f"here 3 {ballBottomY.value} {ballBottomY.value >= camera_y * 0.95}")
-                    if ballBottomY.value >= camera_y * 0.80 and not LOPstate.value:
-                        #print(f"Here?? {ballBottomY.value} {ballType.value}")
+                    if ballBottomY.value >= camera_y * 0.95 and not LOPstate.value:
+                        print(f"Here?? {ballBottomY.value} {ballType.value}")
                         if ballType.value == "silver ball":
-                            #print(f"Here1")
-                            pickVictim("A")
+                            print(f"Here1")
+                            #pickVictim("A")
                         elif ballType.value == "black ball":
-                            #print(f"Here2")
-                            pickVictim("D")
+                            print(f"Here2")
+                            #pickVictim("D")
                         zoneStatus.value = "findVictim"
                         
 
