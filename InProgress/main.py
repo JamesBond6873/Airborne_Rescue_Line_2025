@@ -8,6 +8,7 @@ import threading
 
 
 from gamepad import gamepadLoop
+from mySerial import serialLoop
 from line_cam import lineCamLoop
 from robot import controlLoop
 from mp_manager import *
@@ -28,6 +29,7 @@ def inputThread(queue):
 if __name__ == "__main__":
     processes = [
         Process(target=gamepadLoop, args=()),
+        Process(target=serialLoop, args=()),
         Process(target=lineCamLoop, args=()),
         Process(target=controlLoop, args=())
         #Process(target=zoneCamLoop, args=())
@@ -56,4 +58,4 @@ if __name__ == "__main__":
         print(f"")
         print(f"-------- Main.py: All processes have finished. --------")
         print(f"------------------ Main.py: Exiting. ------------------")
-
+        print(f"")

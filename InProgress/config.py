@@ -3,6 +3,7 @@
 print("Robot Configurations: \t \t OK")
 
 # Is it DEBUG?
+gamepadLoopRun = True # False for score runs
 DEBUG = False
 softDEBUG = True
 LOPOverride = False # If True, LOP state will be updated virtually
@@ -20,7 +21,8 @@ buzzerState = False
 
 # Time Delays
 lineDelayMS = 25 # Frame Rate = 40 FPS
-controlDelayMS = 20 # 50 Hz
+controlDelayMS = 25 # 40 Hz
+serialDelayMS = 10 # 100 Hz
 intersectionMaxTime = 1.000 #s
 
 # Color Configs

@@ -6,7 +6,6 @@ import numpy as np
 from config import *
 from utils import *
 from line_cam import camera_x, camera_y
-import mySerial
 from mp_manager import *
 
 
@@ -20,10 +19,7 @@ inGap = False
 lastLineDetected = True  # Assume robot starts detecting a line
 
 # Loop Vars
-notWaiting = True
-gamepadLoopValue = True
-waitingResponse = ""
-commandWaitingList = []
+pendingCommandsConfirmation = []
 
 # Pin Definitions
 SWITCH_PIN = 14
@@ -141,41 +137,36 @@ def intrepretCommand():
     commandToExecute.value = "none"
 
 
-# Interpret Received Message
-def interpretMessage(message):
-    global notWaiting, waitingResponse, commandWaitingList
-    if "-Nothing-" not in message:
-        printDebug(f"Received Message: {message}", softDEBUG)
-    if "Ok" in message:
-        printDebug(f"Command List: {commandWaitingList}", softDEBUG)
-        if len(commandWaitingList) == 0:
-            notWaiting = True
-        else:
-            mySerial.sendSerial(commandWaitingList[0])
-            commandWaitingList.pop(0)
+# Sends command lists to Serial Process (requiring confirmation by RPi Pico)
+def sendCommandListWithConfirmation(commandList):
+    global pendingCommandsConfirmation
+    if commandWithConfirmation.value == "none" and len(pendingCommandsConfirmation) == 0: # Send One Command to mySerial Straight Away
+        commandWithConfirmation.value = commandList[0]
+        commandList.pop(0)
+    for command in commandList: # Add the rest to pending list
+        pendingCommandsConfirmation.append(command)
 
 
-# Send Commands from Waiting List
-def sendCommandList(commandList):
-    global notWaiting, waitingResponse, commandWaitingList
-    notWaiting = False
+def sendSerialPendingCommandsConfirmation():
+    global pendingCommandsConfirmation
+    if len(pendingCommandsConfirmation) > 0:
+        if commandWithConfirmation.value == "none":
+            commandWithConfirmation.value = pendingCommandsConfirmation[0]
+            pendingCommandsConfirmation.pop(0)
 
-    for command in commandList:
-        commandWaitingList.append(command)
 
-    printDebug(f"Command List: {commandWaitingList}", softDEBUG)
-
-    # Do first Cycle
-    mySerial.sendSerial(commandWaitingList[0])
-    commandWaitingList.pop(0)
-
+def sendCommandNoConfirmation(command):
+    if commandWithoutConfirmation.value == "none":
+        commandWithoutConfirmation.value = command
+    else:
+        print(f"Check Error: Command with no confirmation pending: {commandWithoutConfirmation.value} at {time.perf_counter()}")
 
 # Pick Victim Function (takes "Alive" or "Dead")
 def pickVictim(type):
     if timer_manager.is_timer_expired("armCooldown"): # if cooldown expired
         if not LOPstate.value:
             printDebug(f"Pick {type}", softDEBUG)
-            sendCommandList([f"AD", f"P{type}", "SF,0,F", "SF,1,F", "SF,2,F", "SF,3,F"])
+            sendCommandListWithConfirmation([f"AD", f"P{type}", "SF,0,F", "SF,1,F", "SF,2,F", "SF,3,F"])
         else:
             printDebug(f"I Would have Picked {type}", softDEBUG)
 
@@ -186,25 +177,25 @@ def pickVictim(type):
 def ballRelease(type):
     printDebug(f"Drop {type}", softDEBUG)
 
-    sendCommandList([f"D{type}", f"SF,5,F"])
+    sendCommandListWithConfirmation([f"D{type}", f"SF,5,F"])
 
 
 # Closes Ball Storage
 def closeBallStorage():
     printDebug(f"Close Ball Storage", softDEBUG)
 
-    sendCommandList([f"BC", f"SF,5,F"])
+    sendCommandListWithConfirmation([f"BC", f"SF,5,F"])
 
 
 # Moves Camera to Default Position: Line or Evacuation
 def cameraDefault(position):
     if position == "Line":
         printDebug(f"Set Camera to Line Following Mode", softDEBUG)
-        sendCommandList(["CL", "SF,4,F"])
+        sendCommandListWithConfirmation(["CL", "SF,4,F"])
 
     elif position == "Evacuation":
         printDebug(f"Set Camera to Evacaution Zone Mode", softDEBUG)
-        sendCommandList(["CE", "SF,4,F"])
+        sendCommandListWithConfirmation(["CE", "SF,4,F"])
 
 
 #Returns True if the switch is ON, False otherwise.
@@ -333,7 +324,7 @@ def controlMotors():
         """Send motor command only if values changed."""
         global oldM1, oldM2
         if m1 != oldM1 or m2 != oldM2:
-            mySerial.sendSerial(f"M({int(m1)}, {int(m2)})")
+            sendCommandNoConfirmation(f"M({int(m1)}, {int(m2)})")
             oldM1, oldM2 = m1, m2
     def canGamepadControlMotors():
         """Determine if user input should control motors."""
@@ -388,7 +379,7 @@ def gapController():
 def controlLoop():
     global switchState, M1, M2, M1info, M2info, oldM1, oldM2, motorSpeedDiference, error_theta, error_x, errorAcc, lastError, inGap
 
-    sendCommandList(["GR","BC", "SF,5,F", "CL", "SF,4,F", "AU", "PA", "SF,0,F", "SF,1,F", "SF,2,F", "SF,3,F"])
+    sendCommandListWithConfirmation(["GR","BC", "SF,5,F", "CL", "SF,4,F", "AU", "PA", "SF,0,F", "SF,1,F", "SF,2,F", "SF,3,F"])
 
     if True: # True if only testing Evac
         objective.value = "zone"
@@ -426,71 +417,71 @@ def controlLoop():
         zoneStatusLoop = zoneStatus.value
         objectiveLoop = objective.value
         
-        printDebug(f"Robot Not Waiting: {notWaiting}", DEBUG)
-        if notWaiting:
 
-            # ----- LINE FOLLOWING ----- 
-            if objectiveLoop == "follow_line":
-                gapController()
+        # ----- LINE FOLLOWING ----- 
+        if objectiveLoop == "follow_line":
+            gapController()
 
-                setMotorsSpeeds(lineCenterX.value)
-                intersectionController()
+            setMotorsSpeeds(lineCenterX.value)
+            intersectionController()
+            controlMotors()
+        
+        # ----- EVACUATION ZONE ----- 
+        elif objectiveLoop == "zone":
+
+            if zoneStatusLoop == "begin":
+                #print(f"Here 1-----------------")
+                timer_manager.set_timer("stop", 5.0) # 10 seconds to signal that we entered
+                timer_manager.set_timer("zoneEntry", 8.0) # 3 (5+3) seconds to entry the zone
+                cameraDefault("Evacuation")
+                #sendCommandList(["CE","SF,4,F"])
+                silverValue.value = -1
+                zoneStatus.value = "entry" # go to next Step
+
+            elif zoneStatusLoop == "entry":
+            # print(f"Here 2-----------------")
+                if not timer_manager.is_timer_expired("zoneEntry"):
+                    M1, M2 = 1800, 1800
+                    controlMotors()
+                else: # timer expired
+                    #print(f"Here 3-----------------")
+                    timer_manager.set_timer("stop", 5.0) # 10 seconds to signal that we entered
+                    zoneStatus.value = "findVictims"
+            
+            elif zoneStatusLoop == "findVictims":
+                #print(f"Here 4-----------------")
+                setManualMotorsSpeeds(1250 if rotateTo == "left" else 1750, 1750 if rotateTo == "left" else 1250)
                 controlMotors()
             
-            # ----- EVACUATION ZONE ----- 
-            elif objectiveLoop == "zone":
-
-                if zoneStatusLoop == "begin":
-                    #print(f"Here 1-----------------")
-                    timer_manager.set_timer("stop", 5.0) # 10 seconds to signal that we entered
-                    timer_manager.set_timer("zoneEntry", 8.0) # 3 (5+3) seconds to entry the zone
-                    cameraDefault("Evacuation")
-                    #sendCommandList(["CE","SF,4,F"])
-                    silverValue.value = -1
-                    zoneStatus.value = "entry" # go to next Step
-
-                elif zoneStatusLoop == "entry":
-                # print(f"Here 2-----------------")
-                    if not timer_manager.is_timer_expired("zoneEntry"):
-                        M1, M2 = 1800, 1800
-                        controlMotors()
-                    else: # timer expired
-                        #print(f"Here 3-----------------")
-                        timer_manager.set_timer("stop", 5.0) # 10 seconds to signal that we entered
-                        zoneStatus.value = "findVictims"
-                
-                elif zoneStatusLoop == "findVictims":
-                    #print(f"Here 4-----------------")
-                    setManualMotorsSpeeds(1250 if rotateTo == "left" else 1750, 1750 if rotateTo == "left" else 1250)
-                    controlMotors()
-                
-                elif zoneStatusLoop == "goToBall":
-                    setMotorsSpeeds(ballCenterX.value)
-                    #M1, M2 = 1520, 1520
-                    controlMotors()
-                    #print(f"here 3 {ballBottomY.value} {ballBottomY.value >= camera_y * 0.95}")
-                    if ballBottomY.value >= camera_y * 0.95: # Ball is close to the bottom of the camera
-                        #print(f"Here?? {ballBottomY.value} {ballType.value}")
-                        if ballType.value == "silver ball":
-                            #print(f"Here1")
-                            pickVictim("A")
-                        elif ballType.value == "black ball":
-                            #print(f"Here2")
-                            pickVictim("D")
-                        zoneStatus.value = "findVictim"
+            elif zoneStatusLoop == "goToBall":
+                setMotorsSpeeds(ballCenterX.value)
+                #M1, M2 = 1520, 1520
+                controlMotors()
+                #print(f"here 3 {ballBottomY.value} {ballBottomY.value >= camera_y * 0.95}")
+                if ballBottomY.value >= camera_y * 0.95: # Ball is close to the bottom of the camera
+                    #print(f"Here?? {ballBottomY.value} {ballType.value}")
+                    if ballType.value == "silver ball":
+                        #print(f"Here1")
+                        pickVictim("A")
+                    elif ballType.value == "black ball":
+                        #print(f"Here2")
+                        pickVictim("D")
+                    zoneStatus.value = "findVictim"
                         
 
         CLIinterpretCommand()
         intrepretCommand()
-        receivedMessage = mySerial.readSerial(DEBUG)
-        interpretMessage(receivedMessage)
+        sendSerialPendingCommandsConfirmation()
+
+        if len(pendingCommandsConfirmation) > 5:
+            print(f"We have {len(pendingCommandsConfirmation)} pending commands: {commandWithConfirmation.value} + {pendingCommandsConfirmation}")     
 
         M1info = M1
         M2info = M2
 
         lastObjective = objective.value
         
-        if objectiveLoop == "follow_line" and notWaiting:
+        if objectiveLoop == "follow_line":
             debugMessage = (
                 f"Center: {lineCenterX.value} \t"
                 #f"Angle: {round(np.rad2deg(lineAngle.value),2)} \t"
@@ -512,7 +503,7 @@ def controlLoop():
                 #f"LOP: {LOPstate.value}"
             )
             #printDebug(f"{debugMessage}", softDEBUG)
-        if objectiveLoop == "zone" and notWaiting:
+        if objectiveLoop == "zone":
             debugMessage = (
                 #f"Center: {lineCenterX.value} \t"
                 #f"LineBias: {int(KP * error_x + KD * (error_x - lastError) + KI * errorAcc)}   \t"
@@ -537,5 +528,4 @@ def controlLoop():
             time.sleep(0.0005)
         t0 = t1
     
-
     print(f"Shutting Down Robot Control Loop")
