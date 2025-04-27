@@ -28,12 +28,14 @@ red_max_1 = np.array(red_max_1)
 red_min_2 = np.array(red_min_2)
 red_max_2 = np.array(red_max_2)
 
+# Camera Images Configs
 camera_x = 448
 camera_y = 256
 
 multiple_bottom_side = camera_x / 2
 lastDirection = "Straight!"
 
+# Timers
 timer = Timer()
 timer_manager = TimerManager()
 
@@ -42,6 +44,12 @@ kernel = np.ones((3, 3), np.uint8)
 lastSide = -1
 
 photoCounter = 0
+
+# Initialize sensors data arrays
+ballCenterXArray = createEmptyTimeArray()
+ballBottomYArray = createEmptyTimeArray()
+ballWidthArray = createEmptyTimeArray()
+ballTypeArray = createEmptyTimeArray()
 
 
 def savecv2_img(folder, cv2_img):
@@ -630,7 +638,7 @@ def obstacleController():
 #############################################################################
 
 def lineCamLoop():
-    global cv2_img, blackImage, greenImage, redImage, x_last, y_last
+    global cv2_img, blackImage, greenImage, redImage, x_last, y_last, ballCenterXArray, ballBottomYArray, ballWidthArray, ballTypeArray
 
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/ball_zone_s/ball_detect_s_edgetpu.tflite', task='detect')
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v3/victim_ball_detection_int8_edgetpu.tflite', task='detect')
@@ -825,7 +833,7 @@ def lineCamLoop():
                 """if width >= 400: # Precarius attempt at ignoring random silver balls
                     continue"""
 
-                boxes.append([area, distance, name, width, y2])
+                boxes.append([area, distance, name, width, y2, class_id])
 
                 color = colors(class_id, True)
                 cv2.rectangle(cv2_img, (x1, y1), (x2, y2), color, 2)
@@ -838,10 +846,19 @@ def lineCamLoop():
                     best_box = min(boxes, key=lambda x: abs(x[1] - last_best_box[1]))
 
                 last_best_box = best_box
-                ballCenterX.value = best_box[1]
-                ballType.value = str.lower(str(best_box[2]))
-                ballWidth.value = best_box[3]
-                ballBottomY.value = best_box[4]
+
+                # Update arrays with the current values and store the timestamped data
+                ballCenterXArray = addNewTimeValue(ballCenterXArray, best_box[1])
+                ballBottomYArray = addNewTimeValue(ballBottomYArray, best_box[4])
+                ballWidthArray = addNewTimeValue(ballWidthArray, best_box[3])
+                ballTypeArray = addNewTimeValue(ballTypeArray, best_box[5])
+
+                # Get the averaged values for the control loop (variable time window)
+                ballCenterX.value = calculateAverageArray(ballCenterXArray, 0.5)
+                ballBottomY.value = calculateAverageArray(ballBottomYArray, 0.5)
+                ballWidth.value = calculateAverageArray(ballWidthArray, 0.5)
+                ballType.value = "silver ball" if calculateAverageArray(ballTypeArray, 1) > 0.5 else "black ball"
+
                 #print(f"BALLL FOUND: {ballCenterX.value} {ballBottomY.value} {ballType.value} {ballWidth.value} {ballConfidence.value}")
                 zoneStatus.value = "goToBall"
                 timer_manager.set_timer("goToBall", 0.750)

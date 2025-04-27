@@ -22,10 +22,10 @@ turnReason = manager.Value("i", 0)
 redDetected = manager.Value("i", False)
 silverValue = manager.Value("i", 0) # 0 = Line, 1 = Silver
 
-ballCenterX = manager.Value("i", -1)
-ballBottomY = manager.Value("i", -1)
-ballWidth = manager.Value("i", -1)
-ballType = manager.Value("i", "none") # "none"; "silver ball"; "black ball"
+ballCenterX = manager.Value("i", -1) # Average
+ballBottomY = manager.Value("i", -1) # Average
+ballWidth = manager.Value("i", -1) # Average
+ballType = manager.Value("i", "none") # Average # "none"; "silver ball"; "black ball"
 ballConfidence = manager.Value("i", -1)
 
 isCropped = manager.Value("i", False)
@@ -63,7 +63,7 @@ def addNewTimeValue(time_value_array, value):
     return np.delete(np.vstack((time_value_array, [time.perf_counter(), value])), 0, axis=0)
 
 
-def calculateAverageRecent(time_value_array, time_range):
+def calculateAverageArray(time_value_array, time_range):
     """ Calculate the average of values within the last 'timeRange' seconds. """
     time_value_array = time_value_array[np.where(time_value_array[:, 0] > time.perf_counter() - time_range)]
     if time_value_array.size > 0:
@@ -72,7 +72,7 @@ def calculateAverageRecent(time_value_array, time_range):
         return -1 # Returns -1 if no values found.
 
 
-def getMaximumRecent(time_value_array, time_range):
+def getMaximumArray(time_value_array, time_range):
     """ Get the maximum value within the last 'timeRange' seconds. """
     time_value_array = time_value_array[np.where(time_value_array[:, 0] > time.perf_counter() - time_range)]
     return np.max(time_value_array[:, 1])
