@@ -1,3 +1,5 @@
+import time
+import numpy as np
 from multiprocessing import Manager
 
 print("MultiProcessing Manager: \t OK")
@@ -39,3 +41,38 @@ LOPstate = manager.Value("i", 0)
 
 status = manager.Value("i", "Stopped")
 saveFrame = manager.Value("i", False)
+
+
+# ARRAY FUNCTIONS
+def createEmptyTimeArray(length: int = 240):
+    """ Create a new empty time-value array of given length. Each row: [timestamp, value] """
+    return np.zeros((length, 2))
+
+
+def createFilledArray(value: int, length: int = 240, fill_time: int = 0):
+    """ Create a time-value array filled with an initial value. 
+    From fillTime index onward, timestamps are set to current time. """
+    arr = np.zeros((length, 2))
+    arr[fill_time:, 0] = time.perf_counter()
+    arr[:, 1] = value
+    return arr
+
+
+def addNewTimeValue(time_value_array, value):
+    """ Add a new [current_time, value] pair to the timeArray. """
+    return np.delete(np.vstack((time_value_array, [time.perf_counter(), value])), 0, axis=0)
+
+
+def calculateAverageRecent(time_value_array, time_range):
+    """ Calculate the average of values within the last 'timeRange' seconds. """
+    time_value_array = time_value_array[np.where(time_value_array[:, 0] > time.perf_counter() - time_range)]
+    if time_value_array.size > 0:
+        return np.mean(time_value_array[:, 1])
+    else:
+        return -1 # Returns -1 if no values found.
+
+
+def getMaximumRecent(time_value_array, time_range):
+    """ Get the maximum value within the last 'timeRange' seconds. """
+    time_value_array = time_value_array[np.where(time_value_array[:, 0] > time.perf_counter() - time_range)]
+    return np.max(time_value_array[:, 1])

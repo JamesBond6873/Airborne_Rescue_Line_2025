@@ -1,4 +1,4 @@
-# -------- Robot Actuators/Sensors -------- 
+# -------- Robot Sensors -------- 
 
 import datetime
 import time
@@ -10,7 +10,6 @@ from libcamera import controls
 from ultralytics import YOLO
 from ultralytics.utils.plotting import colors
 
-import config
 from config import *
 from utils import printDebug
 from utils import Timer
@@ -640,8 +639,8 @@ def lineCamLoop():
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.1/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect')
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.1/victim_ball_detection_full_integer_quant_with_metadata_edgetpu.tflite', task='detect')
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.1/victim_ball_detection.pt', task='detect')
-    #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.2/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect') # Used ultralytics 8.3.66 (nms not an argument)
-    modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.3/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect') # Used format = edgetpu
+    modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.2/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect') # Used ultralytics 8.3.66 (nms not an argument)
+    #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.3/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect') # Used format = edgetpu
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.4/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect') # Used format = edgetpu
 
     modelSilverLine = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/silver_zone_entry/silver_classify_s.onnx', task='classify')
@@ -812,8 +811,8 @@ def lineCamLoop():
             for box in result.boxes:
                 x1, y1, x2, y2 = box.xyxy[0].astype(int)
                 class_id = box.cls[0].astype(int)
-                #name = "black ball" if class_id == 0 else "silver ball" if class_id == 1 else "unknown"
-                name = result.names[class_id]
+                name = "black ball" if class_id == 0 else "silver ball" if class_id == 1 else "unknown"
+                #name = result.names[class_id]
                 confidence = box.conf[0].astype(float)
 
                 ballConfidence.value = confidence
