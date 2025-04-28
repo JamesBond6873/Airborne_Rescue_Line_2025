@@ -18,6 +18,12 @@ rotateTo = "left" # When it needs to do 180 it rotates to ...
 inGap = False
 lastLineDetected = True  # Assume robot starts detecting a line
 
+
+pickingVictim = False
+pickSequenceStatus = "goingToBall" #goingToBall, startReverse, lowerArm, moveForward, pickVictim
+pickVictimType = "none"
+
+
 # Loop Vars
 pendingCommandsConfirmation = []
 
@@ -162,15 +168,23 @@ def sendCommandNoConfirmation(command):
         print(f"Check Error: Command with no confirmation pending: {commandWithoutConfirmation.value} at {time.perf_counter()}")
 
 # Pick Victim Function (takes "Alive" or "Dead")
-def pickVictim(type):
-    if timer_manager.is_timer_expired("armCooldown"): # if cooldown expired
-        if not LOPstate.value:
+def pickVictim(type, step=0):
+    if not LOPstate.value:
+        print(f"pickVictim Function: {type} {step}")
+        if step == 1:
+            printDebug(f"Lowering Arm", softDEBUG)
+            sendCommandListWithConfirmation(["AD"])
+        elif step == 2:
             printDebug(f"Pick {type}", softDEBUG)
-            sendCommandListWithConfirmation([f"AD", f"P{type}", "SF,0,F", "SF,1,F", "SF,2,F", "SF,3,F"])
+            sendCommandListWithConfirmation([f"P{type}", "SF,0,F", "SF,1,F", "SF,2,F", "SF,3,F"])
         else:
-            printDebug(f"I Would have Picked {type}", softDEBUG)
-
-        timer_manager.set_timer("armCooldown", 5) # 5 seconds of wait before picking the victim    
+            if timer_manager.is_timer_expired("armCooldown"):
+                printDebug(f"Pick {type}", softDEBUG)
+                sendCommandListWithConfirmation(["AD", f"P{type}", "SF,0,F", "SF,1,F", "SF,2,F", "SF,3,F"])
+                timer_manager.set_timer("armCooldown", 5)
+    else:
+        printDebug(f"I Would have Picked {type}", softDEBUG)
+  
 
 
 # Drop Function (takes "Alive" or "Dead")
@@ -378,6 +392,7 @@ def gapController():
 
 def controlLoop():
     global switchState, M1, M2, M1info, M2info, oldM1, oldM2, motorSpeedDiference, error_theta, error_x, errorAcc, lastError, inGap
+    global pickingVictim, pickSequenceStatus, pickVictimType
 
     sendCommandListWithConfirmation(["GR","BC", "SF,5,F", "CL", "SF,4,F", "AU", "PA", "SF,0,F", "SF,1,F", "SF,2,F", "SF,3,F"])
 
@@ -405,6 +420,9 @@ def controlLoop():
     timer_manager.add_timer("noLine", 0.05)
     timer_manager.add_timer("zoneEntry", 0.05)
     timer_manager.add_timer("armCooldown", 0.05)
+    timer_manager.add_timer("zoneReverse", 0.05)
+    timer_manager.add_timer("lowerArm", 0.05)
+    timer_manager.add_timer("zoneForward", 0.05)
     time.sleep(0.1)
 
     t0 = time.perf_counter()
@@ -414,7 +432,8 @@ def controlLoop():
         # Loop
         LoPSwitchController()
         LOPstate.value = 1 if switchState == True else 0
-        zoneStatusLoop = zoneStatus.value
+        if not pickingVictim:
+            zoneStatusLoop = zoneStatus.value
         objectiveLoop = objective.value
         
 
@@ -453,7 +472,7 @@ def controlLoop():
                 setManualMotorsSpeeds(1250 if rotateTo == "left" else 1750, 1750 if rotateTo == "left" else 1250)
                 controlMotors()
             
-            elif zoneStatusLoop == "goToBall":
+            """elif zoneStatusLoop == "goToBall":
                 setMotorsSpeeds(ballCenterX.value)
                 #M1, M2 = 1520, 1520
                 controlMotors()
@@ -467,8 +486,60 @@ def controlLoop():
                         #print(f"Here2")
                         pickVictim("D")
                     zoneStatus.value = "findVictim"
-                        
+                    """
 
+            # Inside your control loop
+            if zoneStatusLoop == "goToBall":
+                if pickSequenceStatus == "goingToBall":
+                    setMotorsSpeeds(ballCenterX.value)
+                    controlMotors()
+
+                    if ballBottomY.value >= camera_y * 0.95:
+                        pickSequenceStatus = "startReverse"
+                        if ballType.value == "silver ball":
+                            pickVictimType = "A"
+                        elif ballType.value == "black ball":
+                            pickVictimType = "D"
+                        pickingVictim = True
+                        printDebug(f"Victim Catching - Reversing {pickSequenceStatus} {pickingVictim} {zoneStatusLoop} {zoneStatus.value}", softDEBUG)
+                        timer_manager.set_timer("zoneReverse", 1)
+
+                elif pickSequenceStatus == "startReverse":
+                    setManualMotorsSpeeds(1300, 1300)  # Go backward
+                    controlMotors()
+                    if timer_manager.is_timer_expired("zoneReverse"):
+                        setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)  # Stop motors
+                        controlMotors()
+                        printDebug(f"Victim Catching - Lowering Arm", softDEBUG)
+                        pickVictim(pickVictimType, step=1) # Lower Arm
+                        pickSequenceStatus = "loweringArm"
+                        timer_manager.set_timer("lowerArm", 2.0)
+                
+                elif pickSequenceStatus == "loweringArm":
+                    setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)
+                    controlMotors()
+                    if timer_manager.is_timer_expired("lowerArm"):
+                        printDebug(f"Victim Catching - Moving Forward", softDEBUG)
+                        pickSequenceStatus = "moveForward"
+                        timer_manager.set_timer("zoneForward", 1.0)
+
+                elif pickSequenceStatus == "moveForward":
+                    setManualMotorsSpeeds(1700, 1700)  # Go forward slowly
+                    controlMotors()
+                    if timer_manager.is_timer_expired("zoneForward"):
+                        setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)
+                        controlMotors()
+                        pickVictim(pickVictimType, step=2)
+                        printDebug(f"Victim Catching - Picking Victim", softDEBUG)
+                        pickSequenceStatus = "finished"
+
+                elif pickSequenceStatus == "finished":
+                    printDebug(f"Victim Catching - Finished", softDEBUG)
+                    pickingVictim = False
+                    zoneStatus.value = "findVictim"
+                    pickSequenceStatus = "goingToBall"
+
+                        
         CLIinterpretCommand()
         intrepretCommand()
         sendSerialPendingCommandsConfirmation()

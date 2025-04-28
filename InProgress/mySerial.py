@@ -86,7 +86,7 @@ def sendSerial(message, confirmation = False):
     
     if timer_manager.is_timer_expired("serialCooldownbetweenCommands"):
         printDebug(f"Sent to Serial at {time.perf_counter()}: {message.strip()}", softDEBUG)
-        timer_manager.set_timer("serialCooldownbetweenCommands", 0.005) # Wait 5ms before sending the next command
+        timer_manager.set_timer("serialCooldownbetweenCommands", 0.010) # Wait 10ms before sending the next command
         ser.write(message.encode('utf-8'))
 
     else:
