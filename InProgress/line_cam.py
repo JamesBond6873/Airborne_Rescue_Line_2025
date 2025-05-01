@@ -50,6 +50,7 @@ ballCenterXArray = createEmptyTimeArray()
 ballBottomYArray = createEmptyTimeArray()
 ballWidthArray = createEmptyTimeArray()
 ballTypeArray = createEmptyTimeArray()
+ballExistsArray = createEmptyTimeArray()
 
 
 def savecv2_img(folder, cv2_img):
@@ -629,6 +630,19 @@ def intersectionDetector():
         turnDirection.value = "straight"
 
 
+def resetBallArrayVars():
+    global ballCenterXArray, ballBottomYArray, ballWidthArray, ballTypeArray, ballExistsArray
+    if resetBallArrays.value:
+        ballCenterXArray = createFilledArray(camera_x // 2)
+        ballBottomYArray = createFilledArray(camera_y // 2)
+        ballWidthArray = createEmptyTimeArray()
+        ballTypeArray = createFilledArray(0.5)
+        ballExistsArray = createEmptyTimeArray()
+
+        print(f"Successfully reset ball arrays")
+        resetBallArrays.value = False
+
+
 def obstacleController():
     pass
 
@@ -638,7 +652,7 @@ def obstacleController():
 #############################################################################
 
 def lineCamLoop():
-    global cv2_img, blackImage, greenImage, redImage, x_last, y_last, ballCenterXArray, ballBottomYArray, ballWidthArray, ballTypeArray
+    global cv2_img, blackImage, greenImage, redImage, x_last, y_last, ballCenterXArray, ballBottomYArray, ballWidthArray, ballTypeArray, ballExistsArray
 
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/ball_zone_s/ball_detect_s_edgetpu.tflite', task='detect')
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v3/victim_ball_detection_int8_edgetpu.tflite', task='detect')
@@ -707,9 +721,11 @@ def lineCamLoop():
         raw_capture = camera.capture_array()
         raw_capture = cv2.resize(raw_capture, (camera_x, camera_y))
         cv2_img = cv2.cvtColor(raw_capture, cv2.COLOR_RGBA2BGR)
+        resetBallArrayVars() # Reset ball arrays if needed
 
         savecv2_img("VictimsDataSet", cv2_img)
         cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_original.jpg", cv2_img)
+
 
         if objective.value == "follow_line":
             # Color Processing
@@ -852,25 +868,22 @@ def lineCamLoop():
                 ballBottomYArray = addNewTimeValue(ballBottomYArray, best_box[4])
                 ballWidthArray = addNewTimeValue(ballWidthArray, best_box[3])
                 ballTypeArray = addNewTimeValue(ballTypeArray, best_box[5])
+                ballExistsArray = addNewTimeValue(ballExistsArray, 1)
 
-                # Get the averaged values for the control loop (variable time window)
-                ballCenterX.value = calculateAverageArray(ballCenterXArray, 0.5)
-                ballBottomY.value = calculateAverageArray(ballBottomYArray, 0.5)
-                ballWidth.value = calculateAverageArray(ballWidthArray, 0.5)
-                ballType.value = "silver ball" if calculateAverageArray(ballTypeArray, 1) > 0.5 else "black ball"
-
-                #print(f"BALLL FOUND: {ballCenterX.value} {ballBottomY.value} {ballType.value} {ballWidth.value} {ballConfidence.value}")
-                zoneStatus.value = "goToBall"
-                timer_manager.set_timer("goToBall", 0.750)
+ 
             else:
-                if timer_manager.is_timer_expired("goToBall"):
-                    last_best_box = None
-                    ballCenterX.value = 0
-                    ballType.value = "none"
-                    ballWidth.value = -1
-                    zoneStatus.value = "findVictims"
-                else: # Not expired
-                    pass
+                ballCenterXArray = addNewTimeValue(ballCenterXArray, camera_x // 2)
+                ballBottomYArray = addNewTimeValue(ballBottomYArray, camera_y // 2)
+                ballWidthArray = addNewTimeValue(ballWidthArray, 0)
+                ballTypeArray = addNewTimeValue(ballTypeArray, 0.5)
+                ballExistsArray = addNewTimeValue(ballExistsArray, 0)
+
+
+            ballCenterX.value = calculateAverageArray(ballCenterXArray, 0.25)
+            ballBottomY.value = calculateAverageArray(ballBottomYArray, 0.25)
+            ballWidth.value = calculateAverageArray(ballWidthArray, 0.25)
+            ballType.value = "black ball" if calculateAverageArray(ballTypeArray, 0.35) < 0.5 else "silver ball" # Maybe needs rechecking...
+            ballExists.value = calculateAverageArray(ballExistsArray, 0.25) >= 0.5 # [0.5, 1.0] = Ball Exist True [0.0, 0.5[ = False
 
 
         cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_cv2.jpg", cv2_img)

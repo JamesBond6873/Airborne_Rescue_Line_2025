@@ -11,6 +11,7 @@ terminate = manager.Value("i", False)
 
 commandWithConfirmation = manager.Value("i", "none")
 commandWithoutConfirmation = manager.Value("i", "none")
+commandWaitingListLength = manager.Value("i", -1)
 
 gamepadM1 = manager.Value("i", 1520)
 gamepadM2 = manager.Value("i", 1520)
@@ -29,6 +30,8 @@ ballCenterX = manager.Value("i", -1) # Average
 ballBottomY = manager.Value("i", -1) # Average
 ballWidth = manager.Value("i", -1) # Average
 ballType = manager.Value("i", "none") # Average # "none"; "silver ball"; "black ball"
+ballExists = manager.Value("i", False) # Average
+resetBallArrays = manager.Value("i", False) # Reset the ball arrays
 ballConfidence = manager.Value("i", -1)
 
 isCropped = manager.Value("i", False)
