@@ -34,10 +34,14 @@
 
 -> (In Order) Line Following, Intersection Detection, Gap, Silver Line, Evacuation Zone rescue
 
--> Victim detection NPU
+-> Victim detection NPU X
 
 -> 7 Points following X
 
 -> More LEDs (can't have uneven light source)
 
--> Fix GitHub (venv problems)
+-> Fix GitHub (venv problems) X
+
+-> Victim Pick Up X
+
+-> Victim Drop
