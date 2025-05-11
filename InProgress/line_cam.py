@@ -50,6 +50,7 @@ ballCenterXArray = createEmptyTimeArray()
 ballBottomYArray = createEmptyTimeArray()
 ballWidthArray = createEmptyTimeArray()
 ballTypeArray = createEmptyTimeArray()
+ballExistsArray = createEmptyTimeArray()
 
 
 def savecv2_img(folder, cv2_img):
@@ -629,6 +630,60 @@ def intersectionDetector():
         turnDirection.value = "straight"
 
 
+def resetBallArrayVars():
+    global ballCenterXArray, ballBottomYArray, ballWidthArray, ballTypeArray, ballExistsArray
+    if resetBallArrays.value:
+        ballCenterXArray = createFilledArray(camera_x // 2)
+        ballBottomYArray = createFilledArray(camera_y // 2)
+        ballWidthArray = createEmptyTimeArray()
+        ballTypeArray = createFilledArray(0.5)
+        ballExistsArray = createEmptyTimeArray()
+
+        print(f"Successfully reset ball arrays")
+        resetBallArrays.value = False
+
+
+def check_contours(contours, image, color, size=5000):
+    if len(contours) > 0:
+        largest_contour = max(contours, key=cv2.contourArea)
+
+        if cv2.contourArea(largest_contour) > size:
+            x, y, w, h = cv2.boundingRect(largest_contour)
+            cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
+
+            box_width_center = x + w // 2
+
+            return (box_width_center - (camera_x // 2)) / (camera_x // 2) * 180, abs(h)
+
+    return -181, 0
+
+
+def get_green_contours(image):
+    hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    green_image = cv2.inRange(hsv_image, green_min, green_max)
+
+    green_image = cv2.erode(green_image, kernel, iterations=5)
+    green_image = cv2.dilate(green_image, kernel, iterations=8)
+
+    contours_green, _ = cv2.findContours(green_image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+
+    return contours_green
+
+
+def get_red_contours(image):
+    hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    red_image = cv2.inRange(hsv_image, red_min_1, red_max_1) + cv2.inRange(hsv_image, red_min_2, red_max_2)
+
+    red_image = cv2.erode(red_image, kernel, iterations=5)
+    red_image = cv2.dilate(red_image, kernel, iterations=8)
+
+    contours_red, _ = cv2.findContours(red_image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+
+    return contours_red
+
+
+
+
 def obstacleController():
     pass
 
@@ -638,7 +693,7 @@ def obstacleController():
 #############################################################################
 
 def lineCamLoop():
-    global cv2_img, blackImage, greenImage, redImage, x_last, y_last, ballCenterXArray, ballBottomYArray, ballWidthArray, ballTypeArray
+    global cv2_img, blackImage, greenImage, redImage, x_last, y_last, ballCenterXArray, ballBottomYArray, ballWidthArray, ballTypeArray, ballExistsArray
 
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/ball_zone_s/ball_detect_s_edgetpu.tflite', task='detect')
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v3/victim_ball_detection_int8_edgetpu.tflite', task='detect')
@@ -707,9 +762,11 @@ def lineCamLoop():
         raw_capture = camera.capture_array()
         raw_capture = cv2.resize(raw_capture, (camera_x, camera_y))
         cv2_img = cv2.cvtColor(raw_capture, cv2.COLOR_RGBA2BGR)
+        resetBallArrayVars() # Reset ball arrays if needed
 
         savecv2_img("VictimsDataSet", cv2_img)
         cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_original.jpg", cv2_img)
+
 
         if objective.value == "follow_line":
             # Color Processing
@@ -806,71 +863,77 @@ def lineCamLoop():
             
 
         elif objective.value == "zone":
-            img_rgb = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
-            results = modelVictim.predict(img_rgb, imgsz=448, conf=0.3, iou=0.2, agnostic_nms=True, workers=4, verbose=False)  # verbose=True to enable debug info
-            
-            """print("Model class names:", getattr(modelVictim, "names", "No names found"))
-            print("Number of classes:", getattr(modelVictim, "nc", "Unknown"))
-            print(f"Results: {results}")"""
+            if zoneStatus.value in ["begin", "entry", "findVictims", "goToBall"]:
+                img_rgb = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
+                results = modelVictim.predict(img_rgb, imgsz=448, conf=0.3, iou=0.2, agnostic_nms=True, workers=4, verbose=False)  # verbose=True to enable debug info
+                
+                """print("Model class names:", getattr(modelVictim, "names", "No names found"))
+                print("Number of classes:", getattr(modelVictim, "nc", "Unknown"))
+                print(f"Results: {results}")"""
 
-            result = results[0].numpy()
+                result = results[0].numpy()
 
-            boxes = []
-            for box in result.boxes:
-                x1, y1, x2, y2 = box.xyxy[0].astype(int)
-                class_id = box.cls[0].astype(int)
-                name = "black ball" if class_id == 0 else "silver ball" if class_id == 1 else "unknown"
-                #name = result.names[class_id]
-                confidence = box.conf[0].astype(float)
+                boxes = []
+                for box in result.boxes:
+                    x1, y1, x2, y2 = box.xyxy[0].astype(int)
+                    class_id = box.cls[0].astype(int)
+                    name = "black ball" if class_id == 0 else "silver ball" if class_id == 1 else "unknown"
+                    #name = result.names[class_id]
+                    confidence = box.conf[0].astype(float)
 
-                ballConfidence.value = confidence
+                    ballConfidence.value = confidence
 
-                width = x2 - x1
-                height = y2 - y1
-                area = width * height
-                distance = (x1 + x2) // 2
+                    width = x2 - x1
+                    height = y2 - y1
+                    area = width * height
+                    distance = (x1 + x2) // 2
 
-                """if width >= 400: # Precarius attempt at ignoring random silver balls
-                    continue"""
+                    """if width >= 400: # Precarius attempt at ignoring random silver balls
+                        continue"""
 
-                boxes.append([area, distance, name, width, y2, class_id])
+                    boxes.append([area, distance, name, width, y2, class_id])
 
-                color = colors(class_id, True)
-                cv2.rectangle(cv2_img, (x1, y1), (x2, y2), color, 2)
-                cv2.putText(cv2_img, f"{name}: {confidence:.2f}", (x1, y1 - 5), cv2.FONT_HERSHEY_DUPLEX, 0.5, color, 1, cv2.LINE_AA)
+                    color = colors(class_id, True)
+                    cv2.rectangle(cv2_img, (x1, y1), (x2, y2), color, 2)
+                    cv2.putText(cv2_img, f"{name}: {confidence:.2f}", (x1, y1 - 5), cv2.FONT_HERSHEY_DUPLEX, 0.5, color, 1, cv2.LINE_AA)
 
-            #print(f"boxes {len(boxes)} {boxes}")
-            if len(boxes) > 0:
-                best_box = max(boxes, key=lambda x: x[0])
-                if last_best_box is not None:
-                    best_box = min(boxes, key=lambda x: abs(x[1] - last_best_box[1]))
+                #print(f"boxes {len(boxes)} {boxes}")
+                if len(boxes) > 0:
+                    best_box = max(boxes, key=lambda x: x[0])
+                    if last_best_box is not None:
+                        best_box = min(boxes, key=lambda x: abs(x[1] - last_best_box[1]))
 
-                last_best_box = best_box
+                    last_best_box = best_box
 
-                # Update arrays with the current values and store the timestamped data
-                ballCenterXArray = addNewTimeValue(ballCenterXArray, best_box[1])
-                ballBottomYArray = addNewTimeValue(ballBottomYArray, best_box[4])
-                ballWidthArray = addNewTimeValue(ballWidthArray, best_box[3])
-                ballTypeArray = addNewTimeValue(ballTypeArray, best_box[5])
+                    # Update arrays with the current values and store the timestamped data
+                    ballCenterXArray = addNewTimeValue(ballCenterXArray, best_box[1])
+                    ballBottomYArray = addNewTimeValue(ballBottomYArray, best_box[4])
+                    ballWidthArray = addNewTimeValue(ballWidthArray, best_box[3])
+                    ballTypeArray = addNewTimeValue(ballTypeArray, best_box[5])
+                    ballExistsArray = addNewTimeValue(ballExistsArray, 1)
 
-                # Get the averaged values for the control loop (variable time window)
-                ballCenterX.value = calculateAverageArray(ballCenterXArray, 0.5)
-                ballBottomY.value = calculateAverageArray(ballBottomYArray, 0.5)
-                ballWidth.value = calculateAverageArray(ballWidthArray, 0.5)
-                ballType.value = "silver ball" if calculateAverageArray(ballTypeArray, 1) > 0.5 else "black ball"
+    
+                else:
+                    ballCenterXArray = addNewTimeValue(ballCenterXArray, camera_x // 2)
+                    ballBottomYArray = addNewTimeValue(ballBottomYArray, camera_y // 2)
+                    ballWidthArray = addNewTimeValue(ballWidthArray, 0)
+                    ballTypeArray = addNewTimeValue(ballTypeArray, 0.5)
+                    ballExistsArray = addNewTimeValue(ballExistsArray, 0)
 
-                #print(f"BALLL FOUND: {ballCenterX.value} {ballBottomY.value} {ballType.value} {ballWidth.value} {ballConfidence.value}")
-                zoneStatus.value = "goToBall"
-                timer_manager.set_timer("goToBall", 0.750)
-            else:
-                if timer_manager.is_timer_expired("goToBall"):
-                    last_best_box = None
-                    ballCenterX.value = 0
-                    ballType.value = "none"
-                    ballWidth.value = -1
-                    zoneStatus.value = "findVictims"
-                else: # Not expired
-                    pass
+
+                ballCenterX.value = calculateAverageArray(ballCenterXArray, 0.25)
+                ballBottomY.value = calculateAverageArray(ballBottomYArray, 0.25)
+                ballWidth.value = calculateAverageArray(ballWidthArray, 0.25)
+                ballType.value = "black ball" if calculateAverageArray(ballTypeArray, 0.35) < 0.5 else "silver ball" # Maybe needs rechecking...
+                ballExists.value = calculateAverageArray(ballExistsArray, 0.25) >= 0.5 # [0.5, 1.0] = Ball Exist True [0.0, 0.5[ = False
+
+            elif zoneStatus.value == "depositGreen":
+                contours_green = get_green_contours(cv2_img)
+                cornerDistance.value, cornerSize.value = check_contours(contours_green, cv2_img, (0, 0, 255))
+
+            elif zoneStatus.value == "depositRed":
+                contours_red = get_red_contours(cv2_img)
+                cornerDistance.value, cornerSize.value = check_contours(contours_red, cv2_img, (0, 255, 0))
 
 
         cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_cv2.jpg", cv2_img)

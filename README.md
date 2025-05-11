@@ -26,11 +26,11 @@
 
 -> Seperate Files X
 
--> Code should take manual inputs from User
+-> Code should take manual inputs from User X
 
 -> Create a ARM ESC command (attempt to avoid ESCs desarming when the robot is turned on) X
 
--> PCB Updates: IMU + Led Driver + Better Flat Connection + Move components due to height constraints
+-> PCB Updates: IMU + Led Driver + Better Flat Connection + Move components due to height constraints X
 
 -> (In Order) Line Following, Intersection Detection, Gap, Silver Line, Evacuation Zone rescue
 

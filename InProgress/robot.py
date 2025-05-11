@@ -1,5 +1,6 @@
 # -------- Robot Actuators/Sensors -------- 
 import time
+import random
 from gpiozero import Button
 import numpy as np
 
@@ -14,7 +15,7 @@ print("Robot Functions: \t \t OK")
 # Situation Vars:
 #objective = "Follow Line"
 lastTurn = "Straight"
-rotateTo = "left" # When it needs to do 180 it rotates to ...
+rotateTo = "right" # When it needs to do 180 it rotates to ...
 inGap = False
 lastLineDetected = True  # Assume robot starts detecting a line
 
@@ -23,6 +24,13 @@ pickingVictim = False
 pickSequenceStatus = "goingToBall" #goingToBall, startReverse, lowerArm, moveForward, pickVictim
 pickVictimType = "none"
 
+search_corner_state = {
+    "step": 0,
+    "turns": 0,
+    "max_turns": 4,
+    "start_time": 0,
+    "turn_dir": None,
+}
 
 # Loop Vars
 pendingCommandsConfirmation = []
@@ -171,17 +179,18 @@ def sendCommandNoConfirmation(command):
 def pickVictim(type, step=0):
     if not LOPstate.value:
         print(f"pickVictim Function: {type} {step}")
-        if step == 1:
-            printDebug(f"Lowering Arm", softDEBUG)
-            sendCommandListWithConfirmation(["AD"])
-        elif step == 2:
-            printDebug(f"Pick {type}", softDEBUG)
-            sendCommandListWithConfirmation([f"P{type}", "SF,0,F", "SF,1,F", "SF,2,F", "SF,3,F"])
-        else:
-            if timer_manager.is_timer_expired("armCooldown"):
+        if timer_manager.is_timer_expired("armCooldown"): # Only pickVictims every 2.5 seconds 
+            if step == 1:
+                printDebug(f"Lowering Arm", softDEBUG)
+                sendCommandListWithConfirmation(["AD"])
+            elif step == 2:
+                printDebug(f"Pick {type}", softDEBUG)
+                sendCommandListWithConfirmation([f"P{type}", "SF,0,F", "SF,1,F", "SF,2,F", "SF,3,F"])
+                timer_manager.set_timer("armCooldown", 2.5)
+            else:
                 printDebug(f"Pick {type}", softDEBUG)
                 sendCommandListWithConfirmation(["AD", f"P{type}", "SF,0,F", "SF,1,F", "SF,2,F", "SF,3,F"])
-                timer_manager.set_timer("armCooldown", 5)
+                timer_manager.set_timer("armCooldown", 2.5)
     else:
         printDebug(f"I Would have Picked {type}", softDEBUG)
   
@@ -357,6 +366,86 @@ def controlMotors():
     printDebug("Motors: Gamepad Control Active (LOP ON or Override ON)", False) # Debug
     sendMotorsIfNew(gamepadM1.value, gamepadM2.value)
 
+# Decide which ball needs to be picked up
+def decideVictimType():
+    if ballType.value == "silver ball":
+        pickVictimType = "A"
+    elif ballType.value == "black ball":
+        pickVictimType = "D"
+    else:
+        print(f"Possible Error: Ball Type is {ballType.value} - Not a ball")
+        pickVictimType = "A" # just failsafe for null
+
+    alive = ballType.value == "silver ball"
+    if not alive and pickedUpDeadCount.value > 0:
+        pickVictimType = "A"
+        print(f"Used extra failsafe: Too many Black Balls")
+    elif alive and pickedUpAliveCount.value > 1:
+        pickVictimType = "D"
+        print(f"Used extra failsafe: Too many Silver Balls")
+    
+    return pickVictimType
+
+
+def search_for_corner_nonblocking():
+    global search_corner_state
+
+    step = search_corner_state["step"]
+
+    if step == 0:
+        # Initial step: try to detect a corner without moving
+        if cornerDistance.value != -181:
+            setMotorsSpeeds(0)  # stop
+            search_corner_state["step"] = 99  # done
+        elif search_corner_state["turns"] < search_corner_state["max_turns"]:
+            # Prepare to spin randomly
+            search_corner_state["turn_dir"] = random.choice(["left", "right"])
+            timer_manager.set_timer("uTurn", 1.0)  # spin for 1s
+            search_corner_state["step"] = 1
+        else:
+            # Reset if too many turns failed
+            search_corner_state["turns"] = 0
+            search_corner_state["step"] = 0
+
+    elif step == 1:
+        # Spin in place
+        if not timer_manager.is_timer_expired("uTurn"):
+            if search_corner_state["turn_dir"] == "left":
+                setManualMotorsSpeeds(1000, 2000)
+            else:
+                setManualMotorsSpeeds(2000, 1000)
+        else:
+            timer_manager.set_timer("forward", random.uniform(1.0, 2.0))  # drive time
+            search_corner_state["step"] = 2
+
+    elif step == 2:
+        # Drive forward for a short time
+        if not timer_manager.is_timer_expired("forward"):
+            setManualMotorsSpeeds(1500, 1500)
+            if cornerDistance.value != -181:
+                setMotorsSpeeds(0)
+                search_corner_state["step"] = 99  # done
+        else:
+            search_corner_state["turns"] += 1
+            timer_manager.set_timer("uTurn", 0.8)
+            search_corner_state["turn_dir"] = "left"  # slight recovery spin
+            search_corner_state["step"] = 3
+
+    elif step == 3:
+        # Short corrective turn
+        if not timer_manager.is_timer_expired("uTurn"):
+            setManualMotorsSpeeds(1000, 2000)  # turn left
+        else:
+            # Go back to initial step
+            search_corner_state["step"] = 0
+
+    elif step == 99:
+        # Done
+        setMotorsSpeeds(0)
+        return True
+
+    return False  # Still running
+
 
 def intersectionController():
     global lastTurn
@@ -425,6 +514,25 @@ def controlLoop():
     timer_manager.add_timer("zoneForward", 0.05)
     time.sleep(0.1)
 
+
+    # Wait for all serial initialization commands to be sent
+    while commandWaitingListLength.value != 0 or len(pendingCommandsConfirmation) != 0: 
+        time.sleep(0.05)
+        sendSerialPendingCommandsConfirmation()
+        #print(f"Waiting for command list to be empty: {commandWaitingListLength.value}")
+
+
+    resetBallArrays.value = True
+    time.sleep(5 * lineDelayMS * 0.001) # wait for 5 cam loops to register
+
+    print(f"")
+    print(f"")
+    print(f"-------- Robot.py: All Setup Procedures have finished. --------")
+    print(f"------------------ Robot.py: Starting Loop. ------------------")
+    print(f"")
+    print(f"")
+
+    counter = 0
     t0 = time.perf_counter()
     while not terminate.value:
         t1 = t0 + controlDelayMS * 0.001
@@ -447,6 +555,11 @@ def controlLoop():
         
         # ----- EVACUATION ZONE ----- 
         elif objectiveLoop == "zone":
+            if pickedUpAliveCount.value > 1: # 2 (or maybe more if mistake)
+                zoneStatus.value = "depositGreen"
+            
+            elif pickedUpDeadCount.value > 0: # 1 (ormaybe more if mistake)
+                zoneStatus.value = "depositRed"
 
             if zoneStatusLoop == "begin":
                 #print(f"Here 1-----------------")
@@ -469,40 +582,28 @@ def controlLoop():
             
             elif zoneStatusLoop == "findVictims":
                 #print(f"Here 4-----------------")
-                setManualMotorsSpeeds(1250 if rotateTo == "left" else 1750, 1750 if rotateTo == "left" else 1250)
+                setManualMotorsSpeeds(1230 if rotateTo == "left" else 1750, 1750 if rotateTo == "left" else 1230)
                 controlMotors()
             
-            """elif zoneStatusLoop == "goToBall":
-                setMotorsSpeeds(ballCenterX.value)
-                #M1, M2 = 1520, 1520
-                controlMotors()
-                #print(f"here 3 {ballBottomY.value} {ballBottomY.value >= camera_y * 0.95}")
-                if ballBottomY.value >= camera_y * 0.95: # Ball is close to the bottom of the camera
-                    #print(f"Here?? {ballBottomY.value} {ballType.value}")
-                    if ballType.value == "silver ball":
-                        #print(f"Here1")
-                        pickVictim("A")
-                    elif ballType.value == "black ball":
-                        #print(f"Here2")
-                        pickVictim("D")
-                    zoneStatus.value = "findVictim"
-                    """
+                if ballExists.value:
+                    zoneStatus.value = "goToBall"
 
-            # Inside your control loop
-            if zoneStatusLoop == "goToBall":
+            elif zoneStatusLoop == "goToBall":
+                if not ballExists.value:
+                    zoneStatus.value = "findVictims"
+
                 if pickSequenceStatus == "goingToBall":
                     setMotorsSpeeds(ballCenterX.value)
                     controlMotors()
 
                     if ballBottomY.value >= camera_y * 0.95:
                         pickSequenceStatus = "startReverse"
-                        if ballType.value == "silver ball":
-                            pickVictimType = "A"
-                        elif ballType.value == "black ball":
-                            pickVictimType = "D"
+                        
+                        pickVictimType = decideVictimType()
+
                         pickingVictim = True
                         printDebug(f"Victim Catching - Reversing {pickSequenceStatus} {pickingVictim} {zoneStatusLoop} {zoneStatus.value}", softDEBUG)
-                        timer_manager.set_timer("zoneReverse", 1)
+                        timer_manager.set_timer("zoneReverse", 1.0)
 
                 elif pickSequenceStatus == "startReverse":
                     setManualMotorsSpeeds(1300, 1300)  # Go backward
@@ -524,7 +625,7 @@ def controlLoop():
                         timer_manager.set_timer("zoneForward", 1.0)
 
                 elif pickSequenceStatus == "moveForward":
-                    setManualMotorsSpeeds(1700, 1700)  # Go forward slowly
+                    setManualMotorsSpeeds(1800, 1800)  # Go forward slowly
                     controlMotors()
                     if timer_manager.is_timer_expired("zoneForward"):
                         setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)
@@ -536,10 +637,28 @@ def controlLoop():
                 elif pickSequenceStatus == "finished":
                     printDebug(f"Victim Catching - Finished", softDEBUG)
                     pickingVictim = False
-                    zoneStatus.value = "findVictim"
+                    resetBallArrays.value = True
+                    zoneStatus.value = "findVictims"
                     pickSequenceStatus = "goingToBall"
 
-                        
+                    if pickVictimType == "A" and pickedUpAliveCount.value < 2:
+                        pickedUpAliveCount.value += 1
+                    else:
+                        pickedUpDeadCount.value += 1
+
+                    print(f"Picked up {'alive' if pickVictimType == "A" else 'dead'} victim, new total: {pickedUpAliveCount.value + pickedUpDeadCount.value} victims")
+
+                    if pickedUpAliveCount.value + pickedUpDeadCount.value == 3:
+                        zoneStatus.value = "depositGreen"
+                        continue
+
+            elif zoneStatusLoop == "depositGreen":
+                pass
+
+            elif zoneStatusLoop == "depositRed":
+                pass
+
+
         CLIinterpretCommand()
         intrepretCommand()
         sendSerialPendingCommandsConfirmation()
@@ -578,21 +697,25 @@ def controlLoop():
             debugMessage = (
                 #f"Center: {lineCenterX.value} \t"
                 #f"LineBias: {int(KP * error_x + KD * (error_x - lastError) + KI * errorAcc)}   \t"
-                f"ballType: {ballType.value} \t"
-                f"ballCenter: {ballCenterX.value} \t"
-                f"ballBottom: {ballBottomY.value} {ballBottomY.value >= camera_y * 0.95}\t"
-                f"ballWidth: {ballWidth.value} \t"
-                f"M1: {int(M1info)} \t"
+                f"ballExists: {ballExists.value} "
+                #f"ballType: {ballType.value} "
+                #f"ballCenter: {int(ballCenterX.value)} \t"
+                #f"ballBottom: {int(ballBottomY.value)} {ballBottomY.value >= camera_y * 0.95}\t"
+                #f"ballWidth: {ballWidth.value} \t"
+                f"M1: {int(M1info)} "
                 f"M2: {int(M2info)} \t"
                 #f"LOP: {switchState} \t"
                 #f"Loop: {objective.value}\t"
-                f"var: {zoneStatus.value}  "
+                f"var: {zoneStatus.value} {zoneStatusLoop} {pickSequenceStatus} "
+                f"pickVictim: {pickingVictim}"
                 #f"Commands: {commandWaitingList}"
             )
-            #printDebug(f"{debugMessage}", softDEBUG)
-        #if not notWaiting:
-         #   printDebug(f"Not Waiting: {notWaiting}", softDEBUG)
+            counter += 1
+            if counter % 5 == 0:
+                #printDebug(f"{debugMessage}", softDEBUG)
+                pass
         
+        #print(f"ballBottom: {int(ballBottomY.value)} {ballBottomY.value >= camera_y * 0.95} ballType {ballType.value} \t")
 
 
         while (time.perf_counter() <= t1):

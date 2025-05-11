@@ -13,6 +13,7 @@ print("Serial Interface: \t \t OK")
 waitingResponse = False # Flag to indicate if we are waiting for a response
 commandConfirmationAborted = False
 commandWaitingListConfirmation = [] # List of commands to be sent to the RPi
+lastUnsentCommandWithoutConfirmation = None # Last command that was not sent
 
 timer_manager = TimerManager()
 
@@ -102,7 +103,7 @@ def interpretMessage(message):
         printDebug(f"Received Message: {message}", softDEBUG)
     if "Ok" in message:
         commandWaitingListConfirmation.pop(0)
-        printDebug(f"Command List: {commandWaitingListConfirmation}", softDEBUG)
+        printDebug(f"Command List ({len(commandWaitingListConfirmation)} commands): {commandWaitingListConfirmation}", softDEBUG)
         waitingResponse = False
         
 
@@ -115,13 +116,23 @@ def updateCommandWaitingListConfirmation():
 
 
 def updateCommandWithoutConfirmation():
-    global commandWithoutConfirmation
+    global commandWithoutConfirmation, lastUnsentCommandWithoutConfirmation
+
     if commandWithoutConfirmation.value != "none":
         if not waitingResponse:
             sendSerial(commandWithoutConfirmation.value)
+            lastUnsentCommandWithoutConfirmation = None  # Clear, it was sent
         else:
             print(f"Check Error Why the heck are we sending this command when waiting response? {commandWithoutConfirmation.value}")
+            lastUnsentCommandWithoutConfirmation = commandWithoutConfirmation.value
         commandWithoutConfirmation.value = "none"
+
+    # If nothing new came and one was missed before, try to send it
+    elif lastUnsentCommandWithoutConfirmation and not waitingResponse:
+        print(f"Retrying last unsent command: {lastUnsentCommandWithoutConfirmation}")
+        sendSerial(lastUnsentCommandWithoutConfirmation)
+        lastUnsentCommandWithoutConfirmation = None
+
 
 #############################################################################
 #                        Serial Communication Loop
@@ -155,6 +166,7 @@ def serialLoop():
 
         updateCommandWaitingListConfirmation()
         updateCommandWithoutConfirmation()
+        commandWaitingListLength.value = len(commandWaitingListConfirmation)
 
 
         # Check if we have a command to send, and we're not already waiting for a response
