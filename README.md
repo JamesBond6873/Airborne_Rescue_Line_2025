@@ -26,7 +26,7 @@
 
 -> Seperate Files X
 
--> Code should take manual inputs from User
+-> Code should take manual inputs from User X
 
 -> Create a ARM ESC command (attempt to avoid ESCs desarming when the robot is turned on) X
 
