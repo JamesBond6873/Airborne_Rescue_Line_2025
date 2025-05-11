@@ -23,14 +23,10 @@ lastLineDetected = True  # Assume robot starts detecting a line
 pickingVictim = False
 pickSequenceStatus = "goingToBall" #goingToBall, startReverse, lowerArm, moveForward, pickVictim
 pickVictimType = "none"
-
-search_corner_state = {
-    "step": 0,
-    "turns": 0,
-    "max_turns": 4,
-    "start_time": 0,
-    "turn_dir": None,
-}
+dumpedAliveVictims = False
+dumpedDeadVictims = False
+dropSequenceStatus = "searchGoCorner" #searchGoCorner, startReverse, do180, goBackwards, dropVictim
+wiggleStage = 0
 
 # Loop Vars
 pendingCommandsConfirmation = []
@@ -60,6 +56,7 @@ def CLIinterpretCommand():
         print("Command List: ")
         print(f"  - exit")
         print(f"  - vars")
+        print(f"  - nextImage")
         """print(f"  - Drop Alive")
         print(f"  - Drop Dead")
         print(f"  - Close Ball Storage")
@@ -78,6 +75,9 @@ def CLIinterpretCommand():
         print(f"  - MotorOverride: {MotorOverride}")
         print(f"  - Objective: {objective.value}")
         print(f"  - Zone Status: {zoneStatus.value}")
+    elif message == "": #Next Image
+        printDebug("Next Image", False)
+        updateFakeCamImage.value = True
     elif message.startswith("MotorOverride"):
         try:
             MotorOverride = bool(int(message.split()[1]))
@@ -178,23 +178,22 @@ def sendCommandNoConfirmation(command):
 # Pick Victim Function (takes "Alive" or "Dead")
 def pickVictim(type, step=0):
     if not LOPstate.value:
-        print(f"pickVictim Function: {type} {step}")
+        printDebug(f"pickVictim Function: {type} {step}", False)
         if timer_manager.is_timer_expired("armCooldown"): # Only pickVictims every 2.5 seconds 
             if step == 1:
-                printDebug(f"Lowering Arm", softDEBUG)
+                printDebug(f"Lowering Arm", False)
                 sendCommandListWithConfirmation(["AD"])
             elif step == 2:
-                printDebug(f"Pick {type}", softDEBUG)
+                printDebug(f"Pick {type}", False)
                 sendCommandListWithConfirmation([f"P{type}", "SF,0,F", "SF,1,F", "SF,2,F", "SF,3,F"])
                 timer_manager.set_timer("armCooldown", 2.5)
             else:
-                printDebug(f"Pick {type}", softDEBUG)
+                printDebug(f"Pick {type}", False)
                 sendCommandListWithConfirmation(["AD", f"P{type}", "SF,0,F", "SF,1,F", "SF,2,F", "SF,3,F"])
                 timer_manager.set_timer("armCooldown", 2.5)
     else:
-        printDebug(f"I Would have Picked {type}", softDEBUG)
+        printDebug(f"I Would have Picked {type}", False)
   
-
 
 # Drop Function (takes "Alive" or "Dead")
 def ballRelease(type):
@@ -387,64 +386,111 @@ def decideVictimType():
     return pickVictimType
 
 
-def search_for_corner_nonblocking():
-    global search_corner_state
+def zoneDeposit(type):
+    global dropSequenceStatus
 
-    step = search_corner_state["step"]
+    def searchGoCorner():
+        global dropSequenceStatus, wiggleStage
 
-    if step == 0:
-        # Initial step: try to detect a corner without moving
-        if cornerDistance.value != -181:
-            setMotorsSpeeds(0)  # stop
-            search_corner_state["step"] = 99  # done
-        elif search_corner_state["turns"] < search_corner_state["max_turns"]:
-            # Prepare to spin randomly
-            search_corner_state["turn_dir"] = random.choice(["left", "right"])
-            timer_manager.set_timer("uTurn", 1.0)  # spin for 1s
-            search_corner_state["step"] = 1
-        else:
-            # Reset if too many turns failed
-            search_corner_state["turns"] = 0
-            search_corner_state["step"] = 0
+        if cornerHeight.value == 0: # No corner detected
+            setManualMotorsSpeeds(1230 if rotateTo == "left" else 1750, 1750 if rotateTo == "left" else 1230)
+            controlMotors()
+        else: # Corner detected
+            setMotorsSpeeds(cornerCenter.value)
+            controlMotors()
+            if cornerHeight.value >= camera_y * 0.45: # Close to Corner
+                printDebug(f"Victim Dropping - Going Back 1", softDEBUG)
+                dropSequenceStatus = "startReverse"
+                wiggleStage = 0
+                timer_manager.set_timer("zoneReverse", 1.0)
+    def dropVictim():
+        global dropSequenceStatus, wiggleStage
+        if wiggleStage == 0:
+            ballRelease(type)  # "A" Or "D" based on the victim
+            printDebug("Victim Dropping - Opening Ball Storage", softDEBUG)
+            wiggleStage = 1
+            timer_manager.set_timer("wiggle", 0.3)  # Short delay before first wiggle
 
-    elif step == 1:
-        # Spin in place
-        if not timer_manager.is_timer_expired("uTurn"):
-            if search_corner_state["turn_dir"] == "left":
-                setManualMotorsSpeeds(1000, 2000)
-            else:
-                setManualMotorsSpeeds(2000, 1000)
-        else:
-            timer_manager.set_timer("forward", random.uniform(1.0, 2.0))  # drive time
-            search_corner_state["step"] = 2
+        elif wiggleStage == 1:
+            setManualMotorsSpeeds(1800, 1800)  # Small forward movement
+            controlMotors()
+            if timer_manager.is_timer_expired("wiggle"):
+                wiggleStage = 2
+                timer_manager.set_timer("wiggle", 0.3)
 
-    elif step == 2:
-        # Drive forward for a short time
-        if not timer_manager.is_timer_expired("forward"):
-            setManualMotorsSpeeds(1500, 1500)
-            if cornerDistance.value != -181:
-                setMotorsSpeeds(0)
-                search_corner_state["step"] = 99  # done
-        else:
-            search_corner_state["turns"] += 1
-            timer_manager.set_timer("uTurn", 0.8)
-            search_corner_state["turn_dir"] = "left"  # slight recovery spin
-            search_corner_state["step"] = 3
+        elif wiggleStage == 2:
+            setManualMotorsSpeeds(1200, 1200)  # Small backward movement
+            controlMotors()
+            if timer_manager.is_timer_expired("wiggle"):
+                wiggleStage = 3
+                timer_manager.set_timer("wiggle", 0.3)
 
-    elif step == 3:
-        # Short corrective turn
-        if not timer_manager.is_timer_expired("uTurn"):
-            setManualMotorsSpeeds(1000, 2000)  # turn left
-        else:
-            # Go back to initial step
-            search_corner_state["step"] = 0
+        elif wiggleStage == 3:
+            setManualMotorsSpeeds(1800, 1800)  # Second wiggle forward
+            controlMotors()
+            if timer_manager.is_timer_expired("wiggle"):
+                wiggleStage = 4
+                timer_manager.set_timer("wiggle", 0.3)
 
-    elif step == 99:
-        # Done
-        setMotorsSpeeds(0)
-        return True
+        elif wiggleStage == 4:
+            setManualMotorsSpeeds(1200, 1200)  # Small backward movement
+            controlMotors()
+            if timer_manager.is_timer_expired("wiggle"):
+                wiggleStage = 5
+                timer_manager.set_timer("wiggle", 0.3)
+                printDebug("Victim Dropping - Finished Wiggle", softDEBUG)
+                dropSequenceStatus = "finished"
+                wiggleStage = 0
+            
+    if dropSequenceStatus == "searchGoCorner":
+        #printDebug(f"Victim Dropping - Searching for Green Evacuation Point", False)
+        searchGoCorner()
+    elif dropSequenceStatus == "startReverse":
+        setManualMotorsSpeeds(1300, 1300)  # Go backward
+        controlMotors()
+        if timer_manager.is_timer_expired("zoneReverse"):
+            setManualMotorsSpeeds(1230 if rotateTo == "left" else 1750, 1750 if rotateTo == "left" else 1230)
+            controlMotors()
+            printDebug(f"Victim Dropping - doing 180", softDEBUG)
+            dropSequenceStatus = "do180"
+            timer_manager.set_timer("do180", 1.0)
+    elif dropSequenceStatus == "do180":
+        setManualMotorsSpeeds(1230 if rotateTo == "left" else 1750, 1750 if rotateTo == "left" else 1230)
+        controlMotors()
+        if timer_manager.is_timer_expired("do180"):
+            setManualMotorsSpeeds(1300, 1300)  # Go backward
+            controlMotors()
+            printDebug(f"Victim Dropping - Going Back 2", softDEBUG)
+            dropSequenceStatus = "goBackwards"
+            timer_manager.set_timer("zoneReverse", 1.0)
+    elif dropSequenceStatus == "goBackwards":
+        setManualMotorsSpeeds(1300, 1300)  # Go backward
+        controlMotors()
+        if timer_manager.is_timer_expired("zoneReverse"):
+            setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)  # Stop motors
+            controlMotors()
+            printDebug(f"Victim Dropping - Dropping Victim", softDEBUG)
+            dropSequenceStatus = "dropVictim"
+            timer_manager.set_timer("do180", 1.0)
+    elif dropSequenceStatus == "dropVictim":
+        dropVictim()
+    elif dropSequenceStatus == "finished":
+        setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)  # Stop motors
+        controlMotors()
+        closeBallStorage()
+        dropSequenceStatus = "searchGoCorner"  # Reset to searchGoCorner for next victim
 
-    return False  # Still running
+        if type == "A":
+            dumpedAliveVictims = True
+            pickedUpAliveCount.value = 0
+            zoneStatus.value = "depositRed"
+
+        elif type == "D":
+            dumpedDeadVictims = True
+            pickedUpDeadCount.value = 0
+            zoneStatus.value = "finishEvacuation"
+
+        
 
 
 def intersectionController():
@@ -512,6 +558,8 @@ def controlLoop():
     timer_manager.add_timer("zoneReverse", 0.05)
     timer_manager.add_timer("lowerArm", 0.05)
     timer_manager.add_timer("zoneForward", 0.05)
+    timer_manager.add_timer("do180", 0.05)
+    timer_manager.add_timer("wiggle", 0.05)
     time.sleep(0.1)
 
 
@@ -555,10 +603,10 @@ def controlLoop():
         
         # ----- EVACUATION ZONE ----- 
         elif objectiveLoop == "zone":
-            if pickedUpAliveCount.value > 1: # 2 (or maybe more if mistake)
+            if pickedUpAliveCount.value > 1 and not dumpedAliveVictims and zoneStatusLoop != "depositGreen": # 2 (or maybe more if mistake)
                 zoneStatus.value = "depositGreen"
             
-            elif pickedUpDeadCount.value > 0: # 1 (ormaybe more if mistake)
+            elif pickedUpDeadCount.value > 0 and not dumpedDeadVictims and zoneStatusLoop != "depositRed": # 1 (ormaybe more if mistake)
                 zoneStatus.value = "depositRed"
 
             if zoneStatusLoop == "begin":
@@ -571,12 +619,10 @@ def controlLoop():
                 zoneStatus.value = "entry" # go to next Step
 
             elif zoneStatusLoop == "entry":
-            # print(f"Here 2-----------------")
                 if not timer_manager.is_timer_expired("zoneEntry"):
                     M1, M2 = 1800, 1800
                     controlMotors()
                 else: # timer expired
-                    #print(f"Here 3-----------------")
                     timer_manager.set_timer("stop", 5.0) # 10 seconds to signal that we entered
                     zoneStatus.value = "findVictims"
             
@@ -602,7 +648,8 @@ def controlLoop():
                         pickVictimType = decideVictimType()
 
                         pickingVictim = True
-                        printDebug(f"Victim Catching - Reversing {pickSequenceStatus} {pickingVictim} {zoneStatusLoop} {zoneStatus.value}", softDEBUG)
+                        printDebug(f" ----- Starting {pickVictimType} Victim Catching ----- ", softDEBUG)
+                        printDebug(f"Victim Catching - Reversing", False)
                         timer_manager.set_timer("zoneReverse", 1.0)
 
                 elif pickSequenceStatus == "startReverse":
@@ -611,7 +658,7 @@ def controlLoop():
                     if timer_manager.is_timer_expired("zoneReverse"):
                         setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)  # Stop motors
                         controlMotors()
-                        printDebug(f"Victim Catching - Lowering Arm", softDEBUG)
+                        printDebug(f"Victim Catching - Lowering Arm", False)
                         pickVictim(pickVictimType, step=1) # Lower Arm
                         pickSequenceStatus = "loweringArm"
                         timer_manager.set_timer("lowerArm", 2.0)
@@ -620,7 +667,7 @@ def controlLoop():
                     setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)
                     controlMotors()
                     if timer_manager.is_timer_expired("lowerArm"):
-                        printDebug(f"Victim Catching - Moving Forward", softDEBUG)
+                        printDebug(f"Victim Catching - Moving Forward", False)
                         pickSequenceStatus = "moveForward"
                         timer_manager.set_timer("zoneForward", 1.0)
 
@@ -631,11 +678,11 @@ def controlLoop():
                         setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)
                         controlMotors()
                         pickVictim(pickVictimType, step=2)
-                        printDebug(f"Victim Catching - Picking Victim", softDEBUG)
+                        printDebug(f"Victim Catching - Picking Victim", False)
                         pickSequenceStatus = "finished"
 
                 elif pickSequenceStatus == "finished":
-                    printDebug(f"Victim Catching - Finished", softDEBUG)
+                    printDebug(f"Victim Catching - Finished", False)
                     pickingVictim = False
                     resetBallArrays.value = True
                     zoneStatus.value = "findVictims"
@@ -646,18 +693,21 @@ def controlLoop():
                     else:
                         pickedUpDeadCount.value += 1
 
-                    print(f"Picked up {'alive' if pickVictimType == "A" else 'dead'} victim, new total: {pickedUpAliveCount.value + pickedUpDeadCount.value} victims")
+                    printDebug(f"Picked up {'alive' if pickVictimType == 'A' else 'dead'} victim, new total: {pickedUpAliveCount.value + pickedUpDeadCount.value} victims", softDEBUG)
+                    printDebug(f"Picked up {pickedUpAliveCount.value} alive and {pickedUpDeadCount.value} dead", softDEBUG)
 
                     if pickedUpAliveCount.value + pickedUpDeadCount.value == 3:
                         zoneStatus.value = "depositGreen"
                         continue
 
             elif zoneStatusLoop == "depositGreen":
-                pass
+                zoneDeposit("A")
 
             elif zoneStatusLoop == "depositRed":
-                pass
+                zoneDeposit("D")
 
+            elif zoneStatusLoop == "finishEvacuation":
+                printDebug(f"Finished Evacuation - Going Back", softDEBUG)
 
         CLIinterpretCommand()
         intrepretCommand()

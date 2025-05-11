@@ -6,13 +6,12 @@ from multiprocessing import Process
 import multiprocessing as mp
 import threading
 
-
 from gamepad import gamepadLoop
 from mySerial import serialLoop
 from line_cam import lineCamLoop
 from robot import controlLoop
 from mp_manager import *
-#from zone_cam import zoneCamLoop
+
 
 input_queue = mp.Queue()
 

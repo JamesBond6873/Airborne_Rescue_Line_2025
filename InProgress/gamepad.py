@@ -5,9 +5,7 @@ import time
 
 import utils
 from config import *
-import mySerial
 from mp_manager import *
-import robot
 
 
 print("GamePad Interface: \t \t OK")

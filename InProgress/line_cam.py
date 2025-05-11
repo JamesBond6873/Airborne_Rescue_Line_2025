@@ -7,6 +7,7 @@ import cv2
 import numpy as np
 from picamera2 import Picamera2
 from libcamera import controls
+from glob import glob
 from ultralytics import YOLO
 from ultralytics.utils.plotting import colors
 
@@ -14,11 +15,17 @@ from config import *
 from utils import printDebug
 from utils import Timer
 from utils import TimerManager
-import robot
 from mp_manager import *
 
 print("Line Camera: \t \t \t OK")
 
+# Debug Features
+cameraDebugMode = computerOnlyDebug
+debugImageFolder = "DataSet/EvacZoneTest2"
+debugImagePaths = sorted(glob(os.path.join(debugImageFolder, "*.jpg")))
+currentFakeImageIndex = 0
+raw_capture = None
+cv2_img = None
 
 # Color Configs
 green_min = np.array(green_min)
@@ -51,6 +58,8 @@ ballBottomYArray = createEmptyTimeArray()
 ballWidthArray = createEmptyTimeArray()
 ballTypeArray = createEmptyTimeArray()
 ballExistsArray = createEmptyTimeArray()
+cornerCenterArray = createEmptyTimeArray()
+cornerHeightArray = createEmptyTimeArray()
 
 
 def savecv2_img(folder, cv2_img):
@@ -77,6 +86,41 @@ def savecv2_img(folder, cv2_img):
         #timer_manager.set_timer("saveImageCoolDown", 10)
         saveFrame.value = False
     
+
+def getCameraImage(camera):
+    global currentFakeImageIndex, raw_capture, cv2_img
+
+    if not cameraDebugMode:
+        raw_capture = camera.capture_array()
+        raw_capture = cv2.resize(raw_capture, (camera_x, camera_y))
+        cv2_img = cv2.cvtColor(raw_capture, cv2.COLOR_RGBA2BGR)
+        cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_original.jpg", cv2_img)
+        return cv2_img
+    else:
+        if updateFakeCamImage.value:
+            if currentFakeImageIndex >= len(debugImagePaths):
+                print("----- End of debug images -----")
+                return None
+
+            imagePath = debugImagePaths[currentFakeImageIndex]
+            raw_capture = cv2.imread(imagePath)
+            if raw_capture is None:
+                print(f"Couldn't read image: {imagePath}")
+                currentFakeImageIndex += 1
+                return None
+
+            cv2_img = cv2.resize(raw_capture, (camera_x, camera_y))
+            cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_original.jpg", cv2_img)
+            print(f"Processing debug image {currentFakeImageIndex + 1}/{len(debugImagePaths)}: {imagePath}")
+            updateFakeCamImage.value = False
+
+            currentFakeImageIndex += 1
+            return cv2_img
+
+        else:
+            cv2_img = raw_capture.copy()
+            return cv2_img
+
 
 def computeMoments(contour):
     # Compute cv2_img moments for the largest contour
@@ -653,9 +697,24 @@ def check_contours(contours, image, color, size=5000):
 
             box_width_center = x + w // 2
 
-            return (box_width_center - (camera_x // 2)) / (camera_x // 2) * 180, abs(h)
+            #return (box_width_center - (camera_x // 2)) / (camera_x // 2) * 180, abs(h)
+            return box_width_center, abs(h)
 
-    return -181, 0
+
+    return 0, 0 # (meaning it turns left as a safety for control)
+
+
+def updateCornerDetection(contours, color):
+    global cornerCenterArray, cornerHeightArray
+    rawCenter, rawHeight = check_contours(contours, cv2_img, color)
+
+    # Save values over time
+    cornerCenterArray = addNewTimeValue(cornerCenterArray, rawCenter)
+    cornerHeightArray = addNewTimeValue(cornerHeightArray, rawHeight)
+
+    # Set averaged values
+    cornerCenter.value = calculateAverageArray(cornerCenterArray, 0.25)
+    cornerHeight.value = calculateAverageArray(cornerHeightArray, 0.25)
 
 
 def get_green_contours(image):
@@ -665,9 +724,9 @@ def get_green_contours(image):
     green_image = cv2.erode(green_image, kernel, iterations=5)
     green_image = cv2.dilate(green_image, kernel, iterations=8)
 
-    contours_green, _ = cv2.findContours(green_image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    contoursGreen, _ = cv2.findContours(green_image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
-    return contours_green
+    return contoursGreen
 
 
 def get_red_contours(image):
@@ -677,9 +736,9 @@ def get_red_contours(image):
     red_image = cv2.erode(red_image, kernel, iterations=5)
     red_image = cv2.dilate(red_image, kernel, iterations=8)
 
-    contours_red, _ = cv2.findContours(red_image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    contoursRed, _ = cv2.findContours(red_image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
-    return contours_red
+    return contoursRed
 
 
 
@@ -708,23 +767,24 @@ def lineCamLoop():
 
     modelSilverLine = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/silver_zone_entry/silver_classify_s.onnx', task='classify')
     
+    camera = None # PlaceHolder for Debugging
+    if not cameraDebugMode:
+        camera = Picamera2(0)
 
-    camera = Picamera2(0)
+        mode = camera.sensor_modes[0]
+        camera.configure(camera.create_video_configuration(sensor={'output_size': mode['size'], 'bit_depth': mode['bit_depth']}))
 
-    mode = camera.sensor_modes[0]
-    camera.configure(camera.create_video_configuration(sensor={'output_size': mode['size'], 'bit_depth': mode['bit_depth']}))
+        #camera.set_controls({"AfMode": controls.AfModeEnum.Manual, "ExposureTime":10000})
+        camera.set_controls({
+            #"AfMode": controls.AfModeEnum.Manual,
+            #"LensPosition": 6.5,
+            #"FrameDurationLimits": (1000000 // 50, 1000000 // 50),
+            #"AnalogueGain": 3.0,  # Fix gain (default 1.0)
+            #"ExposureTime": 10000  # Set exposure in microseconds (adjust as needed)
+        })
 
-    #camera.set_controls({"AfMode": controls.AfModeEnum.Manual, "ExposureTime":10000})
-    camera.set_controls({
-        #"AfMode": controls.AfModeEnum.Manual,
-        #"LensPosition": 6.5,
-        #"FrameDurationLimits": (1000000 // 50, 1000000 // 50),
-        #"AnalogueGain": 3.0,  # Fix gain (default 1.0)
-        #"ExposureTime": 10000  # Set exposure in microseconds (adjust as needed)
-    })
-
-    camera.start()
-    time.sleep(0.1)
+        camera.start()
+        time.sleep(0.1)
 
     x_last = int( camera_x / 2 )
     y_last = int( camera_y / 2 )
@@ -759,13 +819,10 @@ def lineCamLoop():
         t1 = t0 + lineDelayMS * 0.001
 
         # Loop
-        raw_capture = camera.capture_array()
-        raw_capture = cv2.resize(raw_capture, (camera_x, camera_y))
-        cv2_img = cv2.cvtColor(raw_capture, cv2.COLOR_RGBA2BGR)
-        resetBallArrayVars() # Reset ball arrays if needed
+        cv2_img = getCameraImage(camera)
 
         savecv2_img("VictimsDataSet", cv2_img)
-        cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_original.jpg", cv2_img)
+        resetBallArrayVars() # Reset ball arrays if needed
 
 
         if objective.value == "follow_line":
@@ -927,13 +984,14 @@ def lineCamLoop():
                 ballType.value = "black ball" if calculateAverageArray(ballTypeArray, 0.35) < 0.5 else "silver ball" # Maybe needs rechecking...
                 ballExists.value = calculateAverageArray(ballExistsArray, 0.25) >= 0.5 # [0.5, 1.0] = Ball Exist True [0.0, 0.5[ = False
 
+
             elif zoneStatus.value == "depositGreen":
-                contours_green = get_green_contours(cv2_img)
-                cornerDistance.value, cornerSize.value = check_contours(contours_green, cv2_img, (0, 0, 255))
+                contoursGreen = get_green_contours(cv2_img)
+                updateCornerDetection(contoursGreen, (0, 0, 255))
 
             elif zoneStatus.value == "depositRed":
-                contours_red = get_red_contours(cv2_img)
-                cornerDistance.value, cornerSize.value = check_contours(contours_red, cv2_img, (0, 255, 0))
+                contoursRed = get_red_contours(cv2_img)
+                updateCornerDetection(contoursRed, (0, 255, 0))
 
 
         cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_cv2.jpg", cv2_img)
@@ -942,8 +1000,10 @@ def lineCamLoop():
         while (time.perf_counter() <= t1):
             time.sleep(0.0005)
 
+        
         printDebug(f"\t\t\t\t\t\t\t\tLine Cam Loop Time: {t0} | {t1} | {time.perf_counter()}", DEBUG)
         t0 = t1
 
     print(f"Shutting Down Line Cam Loop")
-    camera.stop()
+    if not cameraDebugMode: 
+        camera.stop()

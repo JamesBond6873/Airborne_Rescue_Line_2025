@@ -82,7 +82,7 @@ def readSerial(debug):
 def sendSerial(message, confirmation = False):
     global waitingResponse, commandConfirmationAborted
     if DEBUG == True:
-        printDebug(f"Fake Sent: {message}", DEBUG)
+        printDebug(f"F: Sent to Serial at {time.perf_counter()}: {message.strip()}", softDEBUG)
         return
     
     if timer_manager.is_timer_expired("serialCooldownbetweenCommands"):
@@ -92,7 +92,7 @@ def sendSerial(message, confirmation = False):
 
     else:
         if confirmation == True:
-            print(f" Did I catch a ball pick up? {message.strip()}")
+            printDebug(f" Did I catch a ball pick up? {message.strip()}", False)
             waitingResponse = False # We didn't send the command
             commandConfirmationAborted = True
 
@@ -100,19 +100,23 @@ def sendSerial(message, confirmation = False):
 def interpretMessage(message):
     global waitingResponse, commandWaitingListConfirmation
     if "-Nothing-" not in message:
-        printDebug(f"Received Message: {message}", softDEBUG)
+        printDebug(f"Received Message at {time.perf_counter()}: {message.strip()}", softDEBUG)
     if "Ok" in message:
         commandWaitingListConfirmation.pop(0)
-        printDebug(f"Command List ({len(commandWaitingListConfirmation)} commands): {commandWaitingListConfirmation}", softDEBUG)
+        printDebug(f"Command List ({len(commandWaitingListConfirmation)} commands): {commandWaitingListConfirmation}", False)
         waitingResponse = False
-        
+    if DEBUG == True:
+        commandWaitingListConfirmation.pop(0)
+        printDebug(f"Command List ({len(commandWaitingListConfirmation)} commands): {commandWaitingListConfirmation}", False)
+        waitingResponse = False
+
 
 def updateCommandWaitingListConfirmation():
     global commandWaitingListConfirmation
     if commandWithConfirmation.value != "none":
         commandWaitingListConfirmation.append(commandWithConfirmation.value)
         commandWithConfirmation.value = "none"
-        printDebug(f"Command Waiting List: {commandWaitingListConfirmation}", softDEBUG)
+        printDebug(f"Command Waiting List: {commandWaitingListConfirmation}", False)
 
 
 def updateCommandWithoutConfirmation():
@@ -123,7 +127,7 @@ def updateCommandWithoutConfirmation():
             sendSerial(commandWithoutConfirmation.value)
             lastUnsentCommandWithoutConfirmation = None  # Clear, it was sent
         else:
-            print(f"Check Error Why the heck are we sending this command when waiting response? {commandWithoutConfirmation.value}")
+            printDebug(f"Check Error Why the heck are we sending this command when waiting response? {commandWithoutConfirmation.value}", False)
             lastUnsentCommandWithoutConfirmation = commandWithoutConfirmation.value
         commandWithoutConfirmation.value = "none"
 
@@ -156,7 +160,7 @@ def serialLoop():
         if commandConfirmationAborted:
             commandConfirmationAborted = False # It will go back to True if needed
             sendSerial(commandWaitingListConfirmation[0], confirmation=True)
-            print(f"Correcting Command Confirmation Aborted: {commandWaitingListConfirmation[0]}")
+            printDebug(f"Correcting Command Confirmation Aborted: {commandWaitingListConfirmation[0]}", False)
             waitingResponse = True  # We are now waiting for a response
 
 
