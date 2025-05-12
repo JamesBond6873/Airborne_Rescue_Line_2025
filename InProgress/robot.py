@@ -75,6 +75,8 @@ def CLIinterpretCommand():
         print(f"  - MotorOverride: {MotorOverride}")
         print(f"  - Objective: {objective.value}")
         print(f"  - Zone Status: {zoneStatus.value}")
+        print(f"  - Zone Start Time: {round(zoneStartTime.value, 3)}")
+        print(f"  - Zone Duration: {round(time.perf_counter() - zoneStartTime.value, 3) if zoneStartTime.value != -1 else 'Not Started'}")
     elif message == "": #Next Image
         printDebug("Next Image", False)
         updateFakeCamImage.value = True
@@ -386,8 +388,12 @@ def decideVictimType():
     return pickVictimType
 
 
+def needToDeposit():
+    pass
+
+
 def zoneDeposit(type):
-    global dropSequenceStatus
+    global dropSequenceStatus, dumpedAliveVictims, dumpedDeadVictims
 
     def searchGoCorner():
         global dropSequenceStatus, wiggleStage
@@ -533,7 +539,7 @@ def controlLoop():
 
     if True: # True if only testing Evac
         objective.value = "zone"
-        zoneStatus.value = "findVictims"
+        zoneStatus.value = "begin"
         time.sleep(5)
         cameraDefault("Evacuation")
 
@@ -610,12 +616,12 @@ def controlLoop():
                 zoneStatus.value = "depositRed"
 
             if zoneStatusLoop == "begin":
-                #print(f"Here 1-----------------")
                 timer_manager.set_timer("stop", 5.0) # 10 seconds to signal that we entered
                 timer_manager.set_timer("zoneEntry", 8.0) # 3 (5+3) seconds to entry the zone
                 cameraDefault("Evacuation")
-                #sendCommandList(["CE","SF,4,F"])
                 silverValue.value = -1
+                if zoneStartTime.value == -1:
+                    zoneStartTime.value = time.perf_counter()
                 zoneStatus.value = "entry" # go to next Step
 
             elif zoneStatusLoop == "entry":
@@ -707,7 +713,8 @@ def controlLoop():
                 zoneDeposit("D")
 
             elif zoneStatusLoop == "finishEvacuation":
-                printDebug(f"Finished Evacuation - Going Back", softDEBUG)
+                printDebug(f"Finished Evacuation - Leaving", softDEBUG)
+                printDebug(f"Finished the Evacuation Zone in {time.perf_counter() - zoneStartTime.value} s", softDEBUG)
 
         CLIinterpretCommand()
         intrepretCommand()

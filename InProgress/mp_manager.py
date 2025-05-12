@@ -9,6 +9,8 @@ manager = Manager()
 
 terminate = manager.Value("i", False)
 updateFakeCamImage = manager.Value("i", True)
+runStartTime = manager.Value("i", -1)
+zoneStartTime = manager.Value("i", -1)
 
 commandWithConfirmation = manager.Value("i", "none")
 commandWithoutConfirmation = manager.Value("i", "none")
