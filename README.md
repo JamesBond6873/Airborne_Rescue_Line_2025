@@ -44,6 +44,8 @@
 
 -> Victim Pick Up X
 
+-> Computer Only Coding Capability X
+
 -> Victim Drop (Not Tested) X
 
 -> Better decision of when to drop
