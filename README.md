@@ -44,4 +44,14 @@
 
 -> Victim Pick Up X
 
--> Victim Drop
+-> Victim Drop (Not Tested) X
+
+-> Better decision of when to drop
+
+-> Possible Line Angle Following
+
+-> Silver Line Implementation
+
+-> Silver Line New DataSet
+
+-> Leaving the Evacuation Zone
