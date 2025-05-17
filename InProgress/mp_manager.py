@@ -35,6 +35,7 @@ ballWidth = manager.Value("i", -1) # Average
 ballType = manager.Value("i", "none") # Average # "none"; "silver ball"; "black ball"
 ballExists = manager.Value("i", False) # Average
 resetBallArrays = manager.Value("i", False) # Reset the ball arrays
+resetEvacZoneArrays = manager.Value("i", False) # Reset the Evacuation Zone Corener Vars
 ballConfidence = manager.Value("i", -1)
 pickedUpAliveCount = manager.Value("i", 0)
 pickedUpDeadCount = manager.Value("i", 0)

@@ -687,6 +687,16 @@ def resetBallArrayVars():
         resetBallArrays.value = False
 
 
+def resetEvacZoneArrayVars():
+    global cornerCenterArray, cornerHeightArray
+    if resetEvacZoneArrays.value:
+        cornerCenterArray = createFilledArray(camera_x // 2)
+        cornerHeightArray = createEmptyTimeArray()
+
+        print(f"Successfully reset evacuation zone corner arrays")
+        resetEvacZoneArrays.value = False
+
+
 def check_contours(contours, image, color, size=5000):
     if len(contours) > 0:
         largest_contour = max(contours, key=cv2.contourArea)
@@ -823,6 +833,7 @@ def lineCamLoop():
 
         savecv2_img("VictimsDataSet", cv2_img)
         resetBallArrayVars() # Reset ball arrays if needed
+        resetEvacZoneArrayVars() # Reset evacuation zone corner arrays if needed
 
 
         if objective.value == "follow_line":
