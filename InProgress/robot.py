@@ -367,6 +367,11 @@ def controlMotors():
     printDebug("Motors: Gamepad Control Active (LOP ON or Override ON)", False) # Debug
     sendMotorsIfNew(gamepadM1.value, gamepadM2.value)
 
+
+def timeInEvacZone() -> float:
+    return time.perf_counter() - zoneStartTime.value
+
+
 # Decide which ball needs to be picked up
 def decideVictimType():
     if ballType.value == "silver ball":
@@ -388,8 +393,39 @@ def decideVictimType():
     return pickVictimType
 
 
-def needToDeposit():
-    pass
+def needToDepositAlive(zoneStatusLoop):
+    if zoneStatusLoop == "depositGreen": # Drop already in Progress
+        return True
+    
+    if pickedUpAliveCount.value >= 2 and pickedUpDeadCount >= 1: # Best Case Scenario 2 Silver + 1 Black
+        printDebug(f"Ready To Drop Alive Ball - Nominal", softDEBUG)
+        return True 
+    
+    elif not ballExists.value: # Only go to safeties if no ball is seen
+        if timeInEvacZone() >= 90 and pickedUpAliveCount.value > 0: # If it takes too long to find them all we drop what we have
+            printDebug(f"Ready To Drop Alive Ball - Time Safety", softDEBUG)
+            return True 
+
+
+def needToDepositDead(zoneStatusLoop):
+    # Drop already in Progress
+    if zoneStatusLoop == "depositRed":
+        return True
+    
+    # Drop the Silver Balls first
+    if pickedUpAliveCount.value > 0:
+        return False
+    
+    # Best Case Scenario: Already dropped 2 Silver
+    if pickedUpDeadCount.value >= 1 and dumpedAliveCount.value >= 2:
+        printDebug(f"Ready To Drop Dead Ball - Nominal", softDEBUG) 
+        return True
+
+    elif not ballExists.value: # Only go to safeties if no ball is seen
+        if timeInEvacZone() >= 100 and pickedUpDeadCount.value > 0:
+            printDebug(f"Ready To Drop Dead Ball - Time Safety", softDEBUG)
+            return True
+   
 
 
 def zoneDeposit(type):
@@ -487,16 +523,19 @@ def zoneDeposit(type):
         dropSequenceStatus = "searchGoCorner"  # Reset to searchGoCorner for next victim
 
         if type == "A":
-            dumpedAliveVictims = True
+            #dumpedAliveVictims = True # Previous version
+            dumpedAliveCount.value += pickedUpAliveCount.value
             pickedUpAliveCount.value = 0
-            zoneStatus.value = "depositRed"
-
+            zoneStatus.value = "findVictims"
+            
         elif type == "D":
-            dumpedDeadVictims = True
+            #dumpedDeadVictims = True
+            dumpedDeadCount += pickedUpDeadCount.value
+            printDebug(f"Finished Dropping {pickedUpDeadCount.value} Dead victims, Total Deposit {dumpedDeadCount.value}", softDEBUG)
             pickedUpDeadCount.value = 0
-            zoneStatus.value = "finishEvacuation"
-
-        
+            zoneStatus.value = "findVictims"
+            printDebug(f"Finished Evacuation - Leaving", softDEBUG)
+            printDebug(f"Finished the Evacuation Zone in {round(time.perf_counter() - zoneStartTime.value, 3)} s", softDEBUG)
 
 
 def intersectionController():
@@ -609,12 +648,11 @@ def controlLoop():
         
         # ----- EVACUATION ZONE ----- 
         elif objectiveLoop == "zone":
-            if pickedUpAliveCount.value > 1 and not dumpedAliveVictims and zoneStatusLoop != "depositGreen": # 2 (or maybe more if mistake)
+            if needToDepositAlive(zoneStatusLoop):
                 zoneStatus.value = "depositGreen"
-            
-            elif pickedUpDeadCount.value > 0 and not dumpedDeadVictims and zoneStatusLoop != "depositRed": # 1 (ormaybe more if mistake)
+            elif needToDepositDead(zoneStatusLoop):
                 zoneStatus.value = "depositRed"
-
+    
             if zoneStatusLoop == "begin":
                 timer_manager.set_timer("stop", 5.0) # 10 seconds to signal that we entered
                 timer_manager.set_timer("zoneEntry", 8.0) # 3 (5+3) seconds to entry the zone
@@ -713,8 +751,8 @@ def controlLoop():
                 zoneDeposit("D")
 
             elif zoneStatusLoop == "finishEvacuation":
-                printDebug(f"Finished Evacuation - Leaving", softDEBUG)
-                printDebug(f"Finished the Evacuation Zone in {time.perf_counter() - zoneStartTime.value} s", softDEBUG)
+                pass
+                
 
         CLIinterpretCommand()
         intrepretCommand()
