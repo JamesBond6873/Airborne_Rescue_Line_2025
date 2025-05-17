@@ -77,6 +77,8 @@ def CLIinterpretCommand():
         print(f"  - Zone Status: {zoneStatus.value}")
         print(f"  - Zone Start Time: {round(zoneStartTime.value, 3)}")
         print(f"  - Zone Duration: {round(time.perf_counter() - zoneStartTime.value, 3) if zoneStartTime.value != -1 else 'Not Started'}")
+        print(f"  - Picked {pickedUpAliveCount.value} Victim(s) and {pickedUpDeadCount.value} Victims(s)")
+        print(f"  - Rescued {dumpedAliveCount.value} Victim(s) and {dumpedDeadCount.value} Victims(s)")
     elif message == "": #Next Image
         printDebug("Next Image", False)
         updateFakeCamImage.value = True

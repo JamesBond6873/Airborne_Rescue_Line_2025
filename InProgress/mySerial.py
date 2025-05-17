@@ -82,11 +82,11 @@ def readSerial(debug):
 def sendSerial(message, confirmation = False):
     global waitingResponse, commandConfirmationAborted
     if DEBUG == True:
-        printDebug(f"F: Sent to Serial at {time.perf_counter()}: {message.strip()}", softDEBUG)
+        printDebug(f"F: Sent to Serial at {time.perf_counter()}: {message.strip()}", serialSoftDEBUG)
         return
     
     if timer_manager.is_timer_expired("serialCooldownbetweenCommands"):
-        printDebug(f"Sent to Serial at {time.perf_counter()}: {message.strip()}", softDEBUG)
+        printDebug(f"Sent to Serial at {time.perf_counter()}: {message.strip()}", serialSoftDEBUG)
         timer_manager.set_timer("serialCooldownbetweenCommands", 0.010) # Wait 10ms before sending the next command
         ser.write(message.encode('utf-8'))
 
@@ -100,7 +100,7 @@ def sendSerial(message, confirmation = False):
 def interpretMessage(message):
     global waitingResponse, commandWaitingListConfirmation
     if "-Nothing-" not in message:
-        printDebug(f"Received Message at {time.perf_counter()}: {message.strip()}", softDEBUG)
+        printDebug(f"Received Message at {time.perf_counter()}: {message.strip()}", serialSoftDEBUG)
     if "Ok" in message:
         commandWaitingListConfirmation.pop(0)
         printDebug(f"Command List ({len(commandWaitingListConfirmation)} commands): {commandWaitingListConfirmation}", False)

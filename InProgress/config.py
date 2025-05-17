@@ -7,6 +7,7 @@ computerOnlyDebug = True # True for computer only, False for robot
 gamepadLoopRun = True # False for score runs
 DEBUG = False
 softDEBUG = True
+serialSoftDEBUG = False
 LOPOverride = False # If True, LOP state will be updated virtually
 LOPVirtualState = True
 MotorOverride = False # If True, the robot will not move
