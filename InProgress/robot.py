@@ -125,7 +125,7 @@ def CLIinterpretCommand():
 
             allowedZoneStatuses = [
                 "notstarted", "begin", "entry", "findvictims",
-                "pickup_ball", "deposit_red", "deposit_green", "exit"
+                "goToBall", "depositRed", "depositGreen", "exit"
             ]
 
             if zoneCode in allowedZoneStatuses:
@@ -401,6 +401,7 @@ def needToDepositAlive(zoneStatusLoop):
     
     if pickedUpAliveCount.value >= 2 and pickedUpDeadCount.value >= 1: # Best Case Scenario 2 Silver + 1 Black
         printDebug(f"Ready To Drop Alive Ball - Nominal", softDEBUG)
+        printDebug(f"{pickedUpAliveCount.value} {pickedUpDeadCount.value} {zoneStatus.value} {zoneStatusLoop} {pickSequenceStatus}", softDEBUG)
         return True 
     
     elif not ballExists.value: # Only go to safeties if no ball is seen
@@ -421,6 +422,7 @@ def needToDepositDead(zoneStatusLoop):
     # Best Case Scenario: Already dropped 2 Silver
     if pickedUpDeadCount.value >= 1 and dumpedAliveCount.value >= 2:
         printDebug(f"Ready To Drop Dead Ball - Nominal", softDEBUG) 
+        printDebug(f"{pickedUpAliveCount.value} {pickedUpDeadCount.value} {zoneStatus.value} {zoneStatusLoop} {pickSequenceStatus}", softDEBUG)
         return True
 
     elif not ballExists.value: # Only go to safeties if no ball is seen
@@ -528,14 +530,14 @@ def zoneDeposit(type):
         if type == "A":
             #dumpedAliveVictims = True # Previous version
             dumpedAliveCount.value += pickedUpAliveCount.value
-            printDebug(f"Finished Dropping {pickedUpAliveCount.value} Alive victims, Total Deposit {dumpedAliveCount.value}", softDEBUG)
+            printDebug(f"Finished Dropping {pickedUpAliveCount.value} Alive victims, Total Deposit {dumpedAliveCount.value + dumpedDeadCount.value}  ( {dumpedAliveCount.value} + {dumpedDeadCount.value} )", softDEBUG)
             pickedUpAliveCount.value = 0
             zoneStatus.value = "findVictims"
             
         elif type == "D":
             #dumpedDeadVictims = True
             dumpedDeadCount.value += pickedUpDeadCount.value
-            printDebug(f"Finished Dropping {pickedUpDeadCount.value} Dead victims, Total Deposit {dumpedDeadCount.value}", softDEBUG)
+            printDebug(f"Finished Dropping {pickedUpDeadCount.value} Dead victims, Total Deposit {dumpedAliveCount.value + dumpedDeadCount.value}  ( {dumpedAliveCount.value} + {dumpedDeadCount.value} ) ", softDEBUG)
             pickedUpDeadCount.value = 0
             zoneStatus.value = "findVictims"
             printDebug(f"Finished Evacuation - Leaving", softDEBUG)
@@ -655,8 +657,10 @@ def controlLoop():
         elif objectiveLoop == "zone":
             if needToDepositAlive(zoneStatusLoop):
                 zoneStatus.value = "depositGreen"
+                zoneStatusLoop = "depositGreen"
             elif needToDepositDead(zoneStatusLoop):
                 zoneStatus.value = "depositRed"
+                zoneStatusLoop = "depositRed"
     
             if zoneStatusLoop == "begin":
                 timer_manager.set_timer("stop", 5.0) # 10 seconds to signal that we entered

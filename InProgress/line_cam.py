@@ -21,7 +21,7 @@ print("Line Camera: \t \t \t OK")
 
 # Debug Features
 cameraDebugMode = computerOnlyDebug
-debugImageFolder = "DataSet/EvacZoneTest2"
+debugImageFolder = "DataSet/EvacZoneTest"
 debugImagePaths = sorted(glob(os.path.join(debugImageFolder, "*.jpg")))
 currentFakeImageIndex = 0
 raw_capture = None
@@ -34,6 +34,13 @@ red_min_1 = np.array(red_min_1)
 red_max_1 = np.array(red_max_1)
 red_min_2 = np.array(red_min_2)
 red_max_2 = np.array(red_max_2)
+
+evacZoneGreenMin = np.array(evacZoneGreenMin)
+evacZoneGreenMax = np.array(evacZoneGreenMax)
+evacZoneRedMin_1 = np.array(evacZoneRedMin_1)
+evacZoneRedMax_1 = np.array(evacZoneRedMax_1)
+evacZoneRedMin_2 = np.array(evacZoneRedMin_2)
+evacZoneRedMax_2 = np.array(evacZoneRedMax_2)
 
 # Camera Images Configs
 camera_x = 448
@@ -58,8 +65,8 @@ ballBottomYArray = createEmptyTimeArray()
 ballWidthArray = createEmptyTimeArray()
 ballTypeArray = createEmptyTimeArray()
 ballExistsArray = createEmptyTimeArray()
-cornerCenterArray = createEmptyTimeArray()
-cornerHeightArray = createEmptyTimeArray()
+cornerCenterArrayGreen = createEmptyTimeArray()
+cornerHeightArrayGreen = createEmptyTimeArray()
 
 
 def savecv2_img(folder, cv2_img):
@@ -688,10 +695,13 @@ def resetBallArrayVars():
 
 
 def resetEvacZoneArrayVars():
-    global cornerCenterArray, cornerHeightArray
+    global cornerCenterArrayGreen, cornerHeightArrayGreen, cornerHeightArrayRed, cornerCenterArrayRed
     if resetEvacZoneArrays.value:
-        cornerCenterArray = createFilledArray(camera_x // 2)
-        cornerHeightArray = createEmptyTimeArray()
+        cornerCenterArrayGreen = createFilledArray(camera_x // 2)
+        cornerHeightArrayGreen = createEmptyTimeArray()
+
+        cornerCenter.value = camera_x // 2
+        cornerHeight.value = 0
 
         print(f"Successfully reset evacuation zone corner arrays")
         resetEvacZoneArrays.value = False
@@ -708,6 +718,7 @@ def check_contours(contours, image, color, size=5000):
             box_width_center = x + w // 2
 
             #return (box_width_center - (camera_x // 2)) / (camera_x // 2) * 180, abs(h)
+            printDebug(f"Found {'Alive' if color == (0, 0, 255) else 'Red' if color == (0, 255, 0) else 'unknown'} Evacuation Corner", False)
             return box_width_center, abs(h)
 
 
@@ -715,22 +726,19 @@ def check_contours(contours, image, color, size=5000):
 
 
 def updateCornerDetection(contours, color):
-    global cornerCenterArray, cornerHeightArray
+    global cornerCenterArrayGreen, cornerHeightArrayGreen
     rawCenter, rawHeight = check_contours(contours, cv2_img, color)
 
     # Save values over time
-    cornerCenterArray = addNewTimeValue(cornerCenterArray, rawCenter)
-    cornerHeightArray = addNewTimeValue(cornerHeightArray, rawHeight)
+    cornerCenterArrayGreen = addNewTimeValue(cornerCenterArrayGreen, rawCenter)
+    cornerHeightArrayGreen = addNewTimeValue(cornerHeightArrayGreen, rawHeight)
 
     # Set averaged values
-    cornerCenter.value = calculateAverageArray(cornerCenterArray, 0.25)
-    cornerHeight.value = calculateAverageArray(cornerHeightArray, 0.25)
+    cornerCenter.value = calculateAverageArray(cornerCenterArrayGreen, 0.25)
+    cornerHeight.value = calculateAverageArray(cornerHeightArrayGreen, 0.25)
 
 
-def get_green_contours(image):
-    hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    green_image = cv2.inRange(hsv_image, green_min, green_max)
-
+def getGreenContours(green_image):
     green_image = cv2.erode(green_image, kernel, iterations=5)
     green_image = cv2.dilate(green_image, kernel, iterations=8)
 
@@ -739,10 +747,7 @@ def get_green_contours(image):
     return contoursGreen
 
 
-def get_red_contours(image):
-    hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    red_image = cv2.inRange(hsv_image, red_min_1, red_max_1) + cv2.inRange(hsv_image, red_min_2, red_max_2)
-
+def getRedContours(red_image):
     red_image = cv2.erode(red_image, kernel, iterations=5)
     red_image = cv2.dilate(red_image, kernel, iterations=8)
 
@@ -847,7 +852,6 @@ def lineCamLoop():
             _, blackImage = cv2.threshold(grayImage, blackThreshold, 255, cv2.THRESH_BINARY_INV)
             
             blackImage = ignoreHighFOVCorners(blackImage)
-            
 
             # Noise Reduction
             blackImage = cv2.erode(blackImage, kernel, iterations=5)
@@ -919,18 +923,23 @@ def lineCamLoop():
             lastLinePoint = finalPoi
 
 
-            # Show cv2_imgs
-            cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_hsv.jpg", hsvImage)
-            cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_green.jpg", greenImage)
-            cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_black.jpg", blackImage)
-            cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_red.jpg", redImage)
-
             obstacleController()
 
             #savecv2_img("VictimsDataSet", cv2_img)
             
 
         elif objective.value == "zone":
+            # Color Processing
+            hsvImage = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2HSV)
+            greenImage = cv2.inRange(hsvImage, evacZoneGreenMin, evacZoneGreenMax)
+            redImage = cv2.inRange(hsvImage, evacZoneRedMin_1, evacZoneRedMax_1) + cv2.inRange(hsvImage, evacZoneRedMin_2, evacZoneRedMax_2)
+            
+            # Black Processing
+            grayImage = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
+            _, blackImage = cv2.threshold(grayImage, blackThreshold, 255, cv2.THRESH_BINARY_INV)
+            
+            blackImage = ignoreHighFOVCorners(blackImage)
+
             if zoneStatus.value in ["begin", "entry", "findVictims", "goToBall"]:
                 img_rgb = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
                 results = modelVictim.predict(img_rgb, imgsz=448, conf=0.3, iou=0.2, agnostic_nms=True, workers=4, verbose=False)  # verbose=True to enable debug info
@@ -997,16 +1006,19 @@ def lineCamLoop():
 
 
             elif zoneStatus.value == "depositGreen":
-                contoursGreen = get_green_contours(cv2_img)
+                contoursGreen = getGreenContours(greenImage)
                 updateCornerDetection(contoursGreen, (0, 0, 255))
 
             elif zoneStatus.value == "depositRed":
-                contoursRed = get_red_contours(cv2_img)
+                contoursRed = getRedContours(redImage)
                 updateCornerDetection(contoursRed, (0, 255, 0))
 
 
         cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_cv2.jpg", cv2_img)
-
+        cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_hsv.jpg", hsvImage)
+        cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_green.jpg", greenImage)
+        cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_black.jpg", blackImage)
+        cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_red.jpg", redImage)
 
         while (time.perf_counter() <= t1):
             time.sleep(0.0005)
