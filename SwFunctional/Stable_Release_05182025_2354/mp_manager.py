@@ -1,0 +1,96 @@
+import time
+import numpy as np
+from multiprocessing import Manager
+
+print("MultiProcessing Manager: \t OK")
+
+
+manager = Manager()
+
+terminate = manager.Value("i", False)
+updateFakeCamImage = manager.Value("i", True)
+runStartTime = manager.Value("i", -1)
+zoneStartTime = manager.Value("i", -1)
+
+commandWithConfirmation = manager.Value("i", "none")
+commandWithoutConfirmation = manager.Value("i", "none")
+commandWaitingListLength = manager.Value("i", -1)
+
+gamepadM1 = manager.Value("i", 1520)
+gamepadM2 = manager.Value("i", 1520)
+commandToExecute = manager.Value("i", "none") #"none",""
+CLIcommandToExecute = manager.Value("i", "none") 
+
+lineCenterX = manager.Value("i", 600)
+lineAngle = manager.Value("i", 0.)
+line_angle_y = manager.Value("i", -1)
+lineDetected = manager.Value("i", False)
+turnReason = manager.Value("i", 0)
+redDetected = manager.Value("i", False)
+silverValue = manager.Value("i", 0) # 0 = Line, 1 = Silver
+
+ballCenterX = manager.Value("i", -1) # Average
+ballBottomY = manager.Value("i", -1) # Average
+ballWidth = manager.Value("i", -1) # Average
+ballType = manager.Value("i", "none") # Average # "none"; "silver ball"; "black ball"
+ballExists = manager.Value("i", False) # Average
+resetBallArrays = manager.Value("i", False) # Reset the ball arrays
+resetEvacZoneArrays = manager.Value("i", False) # Reset the Evacuation Zone Corener Vars
+ballConfidence = manager.Value("i", -1)
+pickedUpAliveCount = manager.Value("i", 0)
+pickedUpDeadCount = manager.Value("i", 0)
+dumpedAliveCount = manager.Value("i", 0)
+dumpedDeadCount = manager.Value("i", 0)
+cornerCenter = manager.Value("i", -181)
+cornerHeight = manager.Value("i", 0)
+zoneFoundGreen = manager.Value("i", False)
+zoneFoundRed = manager.Value("i", False)
+
+isCropped = manager.Value("i", False)
+lineCropPercentage = manager.Value("i", 0.6)
+onIntersection = manager.Value("i", False)
+turnDirection = manager.Value("i", "straight") # "straight", "left", "right", "uTurn"
+objective = manager.Value("i", "follow_line")  # "follow_line"; "zone"; "debug"
+line_status = manager.Value("i", "line_detected")  # "line_detected"; "gap_detected"; "gap_avoid"; "obstacle_detected"; "obstacle_avoid"; "obstacle_orientate"; "check_silver"; "position_entry"; "position_entry_1"; "position_entry_2"; "stop"
+zoneStatus = manager.Value("i", "notStarted")  # "notStarted"; "begin"; "entry"; "findVictims"; "pickup_ball"; "deposit_red"; "deposit_green"; "exit"
+# WARNING -- SHOULD BE NOT STARTED
+LOPstate = manager.Value("i", 0)
+
+
+status = manager.Value("i", "Stopped")
+saveFrame = manager.Value("i", False)
+
+
+# ARRAY FUNCTIONS
+def createEmptyTimeArray(length: int = 240):
+    """ Create a new empty time-value array of given length. Each row: [timestamp, value] """
+    return np.zeros((length, 2))
+
+
+def createFilledArray(value: int, length: int = 240, fill_time: int = 0):
+    """ Create a time-value array filled with an initial value. 
+    From fillTime index onward, timestamps are set to current time. """
+    arr = np.zeros((length, 2))
+    arr[fill_time:, 0] = time.perf_counter()
+    arr[:, 1] = value
+    return arr
+
+
+def addNewTimeValue(time_value_array, value):
+    """ Add a new [current_time, value] pair to the timeArray. """
+    return np.delete(np.vstack((time_value_array, [time.perf_counter(), value])), 0, axis=0)
+
+
+def calculateAverageArray(time_value_array, time_range):
+    """ Calculate the average of values within the last 'timeRange' seconds. """
+    time_value_array = time_value_array[np.where(time_value_array[:, 0] > time.perf_counter() - time_range)]
+    if time_value_array.size > 0:
+        return np.mean(time_value_array[:, 1])
+    else:
+        return -1 # Returns -1 if no values found.
+
+
+def getMaximumArray(time_value_array, time_range):
+    """ Get the maximum value within the last 'timeRange' seconds. """
+    time_value_array = time_value_array[np.where(time_value_array[:, 0] > time.perf_counter() - time_range)]
+    return np.max(time_value_array[:, 1])
