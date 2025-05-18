@@ -293,9 +293,9 @@ void servoFreeControl(String input) {
 
     // Validate the servo angle
     if ( situationStr == "F") {
-      Serial.print("Set servo ");
-      Serial.print(servoId);
-      Serial.println(" to Free Mode");
+      //Serial.print("Set servo ");
+      //Serial.print(servoId);
+      //Serial.println(" to Free Mode");
 
       if (servoId < 0) { Grip.freeAllServos(); } // -1
       else if (servoId >= 0 && servoId <= 3) { Grip.freeXServo(servoId); } // Inside ArmGrip Class
