@@ -3,7 +3,7 @@
 print("Robot Configurations: \t \t OK")
 
 # Is it DEBUG?
-computerOnlyDebug = True # True for computer only, False for robot
+computerOnlyDebug = False # True for computer only, False for robot
 gamepadLoopRun = True # False for score runs
 DEBUG = False
 softDEBUG = True
@@ -38,8 +38,8 @@ red_max_1 = [10, 255, 255]
 red_min_2 = [170, 100, 100]
 red_max_2 = [180, 255, 255]
 
-evacZoneGreenMin = [50, 100, 70]
-evacZoneGreenMax = [100,255,200]
+evacZoneGreenMin = [15, 100, 15]
+evacZoneGreenMax = [90, 200, 105]
 evacZoneRedMin_1 = [0, 100, 90]
 evacZoneRedMax_1 = [10, 255, 255]
 evacZoneRedMin_2 = [170, 100, 100]

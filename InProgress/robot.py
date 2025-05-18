@@ -431,7 +431,6 @@ def needToDepositDead(zoneStatusLoop):
             return True
    
 
-
 def zoneDeposit(type):
     global dropSequenceStatus, dumpedAliveVictims, dumpedDeadVictims
 
@@ -444,11 +443,11 @@ def zoneDeposit(type):
         else: # Corner detected
             setMotorsSpeeds(cornerCenter.value)
             controlMotors()
-            if cornerHeight.value >= camera_y * 0.45: # Close to Corner
+            if cornerHeight.value >= camera_y * 0.65: # Close to Corner
                 printDebug(f"Victim Dropping - Going Back 1", softDEBUG)
                 dropSequenceStatus = "startReverse"
                 wiggleStage = 0
-                timer_manager.set_timer("zoneReverse", 1.0)
+                timer_manager.set_timer("zoneReverse", 0.5)
     def dropVictim():
         global dropSequenceStatus, wiggleStage
         if wiggleStage == 0:
@@ -495,29 +494,29 @@ def zoneDeposit(type):
         setManualMotorsSpeeds(1300, 1300)  # Go backward
         controlMotors()
         if timer_manager.is_timer_expired("zoneReverse"):
-            setManualMotorsSpeeds(1230 if rotateTo == "left" else 1750, 1750 if rotateTo == "left" else 1230)
+            setManualMotorsSpeeds(1000 if rotateTo == "left" else 2000, 2000 if rotateTo == "left" else 1000)
             controlMotors()
             printDebug(f"Victim Dropping - doing 180", softDEBUG)
             dropSequenceStatus = "do180"
-            timer_manager.set_timer("do180", 1.0)
+            timer_manager.set_timer("do180", 1.5)
     elif dropSequenceStatus == "do180":
-        setManualMotorsSpeeds(1230 if rotateTo == "left" else 1750, 1750 if rotateTo == "left" else 1230)
+        setManualMotorsSpeeds(1000 if rotateTo == "left" else 2000, 2000 if rotateTo == "left" else 1000)
         controlMotors()
         if timer_manager.is_timer_expired("do180"):
-            setManualMotorsSpeeds(1300, 1300)  # Go backward
+            setManualMotorsSpeeds(1000, 1000)  # Go backward
             controlMotors()
             printDebug(f"Victim Dropping - Going Back 2", softDEBUG)
             dropSequenceStatus = "goBackwards"
-            timer_manager.set_timer("zoneReverse", 1.0)
+            timer_manager.set_timer("zoneReverse", 2.0)
     elif dropSequenceStatus == "goBackwards":
-        setManualMotorsSpeeds(1300, 1300)  # Go backward
+        setManualMotorsSpeeds(1000, 1000)  # Go backward
         controlMotors()
         if timer_manager.is_timer_expired("zoneReverse"):
             setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)  # Stop motors
             controlMotors()
             printDebug(f"Victim Dropping - Dropping Victim", softDEBUG)
             dropSequenceStatus = "dropVictim"
-            timer_manager.set_timer("do180", 1.0)
+            #timer_manager.set_timer("do180", 4.5)
     elif dropSequenceStatus == "dropVictim":
         dropVictim()
     elif dropSequenceStatus == "finished":
@@ -703,7 +702,7 @@ def controlLoop():
                         pickingVictim = True
                         printDebug(f" ----- Starting {pickVictimType} Victim Catching ----- ", softDEBUG)
                         printDebug(f"Victim Catching - Reversing", False)
-                        timer_manager.set_timer("zoneReverse", 1.0)
+                        timer_manager.set_timer("zoneReverse", 0.5)
 
                 elif pickSequenceStatus == "startReverse":
                     setManualMotorsSpeeds(1300, 1300)  # Go backward
@@ -722,7 +721,7 @@ def controlLoop():
                     if timer_manager.is_timer_expired("lowerArm"):
                         printDebug(f"Victim Catching - Moving Forward", False)
                         pickSequenceStatus = "moveForward"
-                        timer_manager.set_timer("zoneForward", 1.0)
+                        timer_manager.set_timer("zoneForward", 0.4)
 
                 elif pickSequenceStatus == "moveForward":
                     setManualMotorsSpeeds(1800, 1800)  # Go forward slowly

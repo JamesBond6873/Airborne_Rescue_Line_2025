@@ -998,10 +998,10 @@ def lineCamLoop():
                     ballExistsArray = addNewTimeValue(ballExistsArray, 0)
 
 
-                ballCenterX.value = calculateAverageArray(ballCenterXArray, 0.25)
+                ballCenterX.value = calculateAverageArray(ballCenterXArray, 0.15)
                 ballBottomY.value = calculateAverageArray(ballBottomYArray, 0.25)
                 ballWidth.value = calculateAverageArray(ballWidthArray, 0.25)
-                ballType.value = "black ball" if calculateAverageArray(ballTypeArray, 0.35) < 0.5 else "silver ball" # Maybe needs rechecking...
+                ballType.value = "black ball" if calculateAverageArray(ballTypeArray, 0.45) < 0.5 else "silver ball" # Maybe needs rechecking...
                 ballExists.value = calculateAverageArray(ballExistsArray, 0.25) >= 0.5 # [0.5, 1.0] = Ball Exist True [0.0, 0.5[ = False
 
 
