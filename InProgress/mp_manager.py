@@ -52,7 +52,7 @@ onIntersection = manager.Value("i", False)
 turnDirection = manager.Value("i", "straight") # "straight", "left", "right", "uTurn"
 objective = manager.Value("i", "follow_line")  # "follow_line"; "zone"; "debug"
 line_status = manager.Value("i", "line_detected")  # "line_detected"; "gap_detected"; "gap_avoid"; "obstacle_detected"; "obstacle_avoid"; "obstacle_orientate"; "check_silver"; "position_entry"; "position_entry_1"; "position_entry_2"; "stop"
-zoneStatus = manager.Value("i", "notStarted")  # "notStarted"; "begin"; "entry"; "findVictims"; "pickup_ball"; "deposit_red"; "deposit_green"; "exit"
+zoneStatus = manager.Value("i", "notStarted")  # "notStarted"; "begin"; "entry"; "findVictims"; "pickup_ball"; "deposit_red"; "deposit_green"; "exit"; finished
 # WARNING -- SHOULD BE NOT STARTED
 LOPstate = manager.Value("i", 0)
 
@@ -60,6 +60,13 @@ LOPstate = manager.Value("i", 0)
 status = manager.Value("i", "Stopped")
 saveFrame = manager.Value("i", False)
 
+
+# Only for Debugging Purposes
+lopOverride = manager.Value("i", 0)
+lopCounter = manager.Value("i", 0)
+motorOverride = manager.Value("i", 0)
+m1MP = manager.Value("i", 1500)
+m2MP = manager.Value("i", 1500)
 
 # ARRAY FUNCTIONS
 def createEmptyTimeArray(length: int = 240):

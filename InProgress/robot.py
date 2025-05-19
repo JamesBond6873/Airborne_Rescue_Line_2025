@@ -248,6 +248,7 @@ def LoPSwitchController():
             zoneStatus.value = "notStarted"
             timer_manager.clear_all_timers()
             cameraDefault("Line")
+            lopCounter.value += 1
             #message = f"M({1525}, {1524})"
             #mySerial.sendSerial(f"M({1525}, {1524})")
     else:
@@ -581,7 +582,7 @@ def controlLoop():
 
     sendCommandListWithConfirmation(["GR","BC", "SF,5,F", "CL", "SF,4,F", "AU", "PA", "SF,0,F", "SF,1,F", "SF,2,F", "SF,3,F"])
 
-    if True: # True if only testing Evac
+    if False: # True if only testing Evac
         objective.value = "zone"
         zoneStatus.value = "begin"
         time.sleep(5)
@@ -632,6 +633,7 @@ def controlLoop():
     print(f"")
 
     counter = 0
+    runStartTime.value = time.perf_counter()
     t0 = time.perf_counter()
     while not terminate.value:
         t1 = t0 + controlDelayMS * 0.001
@@ -774,6 +776,12 @@ def controlLoop():
 
         lastObjective = objective.value
         
+        # Debugging
+        lopOverride.value = LOPOverride
+        motorOverride.value = MotorOverride
+        m1MP.value = M1info
+        m2MP.value = M2info
+
         if objectiveLoop == "follow_line":
             debugMessage = (
                 f"Center: {lineCenterX.value} \t"
@@ -786,7 +794,7 @@ def controlLoop():
                 f"inGap: {inGap}\t"
                 #f"Turn: {turnDirection.value}     \t"
                 #f"Motor D: {round(motorSpeedDiference, 2)}   \t"
-                f"Siver: {round(float(silverValue.value),3)} \t"
+                f"Silver: {round(float(silverValue.value),3)} \t"
                 f"M1: {int(M1info)} \t"
                 f"M2: {int(M2info)} \t"
                 f"LOP: {switchState} \t"

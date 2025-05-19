@@ -10,6 +10,7 @@ from gamepad import gamepadLoop
 from mySerial import serialLoop
 from line_cam import lineCamLoop
 from robot import controlLoop
+from WebSocket_Server import websocket_process
 from mp_manager import *
 
 
@@ -30,8 +31,8 @@ if __name__ == "__main__":
         Process(target=gamepadLoop, args=()),
         Process(target=serialLoop, args=()),
         Process(target=lineCamLoop, args=()),
-        Process(target=controlLoop, args=())
-        #Process(target=zoneCamLoop, args=())
+        Process(target=controlLoop, args=()),
+        Process(target=websocket_process, args=())
     ]
 
     for process in processes:
