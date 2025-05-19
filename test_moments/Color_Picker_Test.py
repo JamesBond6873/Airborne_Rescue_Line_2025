@@ -10,19 +10,10 @@ def pick_color(event,x,y,flags,param):
         pixel = image_hsv[y, x].astype(int)
 
         #you might want to adjust the ranges(+-10, etc):
-<<<<<<< HEAD
-        #upper =  np.array([pixel[0] + 20, pixel[1] + 20, pixel[2] + 30], dtype=np.uint8)
-        #lower =  np.array([pixel[0] - 30, pixel[1] - 30, pixel[2] - 30], dtype=np.uint8)
-        upper = np.array([min(pixel[0] + 20, 255), min(pixel[1] + 20, 255), min(pixel[2] + 30, 255)], dtype=np.uint8)
-        lower = np.array([max(pixel[0] - 30, 0), max(pixel[1] - 30, 0), max(pixel[2] - 30, 0)], dtype=np.uint8)
-        lower = np.array([50, 120, 70], dtype=np.uint8)
-        upper = np.array([100,255,200], dtype=np.uint8)
-=======
         upper =  np.array([pixel[0] + 20, pixel[1] + 20, pixel[2] + 30])
         lower =  np.array([pixel[0] - 30, pixel[1] - 30, pixel[2] - 30])
-        lower = np.array([0, 0, 253])
-        upper = np.array([255, 255, 255])
->>>>>>> 84c0b6cdfde5c2e813aad5699acbf70768525be2
+        lower = np.array([15, 100, 15])
+        upper = np.array([90, 200, 105])
         #lower = np.array([0,0,0]) # Black only
         print(pixel, lower, upper)
 
@@ -33,13 +24,8 @@ def main():
     import sys
     global image_hsv, pixel # so we can use it in mouse callback
 
-<<<<<<< HEAD
-    image_src = cv2.imread("C:\\Users\\Francisco\\Projects\\RoboCup Junior Rescue Line\\2025\\SoftwareRepo\\test_moments\\latest_frame_original.jpg")  # pick.py my.png
+    image_src = cv2.imread("C:\\Users\\Francisco\\Projects\\RoboCup Junior Rescue Line\\2025\\SoftwareRepo\\test_moments\\latest_frame_cv2_corner2.jpg")  # pick.py my.png
     #image_src = cv2.imread("test_moments\Silver_Line_2.jpg")
-=======
-    image_src = cv2.imread("C:\\Users\\Francisco\\Projects\\RoboCup Junior Rescue Line\\2025\\Frames\\Frames_7Points_Test\\latest_frame_Original_Intersection_2.jpg")  # pick.py my.png
-    image_src = cv2.imread("test_moments\Silver_Line_2.jpg")
->>>>>>> 84c0b6cdfde5c2e813aad5699acbf70768525be2
     if image_src is None:
         print ("the image read is None............")
         return
