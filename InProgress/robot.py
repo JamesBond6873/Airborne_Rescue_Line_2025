@@ -431,7 +431,6 @@ def needToDepositDead(zoneStatusLoop):
             return True
    
 
-
 def zoneDeposit(type):
     global dropSequenceStatus, dumpedAliveVictims, dumpedDeadVictims
 
