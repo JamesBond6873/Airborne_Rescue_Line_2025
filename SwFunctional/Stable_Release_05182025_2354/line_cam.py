@@ -943,8 +943,11 @@ def lineCamLoop():
             if zoneStatus.value in ["begin", "entry", "findVictims", "goToBall"]:
                 img_rgb = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
                 results = modelVictim.predict(img_rgb, imgsz=448, conf=0.3, iou=0.2, agnostic_nms=True, workers=4, verbose=False)  # verbose=True to enable debug info
-                #results = modelVictim.predict(img_rgb, save=True, save_txt=True, imgsz=448, conf=0.3, iou=0.2, agnostic_nms=True, workers=4, verbose=False)
                 
+                """print("Model class names:", getattr(modelVictim, "names", "No names found"))
+                print("Number of classes:", getattr(modelVictim, "nc", "Unknown"))
+                print(f"Results: {results}")"""
+
                 result = results[0].numpy()
 
                 boxes = []

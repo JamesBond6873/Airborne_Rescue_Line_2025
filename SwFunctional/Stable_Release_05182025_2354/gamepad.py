@@ -79,9 +79,9 @@ def handleButtonPress(button):
         utils.printDebug(f"Default Speed Decreased: {defaultSpeed}", DEBUG)
     elif button == 1:
         button1Pressed = True
-        saveFrame.value = not saveFrame.value
+        #saveFrame.value = not saveFrame.value
         #utils.printDebug(f"Save Frame is now set to: {saveFrame.value}", softDEBUG)
-        pass
+        #pass
         if button0Pressed and button1Pressed and button2Pressed and button3Pressed:
             saveFrame.value = not saveFrame.value
             utils.printDebug(f"Save Frame is now set to: {saveFrame.value}", softDEBUG)
