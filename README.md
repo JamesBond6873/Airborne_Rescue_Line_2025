@@ -46,16 +46,18 @@
 
 -> Computer Only Coding Capability X
 
--> Victim Drop (Not Tested) X
+-> Victim Drop X
 
--> Better decision of when to drop
+-> Better decision of when to drop X
 
--> Reset Corner Arrays Function
+-> Reset Corner Arrays Function X
 
 -> Possible Line Angle Following
 
 -> Silver Line Implementation
 
 -> Silver Line New DataSet
+
+-> Gap New DataSet
 
 -> Leaving the Evacuation Zone
