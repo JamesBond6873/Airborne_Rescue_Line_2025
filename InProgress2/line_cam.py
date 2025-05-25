@@ -1,4 +1,4 @@
-# -------- Robot Actuators/Sensors -------- 
+# -------- Robot Sensors -------- 
 
 import datetime
 import time
@@ -7,43 +7,76 @@ import cv2
 import numpy as np
 from picamera2 import Picamera2
 from libcamera import controls
+from glob import glob
 from ultralytics import YOLO
 from ultralytics.utils.plotting import colors
 
-import config
+from config import *
 from utils import printDebug
 from utils import Timer
 from utils import TimerManager
-import robot
 from mp_manager import *
 
 print("Line Camera: \t \t \t OK")
 
+# Debug Features
+cameraDebugMode = computerOnlyDebug
+debugImageFolder = "DataSet/EvacZoneTest"
+debugImagePaths = sorted(glob(os.path.join(debugImageFolder, "*.jpg")))
+currentFakeImageIndex = 0
+raw_capture = None
+cv2_img = None
 
 # Color Configs
-black_min = np.array(config.black_min)
-black_max = np.array(config.black_max)
-green_min = np.array(config.green_min)
-green_max = np.array(config.green_max)
-red_min_1 = np.array(config.red_min_1)
-red_max_1 = np.array(config.red_max_1)
-red_min_2 = np.array(config.red_min_2)
-red_max_2 = np.array(config.red_max_2)
+green_min = np.array(green_min)
+green_max = np.array(green_max)
+red_min_1 = np.array(red_min_1)
+red_max_1 = np.array(red_max_1)
+red_min_2 = np.array(red_min_2)
+red_max_2 = np.array(red_max_2)
 
+evacZoneGreenMin = np.array(evacZoneGreenMin)
+evacZoneGreenMax = np.array(evacZoneGreenMax)
+evacZoneRedMin_1 = np.array(evacZoneRedMin_1)
+evacZoneRedMax_1 = np.array(evacZoneRedMax_1)
+evacZoneRedMin_2 = np.array(evacZoneRedMin_2)
+evacZoneRedMax_2 = np.array(evacZoneRedMax_2)
+
+# Camera Images Configs
 camera_x = 448
-camera_y = 252
+camera_y = 256
 
 multiple_bottom_side = camera_x / 2
 lastDirection = "Straight!"
 
+# Timers
 timer = Timer()
 timer_manager = TimerManager()
 
 kernel = np.ones((3, 3), np.uint8)
 
+lastSide = -1
+
+photoCounter = 0
+
+# Initialize sensors data arrays
+ballCenterXArray = createEmptyTimeArray()
+ballBottomYArray = createEmptyTimeArray()
+ballWidthArray = createEmptyTimeArray()
+ballTypeArray = createEmptyTimeArray()
+ballExistsArray = createEmptyTimeArray()
+cornerCenterArrayGreen = createEmptyTimeArray()
+cornerHeightArrayGreen = createEmptyTimeArray()
+
+
 def savecv2_img(folder, cv2_img):
+    global photoCounter
     if saveFrame.value:
         # Create the "fotos" directory if it doesn't exist
+
+        #if not timer_manager.is_timer_expired("saveImageCoolDown"):
+        #    return
+        
         folder_name = folder
         os.makedirs(folder_name, exist_ok=True)
         
@@ -54,8 +87,47 @@ def savecv2_img(folder, cv2_img):
         # Save the cv2_img using OpenCV
         cv2.imwrite(file_path, cv2_img)
 
-        printDebug(f"File path: {file_path}", config.softDEBUG)
+        photoCounter += 1
+        printDebug(f"Saved Image {photoCounter}: {file_path}", softDEBUG)
+
+        #timer_manager.set_timer("saveImageCoolDown", 10)
+        saveFrame.value = False
     
+
+def getCameraImage(camera):
+    global currentFakeImageIndex, raw_capture, cv2_img
+
+    if not cameraDebugMode:
+        raw_capture = camera.capture_array()
+        raw_capture = cv2.resize(raw_capture, (camera_x, camera_y))
+        cv2_img = cv2.cvtColor(raw_capture, cv2.COLOR_RGBA2BGR)
+        cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_original.jpg", cv2_img)
+        return cv2_img
+    else:
+        if updateFakeCamImage.value:
+            if currentFakeImageIndex >= len(debugImagePaths):
+                print("----- End of debug images -----")
+                return None
+
+            imagePath = debugImagePaths[currentFakeImageIndex]
+            raw_capture = cv2.imread(imagePath)
+            if raw_capture is None:
+                print(f"Couldn't read image: {imagePath}")
+                currentFakeImageIndex += 1
+                return None
+
+            cv2_img = cv2.resize(raw_capture, (camera_x, camera_y))
+            cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_original.jpg", cv2_img)
+            print(f"Processing debug image {currentFakeImageIndex + 1}/{len(debugImagePaths)}: {imagePath}")
+            updateFakeCamImage.value = False
+
+            currentFakeImageIndex += 1
+            return cv2_img
+
+        else:
+            cv2_img = raw_capture.copy()
+            return cv2_img
+
 
 def computeMoments(contour):
     # Compute cv2_img moments for the largest contour
@@ -78,7 +150,7 @@ def computeMoments(contour):
         theta = 0.5 * np.arctan2(2 * mu11, mu20 - mu02)  # Principal axis angle
 
         if theta < 0:
-            printDebug(f"theta og: {round(theta,2)} {round(np.rad2deg(theta),2)}, new {round(np.pi + theta,2)} {round(np.rad2deg(np.pi + theta),2)}", config.DEBUG)
+            printDebug(f"theta og: {round(theta,2)} {round(np.rad2deg(theta),2)}, new {round(np.pi + theta,2)} {round(np.rad2deg(np.pi + theta),2)}", DEBUG)
             theta = np.pi + theta
 
         # Define line endpoints along the principal axis
@@ -97,7 +169,7 @@ def computeMoments(contour):
     return theta
 
 
-def ignoreHighFOVCorners(blackImage, xPercentage=0.30, yPercentage=0.25):
+def ignoreHighFOVCorners(blackImage, xPercentage=0.25, yPercentage=0.15):
     # Define the camera_x and height proportions of the triangular cut
     corner_width = int(camera_x * xPercentage)  # Extend more on x-axis
     corner_height = int(camera_y * yPercentage)  # Less extension on y-axis
@@ -117,7 +189,7 @@ def ignoreHighFOVCorners(blackImage, xPercentage=0.30, yPercentage=0.25):
     return blackImage
 
 
-def checkContourSize(contours, contour_color="red", size=15000):
+def checkContourSize(contours, contour_color="red", size=20000):
     global cv2_img
 
     if contour_color == "red":
@@ -301,8 +373,11 @@ def calculatePointsOfInterest(blackline, blackline_crop, last_bottom_point, aver
     return poi, poi_no_crop, is_crop, max_black_top, bottom_point
 
 
-def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, average_line_angle, turn_direction, average_line_point, blackLine, blackLineCrop):
-    global multiple_bottom_side, lastDirection
+def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, turn_direction, last_line_point):
+    global multiple_bottom_side, lastDirection, lastSide
+
+    average_line_point = last_line_point[0]
+    average_line_point_y = last_line_point[1]
 
     black_top = poi[0][1] < camera_y * .05
 
@@ -314,6 +389,8 @@ def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, average_lin
     if not timer.get_timer("multiple_bottom"):
         final_poi = [multiple_bottom_side, camera_y]
         turnReason.value = 0
+        lastSide = 0  # Reset turning preference
+
 
     elif turn_direction == "left" or turn_direction == "right":
         final_poi = poi[1] if turn_direction == "left" else poi[2]
@@ -323,15 +400,18 @@ def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, average_lin
             timer_manager.set_timer("test_timer", 1.5) # Give 1.0 s for turn
         
         turnReason.value = 1
+        lastSide = 0  # Reset turning preference
 
     elif turn_direction == "uTurn":
         # BackUp to Control loop. Meaning it will go forward until control decides otherwise
         final_poi = (camera_x / 2, camera_y / 2)
         turnReason.value = 102
+        lastSide = 0  # Reset turning preference
 
     elif not timer_manager.is_timer_expired("test_timer"): # Not Expired
         final_poi = poi[1] if lastDirection == "left" else poi[2]
         turnReason.value = 100
+        lastSide = 0  # Reset turning preference
 
     #elif not timer_manager.is_timer_expired("rightLeft"): # Sharp left
      #   final_poi = poi[1]
@@ -346,6 +426,7 @@ def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, average_lin
         if black_top:
             final_poi = poiCropped[0] if is_crop and not maxBlackTop else poi[0]
             turnReason.value = 2
+            lastSide = 0  # Reset turning preference
 
             if (poi[1][0] < camera_x * 0.05 and poi[1][1] > camera_y * (lineCropPercentage.value * .75)) or (poi[2][0] > camera_x * 0.95 and poi[2][1] > camera_y * (lineCropPercentage.value * .75)):
                 final_poi = poi[0]
@@ -379,8 +460,48 @@ def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, average_lin
             final_poi = poiCropped[0] if is_crop else poi[0]
             turnReason.value = 10
 
-            """
-            if poi[1][0] < camera_x * 0.05 and poi[2][0] > camera_x * 0.95 and timer.get_timer("multiple_side_r") and timer.get_timer("multiple_side_l"):
+            if poi[1][0] < camera_x * 0.10 and poi[2][0] > camera_x * 0.90 and timer_manager.is_timer_expired("rightLeft") and timer_manager.is_timer_expired("rightRight"):
+                if lastSide == 2:
+                    index = 2
+                    timer_manager.set_timer("rightRight", 0.6)
+                    turnReason.value = 17.5
+                    final_poi = poi[index]
+                elif lastSide == 1:
+                    index = 1
+                    timer_manager.set_timer("rightLeft", 0.6)
+                    turnReason.value = 16.5
+                    final_poi = poi[index]
+                
+
+            #elif poi[1][0] < camera_x * 0.05:
+            elif poi[1][0] < camera_x * 0.05 and timer_manager.is_timer_expired("rightRight"): # Do not go for left if we were going right
+                # final_poi = poiCropped[1] if is_crop else poi[1] # Removed because constant lineCropPercentage
+                if timer_manager.is_timer_expired("rightLeft"):
+                    timer_manager.set_timer("rightLeft", 0.3)
+                final_poi = poi[1]
+                lastSide = 1
+                turnReason.value = 16
+
+            elif poi[2][0] > camera_x * 0.95 and timer_manager.is_timer_expired("rightLeft"): # Do not go for right if we were going left
+                # final_poi = poiCropped[2] if is_crop else poi[2] # Removed because constant lineCropPercentage
+                if timer_manager.is_timer_expired("rightRight"):
+                    timer_manager.set_timer("rightRight", 0.3)
+                final_poi = poi[2]
+                lastSide = 2
+                turnReason.value = 17
+
+            elif multiple_bottom and timer.get_timer("multiple_bottom"):
+                if poi[3][0] < bottomPoint[0]:
+                    final_poi = [0, camera_y]
+                    multiple_bottom_side = 0
+                    turnReason.value = 18
+                else:
+                    final_poi = [camera_x, camera_y]
+                    multiple_bottom_side = camera_x
+                    turnReason.value = 19
+                timer.set_timer("multiple_bottom", .6)
+            
+            """if poi[1][0] < camera_x * 0.05 and poi[2][0] > camera_x * 0.95 and timer.get_timer("multiple_side_r") and timer.get_timer("multiple_side_l"):
                 #print(f"Here {average_line_angle}")
                 if average_line_angle >= 0:
                     #print(f"Here 1")
@@ -405,32 +526,6 @@ def interpretPOI(poiCropped, poi, is_crop, maxBlackTop, bottomPoint, average_lin
                 #print(f"Here 4")
                 final_poi = poiCropped[2] if is_crop else poi[2]
                 turnReason.value = 15"""
-
-            #elif poi[1][0] < camera_x * 0.05:
-            if poi[1][0] < camera_x * 0.05:
-                # final_poi = poiCropped[1] if is_crop else poi[1] # Removed because constant lineCropPercentage
-                if timer_manager.is_timer_expired("rightLeft"):
-                    timer_manager.set_timer("rightLeft", 0.3)
-                final_poi = poi[1]
-                turnReason.value = 16
-
-            elif poi[2][0] > camera_x * 0.95:
-                # final_poi = poiCropped[2] if is_crop else poi[2] # Removed because constant lineCropPercentage
-                if timer_manager.is_timer_expired("rightRight"):
-                    timer_manager.set_timer("rightRight", 0.3)
-                final_poi = poi[2]
-                turnReason.value = 17
-
-            elif multiple_bottom and timer.get_timer("multiple_bottom"):
-                if poi[3][0] < bottomPoint[0]:
-                    final_poi = [0, camera_y]
-                    multiple_bottom_side = 0
-                    turnReason.value = 18
-                else:
-                    final_poi = [camera_x, camera_y]
-                    multiple_bottom_side = camera_x
-                    turnReason.value = 19
-                timer.set_timer("multiple_bottom", .6)
 
     if (final_poi == poiCropped[0]).all():
         #angle = computeMoments(blackLineCrop)
@@ -586,6 +681,83 @@ def intersectionDetector():
         turnDirection.value = "straight"
 
 
+def resetBallArrayVars():
+    global ballCenterXArray, ballBottomYArray, ballWidthArray, ballTypeArray, ballExistsArray
+    if resetBallArrays.value:
+        ballCenterXArray = createFilledArray(camera_x // 2)
+        ballBottomYArray = createFilledArray(camera_y // 2)
+        ballWidthArray = createEmptyTimeArray()
+        ballTypeArray = createFilledArray(0.5)
+        ballExistsArray = createEmptyTimeArray()
+
+        print(f"Successfully reset ball arrays")
+        resetBallArrays.value = False
+
+
+def resetEvacZoneArrayVars():
+    global cornerCenterArrayGreen, cornerHeightArrayGreen, cornerHeightArrayRed, cornerCenterArrayRed
+    if resetEvacZoneArrays.value:
+        cornerCenterArrayGreen = createFilledArray(camera_x // 2)
+        cornerHeightArrayGreen = createEmptyTimeArray()
+
+        cornerCenter.value = camera_x // 2
+        cornerHeight.value = 0
+
+        print(f"Successfully reset evacuation zone corner arrays")
+        resetEvacZoneArrays.value = False
+
+
+def check_contours(contours, image, color, size=5000):
+    if len(contours) > 0:
+        largest_contour = max(contours, key=cv2.contourArea)
+
+        if cv2.contourArea(largest_contour) > size:
+            x, y, w, h = cv2.boundingRect(largest_contour)
+            cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
+
+            box_width_center = x + w // 2
+
+            #return (box_width_center - (camera_x // 2)) / (camera_x // 2) * 180, abs(h)
+            printDebug(f"Found {'Alive' if color == (0, 0, 255) else 'Red' if color == (0, 255, 0) else 'unknown'} Evacuation Corner", False)
+            return box_width_center, abs(h)
+
+
+    return 0, 0 # (meaning it turns left as a safety for control)
+
+
+def updateCornerDetection(contours, color):
+    global cornerCenterArrayGreen, cornerHeightArrayGreen
+    rawCenter, rawHeight = check_contours(contours, cv2_img, color)
+
+    # Save values over time
+    cornerCenterArrayGreen = addNewTimeValue(cornerCenterArrayGreen, rawCenter)
+    cornerHeightArrayGreen = addNewTimeValue(cornerHeightArrayGreen, rawHeight)
+
+    # Set averaged values
+    cornerCenter.value = calculateAverageArray(cornerCenterArrayGreen, 0.25)
+    cornerHeight.value = calculateAverageArray(cornerHeightArrayGreen, 0.25)
+
+
+def getGreenContours(green_image):
+    green_image = cv2.erode(green_image, kernel, iterations=5)
+    green_image = cv2.dilate(green_image, kernel, iterations=8)
+
+    contoursGreen, _ = cv2.findContours(green_image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+
+    return contoursGreen
+
+
+def getRedContours(red_image):
+    red_image = cv2.erode(red_image, kernel, iterations=5)
+    red_image = cv2.dilate(red_image, kernel, iterations=8)
+
+    contoursRed, _ = cv2.findContours(red_image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+
+    return contoursRed
+
+
+
+
 def obstacleController():
     pass
 
@@ -595,38 +767,45 @@ def obstacleController():
 #############################################################################
 
 def lineCamLoop():
-    global cv2_img, blackImage, greenImage, redImage, x_last, y_last
+    global cv2_img, blackImage, greenImage, redImage, x_last, y_last, ballCenterXArray, ballBottomYArray, ballWidthArray, ballTypeArray, ballExistsArray
 
-    modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/ball_zone_s/ball_detect_s_edgetpu.tflite', task='detect')
+    #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/ball_zone_s/ball_detect_s_edgetpu.tflite', task='detect')
+    #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v3/victim_ball_detection_int8_edgetpu.tflite', task='detect')
+    #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v3/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect')
+    #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect')
+    #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.1/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect')
+    #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.1/victim_ball_detection_full_integer_quant_with_metadata_edgetpu.tflite', task='detect')
+    #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.1/victim_ball_detection.pt', task='detect')
+    modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.2/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect') # Used ultralytics 8.3.66 (nms not an argument)
+    #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.3/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect') # Used format = edgetpu
+    #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.4/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect') # Used format = edgetpu
+
     modelSilverLine = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/silver_zone_entry/silver_classify_s.onnx', task='classify')
     
-    camera = Picamera2(0)
+    camera = None # PlaceHolder for Debugging
+    if not cameraDebugMode:
+        camera = Picamera2(0)
 
-    mode = camera.sensor_modes[0]
-    camera.configure(camera.create_video_configuration(sensor={'output_size': mode['size'], 'bit_depth': mode['bit_depth']}))
+        mode = camera.sensor_modes[0]
+        camera.configure(camera.create_video_configuration(sensor={'output_size': mode['size'], 'bit_depth': mode['bit_depth']}))
 
-    #camera.set_controls({"AfMode": controls.AfModeEnum.Manual, "ExposureTime":10000})
-    camera.set_controls({
-        #"AfMode": controls.AfModeEnum.Manual,
-        #"LensPosition": 6.5,
-        #"FrameDurationLimits": (1000000 // 50, 1000000 // 50),
-        #"AnalogueGain": 3.0,  # Fix gain (default 1.0)
-        #"ExposureTime": 10000  # Set exposure in microseconds (adjust as needed)
-    })
+        #camera.set_controls({"AfMode": controls.AfModeEnum.Manual, "ExposureTime":10000})
+        camera.set_controls({
+            #"AfMode": controls.AfModeEnum.Manual,
+            #"LensPosition": 6.5,
+            #"FrameDurationLimits": (1000000 // 50, 1000000 // 50),
+            #"AnalogueGain": 3.0,  # Fix gain (default 1.0)
+            #"ExposureTime": 10000  # Set exposure in microseconds (adjust as needed)
+        })
 
-    camera.start()
-    time.sleep(0.1)
-
-    # Image for brightness normalization
-    #white_img = cv2.imread("./InProgress3/White_Image_2.jpg")
-    #white_gray = cv2.cvtColor(white_img, cv2.COLOR_RGB2GRAY)
-    #white_gray += (white_gray == 0)
+        camera.start()
+        time.sleep(0.1)
 
     x_last = int( camera_x / 2 )
     y_last = int( camera_y / 2 )
     lastBottomPoint_x = camera_x / 2
     lastLineAngle = 90
-    lastLinePoint = camera_x / 2
+    lastLinePoint = [x_last, y_last] # center points 
 
     do_inference_limit = 7
     do_inference_counter = 0
@@ -646,18 +825,21 @@ def lineCamLoop():
     timer_manager.add_timer("uTurn", 0.05)
     timer_manager.add_timer("rightLeft", 0.05)
     timer_manager.add_timer("rightRight", 0.05)
+    timer_manager.add_timer("goToBall", 0.05)
+    timer_manager.add_timer("saveImageCoolDown", 0.05)
 
 
     t0 = time.perf_counter()
     while not terminate.value:
-        t1 = t0 + config.lineDelayMS * 0.001
+        t1 = t0 + lineDelayMS * 0.001
 
         # Loop
-        raw_capture = camera.capture_array()
-        raw_capture = cv2.resize(raw_capture, (camera_x, camera_y))
-        cv2_img = cv2.cvtColor(raw_capture, cv2.COLOR_RGBA2BGR)
+        cv2_img = getCameraImage(camera)
 
-        cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_original.jpg", cv2_img)
+        savecv2_img("VictimsDataSet", cv2_img)
+        resetBallArrayVars() # Reset ball arrays if needed
+        resetEvacZoneArrayVars() # Reset evacuation zone corner arrays if needed
+
 
         if objective.value == "follow_line":
             # Color Processing
@@ -667,15 +849,14 @@ def lineCamLoop():
             
             # Black Processing
             grayImage = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
-            _, blackImage = cv2.threshold(grayImage, 65, 255, cv2.THRESH_BINARY_INV)
+            _, blackImage = cv2.threshold(grayImage, blackThreshold, 255, cv2.THRESH_BINARY_INV)
             
             blackImage = ignoreHighFOVCorners(blackImage)
-            
 
             # Noise Reduction
             blackImage = cv2.erode(blackImage, kernel, iterations=5)
             blackImage = cv2.dilate(blackImage, kernel, iterations=17) # Previous values: 12 | 16
-            blackImage = cv2.erode(blackImage, kernel, iterations=9)  # Previous values: 4 | 8
+            blackImage = cv2.erode(blackImage, kernel, iterations=9)  # Previous values: 4 | 8"""
 
             greenImage = cv2.erode(greenImage, kernel, iterations=1)
             greenImage = cv2.dilate(greenImage, kernel, iterations=11)
@@ -687,7 +868,7 @@ def lineCamLoop():
 
 
             # -- SILVER Line --
-            if do_inference_counter >= do_inference_limit:
+            """if do_inference_counter >= do_inference_limit:
                 results = modelSilverLine.predict(raw_capture, imgsz=128, conf=0.4, workers=4, verbose=False)
                 result = results[0].numpy()
 
@@ -700,8 +881,8 @@ def lineCamLoop():
                 cv2.circle(cv2_img, (10, camera_y - 10), 5, (255, 255, 255), -1, cv2.LINE_AA)
                 objective.value = "zone"
                 zoneStatus.value = "begin"
-
-
+            """
+            
             # -- INTERSECTIONS -- Deal with intersections
             intersectionDetector()
 
@@ -716,8 +897,8 @@ def lineCamLoop():
             contoursBlack, _ = cv2.findContours(blackImage, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
             # Calculate Black Line (cropped and not) + Points of Interest
             blackLine, blackLineCrop = getLineAndCrop(contoursBlack)
-            poiCropped, poi, isCrop, maxBlackTop, bottomPoint = calculatePointsOfInterest(blackLine, blackLineCrop, lastBottomPoint_x, lastLinePoint)
-            lineAngle2, finalPoi, bottomPoint = interpretPOI(poiCropped, poi, isCrop, maxBlackTop, bottomPoint, lastLineAngle, turnDirection.value, lastLinePoint, blackLine, blackLineCrop)
+            poiCropped, poi, isCrop, maxBlackTop, bottomPoint = calculatePointsOfInterest(blackLine, blackLineCrop, lastBottomPoint_x, lastLinePoint[0])
+            lineAngle2, finalPoi, bottomPoint = interpretPOI(poiCropped, poi, isCrop, maxBlackTop, bottomPoint, turnDirection.value, lastLinePoint)
             lineCenterX.value = finalPoi[0]
             isCropped.value = isCrop
 
@@ -739,68 +920,110 @@ def lineCamLoop():
 
             lastBottomPoint_x = bottomPoint[0]
             lastLineAngle = lineAngle2
-            lastLinePoint = finalPoi[0]
-            
+            lastLinePoint = finalPoi
 
-            # Show cv2_imgs
-            cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_hsv.jpg", hsvImage)
-            cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_green.jpg", greenImage)
-            cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_black.jpg", blackImage)
-            cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_red.jpg", redImage)
 
             obstacleController()
 
-            savecv2_img("Frames", cv2_img)
+            #savecv2_img("VictimsDataSet", cv2_img)
             
 
         elif objective.value == "zone":
-            results = modelVictim.predict(cv2_img, imgsz=(512, 224), conf=0.3, iou=0.2, agnostic_nms=True, workers=4, verbose=False)  # verbose=True to enable debug info
+            # Color Processing
+            hsvImage = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2HSV)
+            greenImage = cv2.inRange(hsvImage, evacZoneGreenMin, evacZoneGreenMax)
+            redImage = cv2.inRange(hsvImage, evacZoneRedMin_1, evacZoneRedMax_1) + cv2.inRange(hsvImage, evacZoneRedMin_2, evacZoneRedMax_2)
+            
+            # Black Processing
+            grayImage = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
+            _, blackImage = cv2.threshold(grayImage, blackThreshold, 255, cv2.THRESH_BINARY_INV)
+            
+            blackImage = ignoreHighFOVCorners(blackImage)
 
-            result = results[0].numpy()
+            if zoneStatus.value in ["begin", "entry", "findVictims", "goToBall"]:
+                img_rgb = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
+                results = modelVictim.predict(img_rgb, imgsz=448, conf=0.3, iou=0.2, agnostic_nms=True, workers=4, verbose=False)  # verbose=True to enable debug info
+                #results = modelVictim.predict(img_rgb, save=True, save_txt=True, imgsz=448, conf=0.3, iou=0.2, agnostic_nms=True, workers=4, verbose=False)
+                
+                result = results[0].numpy()
 
-            #print(f"Results: {results} {result}")
+                boxes = []
+                for box in result.boxes:
+                    x1, y1, x2, y2 = box.xyxy[0].astype(int)
+                    class_id = box.cls[0].astype(int)
+                    name = "black ball" if class_id == 0 else "silver ball" if class_id == 1 else "unknown"
+                    #name = result.names[class_id]
+                    confidence = box.conf[0].astype(float)
 
-            boxes = []
-            for box in result.boxes:
-                x1, y1, x2, y2 = box.xyxy[0].astype(int)
-                class_id = box.cls[0].astype(int)
-                name = result.names[class_id]
-                confidence = box.conf[0].astype(float)
+                    ballConfidence.value = confidence
 
-                width = x2 - x1
-                height = y2 - y1
-                area = width * height
-                distance = (x1 + width // 2) - (camera_x // 2)
-                boxes.append([area, distance, name, width])
+                    width = x2 - x1
+                    height = y2 - y1
+                    area = width * height
+                    distance = (x1 + x2) // 2
 
-                color = colors(class_id, True)
-                cv2.rectangle(cv2_img, (x1, y1), (x2, y2), color, 2)
-                cv2.putText(cv2_img, f"{name}: {confidence:.2f}", (x1, y1 - 5), cv2.FONT_HERSHEY_DUPLEX, 0.5, color, 1, cv2.LINE_AA)
+                    """if width >= 400: # Precarius attempt at ignoring random silver balls
+                        continue"""
 
-            #print(f"boxes {len(boxes)} {boxes}")
-            if len(boxes) > 0:
-                best_box = max(boxes, key=lambda x: x[0])
-                if last_best_box is not None:
-                    best_box = min(boxes, key=lambda x: abs(x[1] - last_best_box[1]))
+                    boxes.append([area, distance, name, width, y2, class_id])
 
-                last_best_box = best_box
-                ballDistance.value = best_box[1]
-                ballType.value = str.lower(str(best_box[2]))
-                ballWidth.value = best_box[3]
-                print(f"BALLL FOUND: {ballDistance.value} {ballType.value} {ballWidth.value}")
-            else:
-                last_best_box = None
-                ballDistance.value = 0
-                ballType.value = "none"
-                ballWidth.value = -1
+                    color = colors(class_id, True)
+                    cv2.rectangle(cv2_img, (x1, y1), (x2, y2), color, 2)
+                    cv2.putText(cv2_img, f"{name}: {confidence:.2f}", (x1, y1 - 5), cv2.FONT_HERSHEY_DUPLEX, 0.5, color, 1, cv2.LINE_AA)
+
+                #print(f"boxes {len(boxes)} {boxes}")
+                if len(boxes) > 0:
+                    best_box = max(boxes, key=lambda x: x[0])
+                    if last_best_box is not None:
+                        best_box = min(boxes, key=lambda x: abs(x[1] - last_best_box[1]))
+
+                    last_best_box = best_box
+
+                    # Update arrays with the current values and store the timestamped data
+                    ballCenterXArray = addNewTimeValue(ballCenterXArray, best_box[1])
+                    ballBottomYArray = addNewTimeValue(ballBottomYArray, best_box[4])
+                    ballWidthArray = addNewTimeValue(ballWidthArray, best_box[3])
+                    ballTypeArray = addNewTimeValue(ballTypeArray, best_box[5])
+                    ballExistsArray = addNewTimeValue(ballExistsArray, 1)
+
+    
+                else:
+                    ballCenterXArray = addNewTimeValue(ballCenterXArray, camera_x // 2)
+                    ballBottomYArray = addNewTimeValue(ballBottomYArray, camera_y // 2)
+                    ballWidthArray = addNewTimeValue(ballWidthArray, 0)
+                    ballTypeArray = addNewTimeValue(ballTypeArray, 0.5)
+                    ballExistsArray = addNewTimeValue(ballExistsArray, 0)
+
+
+                ballCenterX.value = calculateAverageArray(ballCenterXArray, 0.15)
+                ballBottomY.value = calculateAverageArray(ballBottomYArray, 0.25)
+                ballWidth.value = calculateAverageArray(ballWidthArray, 0.25)
+                ballType.value = "black ball" if calculateAverageArray(ballTypeArray, 0.45) < 0.5 else "silver ball" # Maybe needs rechecking...
+                ballExists.value = calculateAverageArray(ballExistsArray, 0.25) >= 0.5 # [0.5, 1.0] = Ball Exist True [0.0, 0.5[ = False
+
+
+            elif zoneStatus.value == "depositGreen":
+                contoursGreen = getGreenContours(greenImage)
+                updateCornerDetection(contoursGreen, (0, 0, 255))
+
+            elif zoneStatus.value == "depositRed":
+                contoursRed = getRedContours(redImage)
+                updateCornerDetection(contoursRed, (0, 255, 0))
 
 
         cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_cv2.jpg", cv2_img)
-
+        cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_hsv.jpg", hsvImage)
+        cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_green.jpg", greenImage)
+        cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_black.jpg", blackImage)
+        cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_red.jpg", redImage)
 
         while (time.perf_counter() <= t1):
             time.sleep(0.0005)
 
-        printDebug(f"\t\t\t\t\t\t\t\tLine Cam Loop Time: {t0} | {t1} | {time.perf_counter()}", config.DEBUG)
+        
+        printDebug(f"\t\t\t\t\t\t\t\tLine Cam Loop Time: {t0} | {t1} | {time.perf_counter()}", DEBUG)
         t0 = t1
-            
+
+    print(f"Shutting Down Line Cam Loop")
+    if not cameraDebugMode: 
+        camera.stop()

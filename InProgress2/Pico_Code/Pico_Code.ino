@@ -60,7 +60,7 @@ bool ledState = true;
 // --------------------------- Time Vars ---------------------------
 unsigned long t0;  // control sampling rate (period ini)
 unsigned long t1;  // control sampling rate (period end)
-long timeInterval = 10;  // 10ms per loop = 100Hz
+long timeInterval = 5;  // 10ms per loop = 100Hz
 
 
 
@@ -110,6 +110,11 @@ void loop() {
 
   // Read Serial Port
   message = readSerial(); 
+
+  if (message != "") {
+    Serial.print("Pico Received: ");
+    Serial.println(message);
+  }
 
   // Act According Message:
   if (message.startsWith("M(") && message.endsWith(")")) { ControlMotor(message); }  // Motor Command | M(x,x)
@@ -288,9 +293,9 @@ void servoFreeControl(String input) {
 
     // Validate the servo angle
     if ( situationStr == "F") {
-      Serial.print("Set servo ");
-      Serial.print(servoId);
-      Serial.println(" to Free Mode");
+      //Serial.print("Set servo ");
+      //Serial.print(servoId);
+      //Serial.println(" to Free Mode");
 
       if (servoId < 0) { Grip.freeAllServos(); } // -1
       else if (servoId >= 0 && servoId <= 3) { Grip.freeXServo(servoId); } // Inside ArmGrip Class

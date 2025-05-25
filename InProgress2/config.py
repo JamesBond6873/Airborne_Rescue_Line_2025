@@ -3,8 +3,14 @@
 print("Robot Configurations: \t \t OK")
 
 # Is it DEBUG?
+computerOnlyDebug = True # True for computer only, False for robot
+gamepadLoopRun = True # False for score runs
 DEBUG = False
 softDEBUG = True
+serialSoftDEBUG = False
+LOPOverride = False # If True, LOP state will be updated virtually
+LOPVirtualState = True
+MotorOverride = False # If True, the robot will not move
 
 # Serial Port Vars
 SERIAL_PORT = '/dev/ttyACM0'
@@ -17,24 +23,27 @@ buzzerState = False
 
 # Time Delays
 lineDelayMS = 25 # Frame Rate = 40 FPS
-controlDelayMS = 20 # 50 Hz
-
+controlDelayMS = 25 # 40 Hz
+serialDelayMS = 10 # 100 Hz
 intersectionMaxTime = 1.000 #s
 
 # Color Configs
-black_min = [0, 0, 0] # 82 83 84
-black_max = [255, 255, 130] # 133 133 135
-#black_min = 0
-#black_max = 80
-
+blackThreshold = 55
 #green_min = [50, 95, 40]    # 58, 95, 39 Night | 126, 94, 145 Day
 #green_max = [100, 255, 255] # 98, 255, 255 Night | 155, 130, 180 Day
-green_min = [40, 75, 35] # 50, 95, 40
-green_max = [90, 255, 145] # 100, 255, 255
+green_min = [50, 120, 70] # 50, 95, 40 # 40, 75, 35
+green_max = [100,255,200] # 100, 255, 255 # 90, 255, 145
 red_min_1 = [0, 100, 90]
 red_max_1 = [10, 255, 255]
 red_min_2 = [170, 100, 100]
 red_max_2 = [180, 255, 255]
+
+evacZoneGreenMin = [15, 100, 15]
+evacZoneGreenMax = [90, 200, 105]
+evacZoneRedMin_1 = [0, 100, 90]
+evacZoneRedMax_1 = [10, 255, 255]
+evacZoneRedMin_2 = [170, 100, 100]
+evacZoneRedMax_2 = [180, 255, 255]
 
 # Constants for speed factors and motor default values
 delayTimeMS = 10
@@ -56,7 +65,7 @@ defaultSpeed = 1850
 
 # Motor Vars
 speedFactor = 0
-KP = 1.50
-KD = 2.00
+KP = 1.70 #1.50
+KD = 2.05 #2.05
 KI = 0
 KP_THETA = 250 # 407 = 1280/3.14159
