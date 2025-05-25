@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Live Robot Data</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 1.5rem;
+      background-color: #f8f9fa;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 1.0rem;
+      font-size: 3rem;
+    }
+
+    .section {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 0.5rem;
+      background-color: #ffffff;
+    }
+
+    .section h2 {
+      grid-column: span 5;
+      margin-bottom: 1.0rem;
+      font-size: 1.5rem;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: row; /* OR just remove this line */
+      justify-content: space-between; /* optional: spreads label & value */
+      align-items: center;
+      font-size: 0.9rem;
+      background-color: #f0f0f0;
+      padding: 0.5rem;
+      border-radius: 0.5rem;
+    }
+
+    .label {
+      font-weight: bold;
+      margin-bottom: 0.2rem;
+    }
+
+    .value {
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <h1>Live Robot Data</h1>
+
+  <div class="section">
+    <h2>General Info</h2>
+    <div class="field"><span class="label">Timestamp:</span><span class="value" id="timestamp"></span></div>
+    <div class="field"><span class="label">Terminate:</span><span class="value" id="terminate"></span></div>
+    <div class="field"><span class="label">Run Time:</span><span class="value" id="runtime"></span></div>
+    <div class="field"><span class="label">Objective:</span><span class="value" id="objective"></span></div>
+    <div class="field"><span class="label">Data 1:</span><span class="value">-!-</span></div>
+    <div class="field"><span class="label">LOP State:</span><span class="value" id="lopState"></span></div>
+    <div class="field"><span class="label">LOP Override:</span><span class="value" id="lopOverride"></span></div>
+    <div class="field"><span class="label">LOP Counter:</span><span class="value" id="lopCounter"></span></div>
+    <div class="field"><span class="label">Motor Override:</span><span class="value" id="motorOverride"></span></div>
+    <div class="field"><span class="label">Data 2:</span><span class="value">-!-</span></div>
+    <div class="field"><span class="label">Left Motors:</span><span class="value" id="leftMotors"></span></div>
+    <div class="field"><span class="label">Right Motors:</span><span class="value" id="rightMotors"></span></div>
+  </div>
+
+  <div class="section">
+    <h2>📏 Line Following</h2>
+    <div class="field"><span class="label">Data 1:</span><span class="value">---</span></div>
+    <div class="field"><span class="label">Data 2:</span><span class="value">---</span></div>
+    <div class="field"><span class="label">Data 3:</span><span class="value">---</span></div>
+    <div class="field"><span class="label">Data 4:</span><span class="value">---</span></div>
+    <div class="field"><span class="label">Data 5:</span><span class="value">---</span></div>
+  </div>
+
+  <div class="section">
+    <h2>🧯 Evacuation Zone</h2>
+    <div class="field"><span class="label">Evacuation Zone Time:</span><span class="value" id="evacTime"></span></div>
+    <div class="field"><span class="label">Data 2:</span><span class="value">---</span></div>
+    <div class="field"><span class="label">Data 3:</span><span class="value">---</span></div>
+    <div class="field"><span class="label">Data 4:</span><span class="value">---</span></div>
+    <div class="field"><span class="label">Data 5:</span><span class="value">---</span></div>
+  </div>
+
+  <script>
+    const ws = new WebSocket("ws://192.168.1.177:8000");
+
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+
+        const ids = [
+            "timestamp",      // data[0]
+            "terminate",      // data[1]
+            "objective",      // data[2]
+            "runtime",        // data[3]
+            "evacTime",       // data[4]
+            "lopState",       // data[5]
+            "lopOverride",    // data[6]
+            "lopCounter",     // data[7]
+            "motorOverride",  // data[8]
+            "leftMotors",     // data[9]
+            "rightMotors"     // data[10]
+        ];
+
+        const set = (id, value) => {
+            const el = document.getElementById(id);
+            if (!el) return; // skip if element doesn't exist
+            el.textContent = value;
+
+            if (value === "True") {
+            el.classList.add("true");
+            el.classList.remove("false");
+            } else if (value === "False") {
+            el.classList.add("false");
+            el.classList.remove("true");
+            } else {
+            el.classList.remove("true", "false");
+            }
+        };
+
+        ids.forEach((id, index) => set(id, data[index]));
+    };
+  </script>
+</body>
+</html>
