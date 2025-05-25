@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Live Robot Data</title>
+  <title>Airborne Rescue Line Robot Data</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -58,57 +58,212 @@
   <h1>Live Robot Data</h1>
 
   <div class="section">
-    <h2>General Info</h2>
+    <h2>General Info </h2> 
     <div class="field"><span class="label">Timestamp:</span><span class="value" id="timestamp"></span></div>
     <div class="field"><span class="label">Terminate:</span><span class="value" id="terminate"></span></div>
     <div class="field"><span class="label">Run Time:</span><span class="value" id="runtime"></span></div>
     <div class="field"><span class="label">Objective:</span><span class="value" id="objective"></span></div>
-    <div class="field"><span class="label">Data 1:</span><span class="value">-!-</span></div>
+    <div class="field"><span class="label">Data 1:</span><span class="value" id="Data1G"></span></div>
     <div class="field"><span class="label">LOP State:</span><span class="value" id="lopState"></span></div>
     <div class="field"><span class="label">LOP Override:</span><span class="value" id="lopOverride"></span></div>
     <div class="field"><span class="label">LOP Counter:</span><span class="value" id="lopCounter"></span></div>
     <div class="field"><span class="label">Motor Override:</span><span class="value" id="motorOverride"></span></div>
-    <div class="field"><span class="label">Data 2:</span><span class="value">-!-</span></div>
+    <div class="field"><span class="label">Data 2:</span><span class="value" id="Data2G"></span></div>
     <div class="field"><span class="label">Left Motors:</span><span class="value" id="leftMotors"></span></div>
     <div class="field"><span class="label">Right Motors:</span><span class="value" id="rightMotors"></span></div>
-  </div>
+    <div class="field"><span class="label">Data 3:</span><span class="value" id="Data3G"></span></div>
+    <div class="field"><span class="label">Data 4:</span><span class="value" id="Data4G"></span></div>
+    <div class="field"><span class="label">Data 5:</span><span class="value" id="Data5G"></span></div>
+    <div class="field"><span class="label">Data 6:</span><span class="value" id="Data6G"></span></div>
+    <div class="field"><span class="label">Data 7:</span><span class="value" id="Data7G"></span></div>
+    <div class="field"><span class="label">Data 8:</span><span class="value" id="Data8G"></span></div>
+    <div class="field"><span class="label">Data 9:</span><span class="value" id="Data9G"></span></div>
+    <div class="field"><span class="label">Data 10:</span><span class="value" id="Data10G"></span></div>
+  </div> 
 
   <div class="section">
     <h2>📏 Line Following</h2>
-    <div class="field"><span class="label">Data 1:</span><span class="value">---</span></div>
-    <div class="field"><span class="label">Data 2:</span><span class="value">---</span></div>
-    <div class="field"><span class="label">Data 3:</span><span class="value">---</span></div>
-    <div class="field"><span class="label">Data 4:</span><span class="value">---</span></div>
-    <div class="field"><span class="label">Data 5:</span><span class="value">---</span></div>
+    <div class="field"><span class="label">Data 1:</span><span class="value" id="Data1L"></span></div>
+    <div class="field"><span class="label">Data 2:</span><span class="value" id="Data2L"></span></div>
+    <div class="field"><span class="label">Data 3:</span><span class="value" id="Data3L"></span></div>
+    <div class="field"><span class="label">Data 4:</span><span class="value" id="Data4L"></span></div>
+    <div class="field"><span class="label">Data 5:</span><span class="value" id="Data5L"></span></div>
+    <div class="field"><span class="label">Data 6:</span><span class="value" id="Data6L"></span></div>
+    <div class="field"><span class="label">Data 7:</span><span class="value" id="Data7L"></span></div>
+    <div class="field"><span class="label">Data 8:</span><span class="value" id="Data8L"></span></div>
+    <div class="field"><span class="label">Data 9:</span><span class="value" id="Data9L"></span></div>
+    <div class="field"><span class="label">Data 10:</span><span class="value" id="Data10L"></span></div>
   </div>
 
   <div class="section">
     <h2>🧯 Evacuation Zone</h2>
     <div class="field"><span class="label">Evacuation Zone Time:</span><span class="value" id="evacTime"></span></div>
-    <div class="field"><span class="label">Data 2:</span><span class="value">---</span></div>
-    <div class="field"><span class="label">Data 3:</span><span class="value">---</span></div>
-    <div class="field"><span class="label">Data 4:</span><span class="value">---</span></div>
-    <div class="field"><span class="label">Data 5:</span><span class="value">---</span></div>
+    <div class="field"><span class="label">Data 2:</span><span class="value" id="Data2E"></span></div>
+    <div class="field"><span class="label">Data 3:</span><span class="value" id="Data3E"></span></div>
+    <div class="field"><span class="label">Data 4:</span><span class="value" id="Data4E"></span></div>
+    <div class="field"><span class="label">Data 5:</span><span class="value" id="Data5E"></span></div>
+    <div class="field"><span class="label">Data 6:</span><span class="value" id="Data6E"></span></div>
+    <div class="field"><span class="label">Data 7:</span><span class="value" id="Data7E"></span></div>
+    <div class="field"><span class="label">Data 8:</span><span class="value" id="Data8E"></span></div>
+    <div class="field"><span class="label">Data 9:</span><span class="value" id="Data9E"></span></div>
+    <div class="field"><span class="label">Data 10:</span><span class="value" id="Data10E"></span></div>
+  </div>
+
+  <!-- Toggle Buttons -->
+  <button class="toggle-btn" data-name="MotorOverride" data-output-on="MotorOverride 1" data-output-off="MotorOverride 0" data-watch="motorOverride">Motor Override</button>
+  <button class="toggle-btn" data-name="LOPOverride" data-output-on="LOPOverride 1" data-output-off="LOPOverride 0" data-watch="lopOverride">LOP Override</button>
+  <button class="toggle-btn" data-name="LOPState" data-output-on="LOPState 1" data-output-off="LOPState 0" data-watch="motorOverride">LOP State</button>
+
+  <!-- Selector Group 1 -->
+  <button class="selector-btn" data-name="ObjectiveFL" data-group="group1" data-output="Objective FL">Line Following</button>
+  <button class="selector-btn" data-name="ObjectiveEZ" data-group="group1" data-output="Objective EZ">Evacuation Zone</button>
+
+  <!-- Selector Group 2 -->
+  <button class="selector-btn" data-name="ZoneStatusNotStarted" data-group="group2" data-output="ZoneStatus notStarted">Not Started</button>
+  <button class="selector-btn" data-name="ZoneStatusBegin" data-group="group2" data-output="ZoneStatus begin">Begin</button>
+  <button class="selector-btn" data-name="ZoneStatusEntry" data-group="group2" data-output="ZoneStatus entry">Entry</button>
+  <button class="selector-btn" data-name="ZoneStatusFindVictims" data-group="group2" data-output="ZoneStatus findVictims">Find Victims</button>
+  <button class="selector-btn" data-name="ZoneStatusGoToBall" data-group="group2" data-output="ZoneStatus goToBall">Go To Ball</button>
+  <button class="selector-btn" data-name="ZoneStatusDepositGreen" data-group="group2" data-output="ZoneStatus depositGreen">Deposit Green</button>
+  <button class="selector-btn" data-name="ZoneStatusDepositRed" data-group="group2" data-output="ZoneStatus depositRed">Deposit Red</button>
+  <button class="selector-btn" data-name="ZoneStatusExit" data-group="group2" data-output="ZoneStatus exit">Exit</button>
+
+  <button class="quick-btn" data-name="DoSomethingQuick" data-output="ACTION_1">Do Something</button>
+  <div class="section">
+    <h2>🖥️ Console</h2>
+    <div style="grid-column: span 5; display: flex; flex-direction: column;">
+      <div id="console-output" style="height: 200px; overflow-y: auto; background: #000; color: #0f0; font-family: monospace; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem;"></div>
+      <div style="display: flex; gap: 0.5rem;">
+        <input id="console-input" type="text" placeholder="Type a command..." style="flex: 1; padding: 0.5rem; border-radius: 0.5rem; border: 1px solid #ccc;" />
+        <button onclick="sendCommand()" style="padding: 0.5rem 1rem; border: none; background-color: #007bff; color: white; border-radius: 0.5rem; cursor: pointer;">Send</button>
+      </div>
+    </div>
   </div>
 
   <script>
     const ws = new WebSocket("ws://192.168.1.177:8000");
 
+    const consoleOutput = document.getElementById("console-output");
+    const consoleInput = document.getElementById("console-input");
+
+    document.querySelectorAll(".toggle-btn").forEach((btn) => {
+      btn.toggleState = 0;
+
+      btn.addEventListener("click", () => {
+        btn.toggleState = btn.toggleState ? 0 : 1;
+
+        const outputOn = btn.getAttribute("data-output-on");
+        const outputOff = btn.getAttribute("data-output-off");
+        const message = btn.toggleState ? outputOn : outputOff;
+
+        ws.send(message); // now sending correct string, not just 1/0
+
+        btn.style.backgroundColor = btn.toggleState ? "lightgreen" : "";
+      });
+    });
+
+
+    document.querySelectorAll(".selector-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const group = btn.getAttribute("data-group");
+        const name = btn.getAttribute("data-name");
+        const output = btn.getAttribute("data-output") || name;
+
+        // Deselect all in same group
+        document.querySelectorAll(`.selector-btn[data-group='${group}']`).forEach((b) => {
+          b.classList.remove("selected");
+          b.style.backgroundColor = "";
+        });
+
+        // Select this one
+        btn.style.backgroundColor = "lightgreen";
+
+        // Send to RPi
+        ws.send(`${output}`);
+      });
+    });
+
+
+    document.querySelectorAll(".quick-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const name = btn.getAttribute("data-name");
+        const output = btn.getAttribute("data-output") || "1";
+        ws.send(`${name} ${output}`);
+        btn.style.backgroundColor = "lightcoral"; // flash or show briefly
+        setTimeout(() => {
+          btn.style.backgroundColor = "";
+        }, 150); // Optional visual feedback
+      });
+    });
+
+
+    function sendCommand() {
+      const command = consoleInput.value.trim();
+      if (command !== "") {
+        ws.send(command);
+        appendConsoleMessage(">> " + command);
+        consoleInput.value = "";
+      }
+    }
+
+
+    function appendConsoleMessage(message) {
+      const line = document.createElement("div");
+      line.textContent = message;
+      consoleOutput.appendChild(line);
+      consoleOutput.scrollTop = consoleOutput.scrollHeight;
+    }
+
+
     ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
 
+        if (data.type === "console") {
+          appendConsoleMessage(data.content);
+          return;
+        }
+
         const ids = [
-            "timestamp",      // data[0]
-            "terminate",      // data[1]
-            "objective",      // data[2]
-            "runtime",        // data[3]
-            "evacTime",       // data[4]
-            "lopState",       // data[5]
-            "lopOverride",    // data[6]
-            "lopCounter",     // data[7]
-            "motorOverride",  // data[8]
-            "leftMotors",     // data[9]
-            "rightMotors"     // data[10]
+            "timestamp",      
+            "terminate",      
+            "runtime",      
+            "objective",        
+            "Data1G",         // --
+            "lopState",       
+            "lopOverride",    
+            "lopCounter",     
+            "motorOverride",  
+            "Data2G",         // --
+            "leftMotors",     
+            "rightMotors",    
+            "Data3G",
+            "Data4G",
+            "Data5G",         // --
+            "Data6G",
+            "Data7G",
+            "Data8G",
+            "Data9G",
+            "Data10G",        // --
+            "Data1L",
+            "Data2L",
+            "Data3L",
+            "Data4L",
+            "Data5L",         // --
+            "Data6L",
+            "Data7L",
+            "Data8L",
+            "Data9L",
+            "Data10L",        // --
+            "evacTime",       
+            "Data2E",
+            "Data3E",
+            "Data4E",
+            "Data5E",         // --
+            "Data6E",
+            "Data7E",
+            "Data8E",
+            "Data9E",
+            "Data10E",        // --
         ];
 
         const set = (id, value) => {
@@ -129,6 +284,9 @@
 
         ids.forEach((id, index) => set(id, data[index]));
     };
+
+
   </script>
 </body>
 </html>
+
