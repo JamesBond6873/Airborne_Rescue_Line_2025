@@ -2,33 +2,83 @@ import asyncio
 import websockets
 import json
 import time
+from utils import *
 from mp_manager import *
 
 # Define global set to hold connections
 connections = set()
 
 async def handler(websocket):
-    print("Client connected")
+    printConsoles("Client connected")
     connections.add(websocket)
-    try:
+
+
+    async def receive_commands():
+        async for message in websocket:
+            printConsoles(f"Command received: {message}")
+            CLIWebSocketCommand.value = message  # Store the received command
+            # Optionally: parse or act on the command here
+            # Example:
+            # if message == "stop":
+            #     terminate.value = True
+
+    async def send_status():
         while not terminate.value:
             payload = [
                 f"{round(time.perf_counter(), 3)} s",
                 "True" if terminate.value else "False",
-                f"{objective.value}",
                 f"{round(time.perf_counter() - runStartTime.value, 0)} s",
-                f"{'Not Started' if zoneStartTime.value == -1 else 'Finished' if zoneStatus.value == 'finished' else (round(time.perf_counter() - zoneStartTime.value, 0))}",
+                f"{objective.value}",
+                f"",
                 f"{bool(LOPstate.value)}",
                 f"{bool(lopOverride.value)}",
                 f"{'Perfect Run' if lopCounter.value == 0 else lopCounter.value}",
                 f"{bool(motorOverride.value)}",
                 f"",
-                f"",
                 f"{m1MP.value}",
-                f"{m2MP.value}"
+                f"{m2MP.value}",
+                f"",
+                f"",
+                f"",
+                f"",
+                f"",
+                f"",
+                f"",
+                f"",
+                f"-!-",
+                f"",
+                f"",
+                f"",
+                f"",
+                f"",
+                f"",
+                f"",
+                f"",
+                f"",
+                f"{'Not Started' if zoneStartTime.value == -1 else 'Finished' if zoneStatus.value == 'finished' else (round(time.perf_counter() - zoneStartTime.value, 0))}",
+                f"{dumpedAliveCount.value} Victim(s)",
+                f"{dumpedDeadCount.value} Victim(s)",
+                f"{pickedUpAliveCount.value} Victim(s)",
+                f"{pickedUpDeadCount.value} Victim(s)",
+                f"{zoneStatus.value}",
+                f"{zoneStatusLoopDebug.value}",
+                f"{pickSequenceStatusDebug.value}",
+                f"{pickingVictimDebug.value}",
+                f"",
+                f"",
             ]
+            
             await websocket.send(json.dumps(payload))
-            await asyncio.sleep(0.1)
+
+            while consoleLines:
+                line = consoleLines.pop(0)
+                await websocket.send(json.dumps({ "type": "console", "content": line }))
+
+            await asyncio.sleep(0.01)
+
+
+    try:
+        await asyncio.gather(receive_commands(), send_status())
     except websockets.exceptions.ConnectionClosed:
         print("Client disconnected")
     finally:

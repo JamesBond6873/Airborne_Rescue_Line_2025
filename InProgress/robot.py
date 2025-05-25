@@ -10,7 +10,7 @@ from line_cam import camera_x, camera_y
 from mp_manager import *
 
 
-print("Robot Functions: \t \t OK")
+printConsoles("Robot Functions: \t \t OK")
 
 # Situation Vars:
 #objective = "Follow Line"
@@ -43,66 +43,66 @@ error = errorAcc = lastError = 0
 timer_manager = TimerManager()
 
 # Interpret CLI Commands
-def CLIinterpretCommand():
+def CLIinterpretCommand(mpMessage):
     global MotorOverride, LOPOverride, LOPVirtualState
 
-    message = CLIcommandToExecute.value
+    message = mpMessage.value
 
     if message == "exit": # Exit command
-        print("Exiting...")
+        printConsoles("Exiting...")
         terminate.value = True
         return
     elif message == "list":
-        print("Command List: ")
-        print(f"  - exit")
-        print(f"  - vars")
-        print(f"  - nextImage")
-        """print(f"  - Drop Alive")
-        print(f"  - Drop Dead")
-        print(f"  - Close Ball Storage")
-        print(f"  - Pick Alive")
-        print(f"  - Pick Dead")
-        print(f"  - Camera Evacuation")
-        print(f"  - Camera Line")"""
-        print(f"  - MotorOverride <0 or 1>")
-        print(f"  - LOPOverride <0 or 1>")
-        print(f"  - LOPState <0 or 1>")
-        print(f"  - Objective <FL or EZ>")
-        print(f"  - ZoneStatus <notStarted, begin, entry, findVictims, pickup_ball, deposit_red, deposit_green, exit>")
+        printConsoles("Command List: ")
+        printConsoles(f"  - exit")
+        printConsoles(f"  - vars")
+        printConsoles(f"  - nextImage")
+        """printConsoles(f"  - Drop Alive")
+        printConsoles(f"  - Drop Dead")
+        printConsoles(f"  - Close Ball Storage")
+        printConsoles(f"  - Pick Alive")
+        printConsoles(f"  - Pick Dead")
+        printConsoles(f"  - Camera Evacuation")
+        printConsoles(f"  - Camera Line")"""
+        printConsoles(f"  - MotorOverride <0 or 1>")
+        printConsoles(f"  - LOPOverride <0 or 1>")
+        printConsoles(f"  - LOPState <0 or 1>")
+        printConsoles(f"  - Objective <FL or EZ>")
+        printConsoles(f"  - ZoneStatus <notStarted, begin, entry, findVictims, goToBall, depositRed, depositGreen, exit>")
     elif message == "vars":
-        print(f"  - LOPOverride: {LOPOverride}")
-        print(f"  - LOPVirtualState: {LOPVirtualState}")
-        print(f"  - MotorOverride: {MotorOverride}")
-        print(f"  - Objective: {objective.value}")
-        print(f"  - Zone Status: {zoneStatus.value}")
-        print(f"  - Zone Start Time: {round(zoneStartTime.value, 3)}")
-        print(f"  - Zone Duration: {round(time.perf_counter() - zoneStartTime.value, 3) if zoneStartTime.value != -1 else 'Not Started'}")
-        print(f"  - Picked {pickedUpAliveCount.value} Victim(s) and {pickedUpDeadCount.value} Victims(s)")
-        print(f"  - Rescued {dumpedAliveCount.value} Victim(s) and {dumpedDeadCount.value} Victims(s)")
+        printConsoles(f"  - LOPOverride: {LOPOverride}")
+        printConsoles(f"  - LOPVirtualState: {LOPVirtualState}")
+        printConsoles(f"  - MotorOverride: {MotorOverride}")
+        printConsoles(f"  - Objective: {objective.value}")
+        printConsoles(f"  - Zone Status: {zoneStatus.value}")
+        printConsoles(f"  - Zone Start Time: {round(zoneStartTime.value, 3)}")
+        printConsoles(f"  - Zone Duration: {round(time.perf_counter() - zoneStartTime.value, 3) if zoneStartTime.value != -1 else 'Not Started'}")
+        printConsoles(f"  - Picked {pickedUpAliveCount.value} Victim(s) and {pickedUpDeadCount.value} Victims(s)")
+        printConsoles(f"  - Rescued {dumpedAliveCount.value} Victim(s) and {dumpedDeadCount.value} Victims(s)")
     elif message == "": #Next Image
         printDebug("Next Image", False)
         updateFakeCamImage.value = True
     elif message.startswith("MotorOverride"):
         try:
             MotorOverride = bool(int(message.split()[1]))
-            print(f"Motor Override set to {MotorOverride}")
+            printConsoles(f"Motor Override set to {MotorOverride}")
         except (ValueError, IndexError):
-            print("Invalid motorOverride command. Use 'motorOverride <0 or 1>'")
+            printConsoles("Invalid motorOverride command. Use 'motorOverride <0 or 1>'")
     elif message.startswith("LOPOverride"):
         try:
             LOPOverride = bool(int(message.split()[1]))
-            print(f"LOP Override set to {LOPOverride}")
+            printConsoles(f"LOP Override set to {LOPOverride}")
         except (ValueError, IndexError):
-            print("Invalid LOPOverride command. Use 'LOPOverride <0 or 1>'")
+            printConsoles("Invalid LOPOverride command. Use 'LOPOverride <0 or 1>'")
     elif message.startswith("LOPState"):
         try:
             LOPVirtualState = bool(int(message.split()[1]))
-            print(f"LOP State set to {LOPVirtualState}")
+            printConsoles(f"LOP State set to {LOPVirtualState}")
             if not LOPOverride:
-                print(f"LOP Override is OFF. LOP State will not change anything.")
-                print(f"Run LOPOverride <1> to be able to change LOP State.")
+                printConsoles(f"LOP Override is OFF. LOP State will not change anything.")
+                printConsoles(f"Run LOPOverride <1> to be able to change LOP State.")
         except (ValueError, IndexError):
-            print("Invalid LOPState command. Use 'LOPState <0 or 1>'")
+            printConsoles("Invalid LOPState command. Use 'LOPState <0 or 1>'")
     elif message.startswith("Objective"):
         try:
             _, objectiveCode = message.split(maxsplit=1)
@@ -110,32 +110,35 @@ def CLIinterpretCommand():
 
             if objectiveCode == "FL":
                 objective.value = "follow_line"
-                print("Objective set to FOLLOW LINE.")
+                printConsoles("Objective set to FOLLOW LINE.")
             elif objectiveCode == "EZ":
                 objective.value = "zone"
-                print("Objective set to ZONE.")
+                zoneStatus.value = "begin"
+                printConsoles("Objective set to ZONE.")
             else:
-                print(f"Unknown Objective '{objectiveCode}'. Use 'FL' or 'EZ'.")
+                printConsoles(f"Unknown Objective '{objectiveCode}'. Use 'FL' or 'EZ'.")
         except (ValueError, IndexError):
-            print("Invalid Objective command. Use 'Objective FL' or 'Objective EZ'.")
+            printConsoles("Invalid Objective command. Use 'Objective FL' or 'Objective EZ'.")
     elif message.startswith("ZoneStatus"):
         try:
             _, zoneCode = message.split(maxsplit=1)
-            zoneCode = zoneCode.strip().lower()
+            zoneCode = zoneCode.strip()
 
             allowedZoneStatuses = [
-                "notstarted", "begin", "entry", "findvictims",
+                "notStarted", "begin", "entry", "findVictims",
                 "goToBall", "depositRed", "depositGreen", "exit"
             ]
 
             if zoneCode in allowedZoneStatuses:
                 zoneStatus.value = zoneCode
-                print(f"ZoneStatus set to '{zoneCode}'.")
+                printConsoles(f"ZoneStatus set to '{zoneCode}'.")
             else:
-                print(f"Unknown ZoneStatus '{zoneCode}'. Allowed: {allowedZoneStatuses}")
+                printConsoles(f"Unknown ZoneStatus '{zoneCode}'. Allowed: {allowedZoneStatuses}")
         except (ValueError, IndexError):
-            print("Invalid ZoneStatus command. Example: 'ZoneStatus begin'")
-    CLIcommandToExecute.value = "none" # Reset command to none
+            printConsoles("Invalid ZoneStatus command. Example: 'ZoneStatus begin'")
+    
+    # Reset command to none
+    mpMessage.value = "none"
 
 
 # Command Intrepreter
@@ -143,7 +146,7 @@ def intrepretCommand():
     command = commandToExecute.value
     if command == "none":
         return
-    print(f"Command to Execute: {command}")
+    printConsoles(f"Command to Execute: {command}")
     if command == "Drop Alive": ballRelease("A")
     elif command == "Drop Dead": ballRelease("D")
     elif command == "Close Ball Storage": closeBallStorage()  
@@ -177,7 +180,7 @@ def sendCommandNoConfirmation(command):
     if commandWithoutConfirmation.value == "none":
         commandWithoutConfirmation.value = command
     else:
-        print(f"Check Error: Command with no confirmation pending: {commandWithoutConfirmation.value} at {time.perf_counter()}")
+        printConsoles(f"Check Error: Command with no confirmation pending: {commandWithoutConfirmation.value} at {time.perf_counter()}")
 
 # Pick Victim Function (takes "Alive" or "Dead")
 def pickVictim(type, step=0):
@@ -382,16 +385,16 @@ def decideVictimType():
     elif ballType.value == "black ball":
         pickVictimType = "D"
     else:
-        print(f"Possible Error: Ball Type is {ballType.value} - Not a ball")
+        printConsoles(f"Possible Error: Ball Type is {ballType.value} - Not a ball")
         pickVictimType = "A" # just failsafe for null
 
     alive = ballType.value == "silver ball"
     if not alive and pickedUpDeadCount.value > 0:
         pickVictimType = "A"
-        print(f"Used extra failsafe: Too many Black Balls")
+        printConsoles(f"Used extra failsafe: Too many Black Balls")
     elif alive and pickedUpAliveCount.value > 1:
         pickVictimType = "D"
-        print(f"Used extra failsafe: Too many Silver Balls")
+        printConsoles(f"Used extra failsafe: Too many Silver Balls")
     
     return pickVictimType
 
@@ -618,19 +621,19 @@ def controlLoop():
     while commandWaitingListLength.value != 0 or len(pendingCommandsConfirmation) != 0: 
         time.sleep(0.05)
         sendSerialPendingCommandsConfirmation()
-        #print(f"Waiting for command list to be empty: {commandWaitingListLength.value}")
+        #printConsoles(f"Waiting for command list to be empty: {commandWaitingListLength.value}")
 
 
     resetBallArrays.value = True
     resetEvacZoneArrays.value = True
     time.sleep(5 * lineDelayMS * 0.001) # wait for 5 cam loops to register
 
-    print(f"")
-    print(f"")
-    print(f"-------- Robot.py: All Setup Procedures have finished. --------")
-    print(f"------------------ Robot.py: Starting Loop. ------------------")
-    print(f"")
-    print(f"")
+    printConsoles(f"")
+    printConsoles(f"")
+    printConsoles(f"-------- Robot.py: All Setup Procedures have finished. --------")
+    printConsoles(f"------------------ Robot.py: Starting Loop. ------------------")
+    printConsoles(f"")
+    printConsoles(f"")
 
     counter = 0
     runStartTime.value = time.perf_counter()
@@ -681,7 +684,7 @@ def controlLoop():
                     zoneStatus.value = "findVictims"
             
             elif zoneStatusLoop == "findVictims":
-                #print(f"Here 4-----------------")
+                #printConsoles(f"Here 4-----------------")
                 setManualMotorsSpeeds(1230 if rotateTo == "left" else 1750, 1750 if rotateTo == "left" else 1230)
                 controlMotors()
             
@@ -764,12 +767,13 @@ def controlLoop():
                 pass
                 
 
-        CLIinterpretCommand()
+        CLIinterpretCommand(CLIcommandToExecute)
+        CLIinterpretCommand(CLIWebSocketCommand)
         intrepretCommand()
         sendSerialPendingCommandsConfirmation()
 
         if len(pendingCommandsConfirmation) > 5:
-            print(f"We have {len(pendingCommandsConfirmation)} pending commands: {commandWithConfirmation.value} + {pendingCommandsConfirmation}")     
+            printConsoles(f"We have {len(pendingCommandsConfirmation)} pending commands: {commandWithConfirmation.value} + {pendingCommandsConfirmation}")     
 
         M1info = M1
         M2info = M2
@@ -781,6 +785,10 @@ def controlLoop():
         motorOverride.value = MotorOverride
         m1MP.value = M1info
         m2MP.value = M2info
+        # Evac Zone
+        zoneStatusLoopDebug.value = zoneStatusLoop
+        pickSequenceStatusDebug.value = pickSequenceStatus
+        pickingVictimDebug.value = pickingVictim
 
         if objectiveLoop == "follow_line":
             debugMessage = (
@@ -826,11 +834,11 @@ def controlLoop():
                 #printDebug(f"{debugMessage}", softDEBUG)
                 pass
         
-        #print(f"ballBottom: {int(ballBottomY.value)} {ballBottomY.value >= camera_y * 0.95} ballType {ballType.value} \t")
+        #printConsoles(f"ballBottom: {int(ballBottomY.value)} {ballBottomY.value >= camera_y * 0.95} ballType {ballType.value} \t")
 
 
         while (time.perf_counter() <= t1):
             time.sleep(0.0005)
         t0 = t1
     
-    print(f"Shutting Down Robot Control Loop")
+    printConsoles(f"Shutting Down Robot Control Loop")

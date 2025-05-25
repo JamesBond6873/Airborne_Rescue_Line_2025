@@ -6,6 +6,7 @@ from multiprocessing import Process
 import multiprocessing as mp
 import threading
 
+from utils import printDebug
 from gamepad import gamepadLoop
 from mySerial import serialLoop
 from line_cam import lineCamLoop
@@ -17,12 +18,12 @@ from mp_manager import *
 input_queue = mp.Queue()
 
 def inputThread(queue):
-    print(f"Input Thread started -- Inside Main.py")
+    printDebug(f"Input Thread started -- Inside Main.py", True)
     while True:
         line = sys.stdin.readline()
         if line:
             queue.put(line.strip())
-            #print(f"Input Thread: {line.strip()}")
+            #printDebug(f"Input Thread: {line.strip()}")
             CLIcommandToExecute.value = line.strip()
 
  
@@ -37,7 +38,7 @@ if __name__ == "__main__":
 
     for process in processes:
         process.start()
-        print(process)
+        printDebug(process, True)
         time.sleep(0.5)
 
     threading.Thread(target=inputThread, args=(input_queue,), daemon=True).start()
@@ -47,15 +48,15 @@ if __name__ == "__main__":
             process.join()
 
     except KeyboardInterrupt:
-        print(f"KeyboardInterrupt detected. Terminating processes...")
+        printDebug(f"KeyboardInterrupt detected. Terminating processes...", True)
         for process in processes:
             process.terminate()
             process.join()
-        print(f"Processes terminated.")
+        printDebug(f"Processes terminated.", True)
 
     finally:
-        print(f"")
-        print(f"")
-        print(f"-------- Main.py: All processes have finished. --------")
-        print(f"------------------ Main.py: Exiting. ------------------")
-        print(f"")
+        printDebug(f"", True)
+        printDebug(f"", True)
+        printDebug(f"-------- Main.py: All processes have finished. --------", True)
+        printDebug(f"------------------ Main.py: Exiting. ------------------", True)
+        printDebug(f"", True)
