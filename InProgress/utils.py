@@ -2,7 +2,7 @@
 
 import time
 import numpy as np
-
+from mp_manager import *
 
 print("Utilities: \t \t \t OK")
 
@@ -10,7 +10,12 @@ print("Utilities: \t \t \t OK")
 def printDebug(text, debug):
     if debug:
         print(text)
+        consoleLines.append(str(text))
 
+
+def printConsoles(text):
+    print(text)
+    consoleLines.append(str(text))
 
 class Timer:
     def __init__(self):

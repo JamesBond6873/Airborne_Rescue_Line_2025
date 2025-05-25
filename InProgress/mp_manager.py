@@ -19,7 +19,10 @@ commandWaitingListLength = manager.Value("i", -1)
 gamepadM1 = manager.Value("i", 1520)
 gamepadM2 = manager.Value("i", 1520)
 commandToExecute = manager.Value("i", "none") #"none",""
-CLIcommandToExecute = manager.Value("i", "none") 
+CLIcommandToExecute = manager.Value("i", "none")
+CLIWebSocketCommand = manager.Value("i", "none")
+consoleLines = manager.list()
+consoleLines.append("Sensor timeout!")
 
 lineCenterX = manager.Value("i", 600)
 lineAngle = manager.Value("i", 0.)
@@ -67,6 +70,9 @@ lopCounter = manager.Value("i", 0)
 motorOverride = manager.Value("i", 0)
 m1MP = manager.Value("i", 1500)
 m2MP = manager.Value("i", 1500)
+zoneStatusLoopDebug = manager.Value("i", "notStarted")
+pickSequenceStatusDebug = manager.Value("i", "goingToBall")
+pickingVictimDebug = manager.Value("i", False)
 
 # ARRAY FUNCTIONS
 def createEmptyTimeArray(length: int = 240):
