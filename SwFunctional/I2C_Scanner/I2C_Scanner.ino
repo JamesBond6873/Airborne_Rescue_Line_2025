@@ -12,14 +12,14 @@
 // Set I2C bus to use: Wire, Wire1, etc.
 //#define WIRE Wire
 
-///*
+/*
 //Only functional for dedfault I2C 0 Pins, which are GPIO 4,5
 #define WIRE Wire
-//*/
-
-/* Create a custom TwoWire instance using I2C1 -- Works with all pins
-TwoWire WIRE(i2c1, 6, 7); // i2c1 peripheral, SDA = GPIO6, SCL = GPIO7
 */
+
+// Create a custom TwoWire instance using I2C1 -- Works with all pins
+TwoWire WIRE(i2c1, 6, 7); // i2c1 peripheral, SDA = GPIO6, SCL = GPIO7
+
 
 void setup() {
   WIRE.begin();

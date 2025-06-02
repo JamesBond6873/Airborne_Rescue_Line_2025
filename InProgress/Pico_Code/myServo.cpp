@@ -25,8 +25,12 @@ void myServo::lineFollowing() {
   else { Serial.println("Error 404 - Not Camera Servo"); }
 }
 
-void myServo::freeServo() {
+/*void myServo::freeServo() {
   _pwm.setPWM(_channel, 0, 4096);
+}*/
+
+void myServo::freeServo() {
+  _pwm.setPWM(_channel, 0, 0); // Always low
 }
 
 void myServo::EvacuationZone() {
