@@ -3,6 +3,8 @@
 #include "Motor.h"
 #include <Adafruit_PWMServoDriver.h>
 #include "ArmGrip.h"
+#include <Wire.h>
+#include <ICM_20948.h>
 
 // --------------------------- Motor Vars ---------------------------
 
@@ -49,6 +51,15 @@ myServo camServo(camServoChannel, pwm, true, false);
 myServo ballStorageServo(ballStorageServoChannel, pwm, false, true);
 
 
+// --------------------------- IMU Vars ---------------------------
+const int IMUsdaPin = 20;
+const int IMUsclPin = 21;
+
+// Create ICM-20948 object
+//TwoWire customWire(i2c0, 20, 21);
+ICM_20948_I2C myIMU;
+
+
 // --------------------------- LED Vars ---------------------------
 unsigned long ledT0;  // control sampling rate (period ini)
 unsigned long ledT1;  // control sampling rate (period end)
@@ -76,6 +87,17 @@ void setup() {
   for (int i = 0; i < 4; i++) {
     motors[i].getReady();
   }*/
+  // Get the IMU Ready
+  // Manually assign I2C to GPIO 20 (SDA) and GPIO 21 (SCL)
+  Wire.begin();
+
+  if (myIMU.begin(Wire,1) != ICM_20948_Stat_Ok) {
+    Serial.println("IMU initialization failed. Check connections.");
+    while (1) {Serial.println("IMU initialization failed. Check connections.");}
+  } else {
+    Serial.println("IMU initialized successfully.");
+  }
+  delay(1000);
 
   // Get The Servos Ready - Correct Position
   Grip.begin();
@@ -110,6 +132,34 @@ void loop() {
 
   // Read Serial Port
   message = readSerial(); 
+
+  // Update Sensor Data
+  if (myIMU.dataReady()) {
+    myIMU.getAGMT(); // Read all data: Accel, Gyro, Mag, Temp
+
+    Serial.print("Accel (mg): ");
+    Serial.print(myIMU.accX(), 2);
+    Serial.print(", ");
+    Serial.print(myIMU.accY(), 2);
+    Serial.print(", ");
+    Serial.print(myIMU.accZ(), 2);
+    Serial.print(" | Gyro (dps): ");
+    Serial.print(myIMU.gyrX(), 2);
+    Serial.print(", ");
+    Serial.print(myIMU.gyrY(), 2);
+    Serial.print(", ");
+    Serial.print(myIMU.gyrZ(), 2);
+    Serial.print(" | Mag (uT): ");
+    Serial.print(myIMU.magX(), 2);
+    Serial.print(", ");
+    Serial.print(myIMU.magY(), 2);
+    Serial.print(", ");
+    Serial.print(myIMU.magZ(), 2);
+    Serial.print(" | Temp (C): ");
+    Serial.println(myIMU.temp(), 2);
+  } else {
+    Serial.println("Waiting for data...");
+  }
 
   if (message != "") {
     Serial.print("Pico Received: ");
@@ -191,6 +241,43 @@ String readSerial() {
   }
 
   return str;
+}
+
+
+void getAndPrintIMUData() {
+  if (myIMU.dataReady()) {
+    myIMU.getAGMT();  // Update accel, gyro, mag, and temp
+
+    // Accel
+    Serial.print("Acc [g]: ");
+    Serial.print(myIMU.accX());
+    Serial.print(", ");
+    Serial.print(myIMU.accY());
+    Serial.print(", ");
+    Serial.println(myIMU.accZ());
+
+    // Gyro
+    Serial.print("Gyro [dps]: ");
+    Serial.print(myIMU.gyrX());
+    Serial.print(", ");
+    Serial.print(myIMU.gyrY());
+    Serial.print(", ");
+    Serial.println(myIMU.gyrZ());
+
+    // Magnetometer
+    Serial.print("Mag [uT]: ");
+    Serial.print(myIMU.magX());
+    Serial.print(", ");
+    Serial.print(myIMU.magY());
+    Serial.print(", ");
+    Serial.println(myIMU.magZ());
+
+    // Temperature
+    Serial.print("Temp [C]: ");
+    Serial.println(myIMU.temp());
+  } else {
+    Serial.println("Waiting for IMU data...");
+  }
 }
 
 

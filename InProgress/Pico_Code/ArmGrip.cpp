@@ -5,7 +5,7 @@ ArmGrip::ArmGrip(Adafruit_PWMServoDriver& pwmDriver, int ServoChannelRH, int Ser
   : pwm(pwmDriver), _RightHandServo(ServoChannelRH, pwmDriver, false, false), _LeftHandServo(ServoChannelLH, pwmDriver, false, false), _RightArmServo(ServoChannelRA, pwmDriver, false, false), _LeftArmServo(ServoChannelLA, pwmDriver, false, false) {}
 
 void ArmGrip::begin() {
-  Wire.begin();
+  //Wire.begin();
   pwm.begin();
   pwm.setPWMFreq(60);
   _RightHandServo.setDefault(_defPosRH);
