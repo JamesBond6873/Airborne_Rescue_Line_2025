@@ -61,6 +61,11 @@ ICM_20948_I2C myIMU;
 
 
 // --------------------------- LED Vars ---------------------------
+const int redLed = 18;
+const int greenLed = 17;
+const int blueLed = 16;
+const int robotLight = 8;
+
 unsigned long ledT0;  // control sampling rate (period ini)
 unsigned long ledT1;  // control sampling rate (period end)
 long ledTimeInterval = 1000;  // 1s blinks
@@ -114,6 +119,14 @@ void setup() {
   // LED
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH);
+  
+  pinMode(redLed, OUTPUT);
+  pinMode(greenLed, OUTPUT);
+  pinMode(blueLed, OUTPUT);
+  setRGBColor(0,255,0);
+
+  pinMode(robotLight, OUTPUT);
+  digitalWrite(robotLight, HIGH);
 
   ledT0 = millis();
   t0 = millis();
@@ -133,33 +146,6 @@ void loop() {
   // Read Serial Port
   message = readSerial(); 
 
-  // Update Sensor Data
-  if (myIMU.dataReady()) {
-    myIMU.getAGMT(); // Read all data: Accel, Gyro, Mag, Temp
-
-    Serial.print("Accel (mg): ");
-    Serial.print(myIMU.accX(), 2);
-    Serial.print(", ");
-    Serial.print(myIMU.accY(), 2);
-    Serial.print(", ");
-    Serial.print(myIMU.accZ(), 2);
-    Serial.print(" | Gyro (dps): ");
-    Serial.print(myIMU.gyrX(), 2);
-    Serial.print(", ");
-    Serial.print(myIMU.gyrY(), 2);
-    Serial.print(", ");
-    Serial.print(myIMU.gyrZ(), 2);
-    Serial.print(" | Mag (uT): ");
-    Serial.print(myIMU.magX(), 2);
-    Serial.print(", ");
-    Serial.print(myIMU.magY(), 2);
-    Serial.print(", ");
-    Serial.print(myIMU.magZ(), 2);
-    Serial.print(" | Temp (C): ");
-    Serial.println(myIMU.temp(), 2);
-  } else {
-    Serial.println("Waiting for data...");
-  }
 
   if (message != "") {
     Serial.print("Pico Received: ");
@@ -200,12 +186,20 @@ void loop() {
   else if (message.startsWith("SC,")) { servoControlMessage(message); Serial.print("Ok\n"); } // Control Single Servo Command | servoControl
 
   else if (message.startsWith("SF,")) { servoFreeControl(message); Serial.print("Ok\n"); } //Free a servo | Servo Free
+
+  else if (message == "IMU10") { getAndPrintIMUData(); } // Print IMU Data
+
+  else if (message == "L0") { digitalWrite(robotLight, LOW); }
+  else if (message == "L1") { digitalWrite(robotLight, HIGH); }
+  
+  else if (message.startsWith("RGB,")) { handleRGBCommand(message); Serial.print("Ok\n"); }
   
   else if (message == "Alive") { Serial.println("Yes Alive"); }  // Check if Pico is still alive  | Alive
 
 
   // LED Blink
   ledBlinkController(); //Blinks LED every Time Interval (ledTimeInterval = 1s)
+
 
   while (millis() <= t1) {
     delay(1);
@@ -254,26 +248,26 @@ void getAndPrintIMUData() {
     Serial.print(", ");
     Serial.print(myIMU.accY());
     Serial.print(", ");
-    Serial.println(myIMU.accZ());
+    Serial.print(myIMU.accZ());
 
     // Gyro
-    Serial.print("Gyro [dps]: ");
+    Serial.print("  | Gyro [dps]: ");
     Serial.print(myIMU.gyrX());
     Serial.print(", ");
     Serial.print(myIMU.gyrY());
     Serial.print(", ");
-    Serial.println(myIMU.gyrZ());
+    Serial.print(myIMU.gyrZ());
 
     // Magnetometer
-    Serial.print("Mag [uT]: ");
+    Serial.print("  |  Mag [uT]: ");
     Serial.print(myIMU.magX());
     Serial.print(", ");
     Serial.print(myIMU.magY());
     Serial.print(", ");
-    Serial.println(myIMU.magZ());
+    Serial.print(myIMU.magZ());
 
     // Temperature
-    Serial.print("Temp [C]: ");
+    Serial.print("  |  Temp [C]: ");
     Serial.println(myIMU.temp());
   } else {
     Serial.println("Waiting for IMU data...");
@@ -323,6 +317,26 @@ void collectToFData() {
   // Sill Empty
   // Pass
 }
+
+
+void handleRGBCommand(String command) {
+  if (command.startsWith("RGB,")) {
+    int firstComma = command.indexOf(',');              // Position of first comma
+    int secondComma = command.indexOf(',', firstComma + 1);
+    int thirdComma = command.indexOf(',', secondComma + 1);
+
+    if (firstComma > 0 && secondComma > firstComma && thirdComma > secondComma) {
+      int red   = command.substring(firstComma + 1, secondComma).toInt();
+      int green = command.substring(secondComma + 1, thirdComma).toInt();
+      int blue  = command.substring(thirdComma + 1).toInt();
+
+      setRGBColor(red, green, blue);
+    } else {
+      Serial.println("Error: Malformed RGB command");
+    }
+  }
+}
+
 
 
 // --------------------------------------------------------------
@@ -411,4 +425,11 @@ void ledBlinkController() {
     }
     ledT0 = ledT1;
   }
+}
+
+
+void setRGBColor(int red, int green, int blue) {
+  digitalWrite(redLed, red);
+  digitalWrite(greenLed, green);
+  digitalWrite(blueLed, blue);
 }
