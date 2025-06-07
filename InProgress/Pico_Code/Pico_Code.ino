@@ -206,6 +206,7 @@ void loop() {
 
   else if (message == "L0") { digitalWrite(robotLight, LOW); }
   else if (message == "L1") { digitalWrite(robotLight, HIGH); }
+  else if (message.startsWith("LX")) { lightControlMessage(message); }
   
   else if (message.startsWith("RGB,")) { handleRGBCommand(message); Serial.print("Ok\n"); }
   
@@ -343,6 +344,7 @@ void servoControlMessage(String input) {
 }
 
 
+// --------------------------------------------------------------
 // Function to handle ToF read commands | Format: ToFX,Index (1 to 5)
 void tofControlMessage(String input) {
   int commaIndex = input.indexOf(',');
@@ -379,6 +381,31 @@ void tofControlMessage(String input) {
     }
   } else {
     Serial.println("Invalid ToF command format. Use ToFX,Index (1-5)");
+  }
+}
+
+
+// --------------------------------------------------------------
+// Function to control the light brightness using PWM | Format: LX,0 to LX,255
+void lightControlMessage(String input) {
+  int commaIndex = input.indexOf(',');
+
+  if (commaIndex != -1) {
+    String pwmValueStr = input.substring(commaIndex + 1);
+    int pwmValue = pwmValueStr.toInt();
+
+    // Validate the PWM value (between 0 and 255)
+    if (pwmValue >= 0 && pwmValue <= 255) {
+      Serial.print("Setting light brightness to: ");
+      Serial.println(pwmValue);
+      
+      // Set the PWM value to control brightness
+      analogWrite(robotLight, pwmValue);
+    } else {
+      Serial.println("Invalid PWM value. Please provide a value between 0 and 255.");
+    }
+  } else {
+    Serial.println("Invalid command format. Use LX,Value (0-255)");
   }
 }
 
