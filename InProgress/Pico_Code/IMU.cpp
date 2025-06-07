@@ -1,5 +1,4 @@
 #include "IMU.h"
-#include <Wire.h>
 
 // Constructor
 IMU::IMU() {}

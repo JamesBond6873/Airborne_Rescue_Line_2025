@@ -6,6 +6,7 @@
 #include "Motor.h"
 #include "ArmGrip.h"
 #include "IMU.h"
+#include "ToF.h"
 
 
 // --------------------------- Motor Vars ---------------------------
@@ -54,20 +55,11 @@ myServo ballStorageServo(ballStorageServoChannel, pwm, false, true);
 
 
 // --------------------------- IMU Vars ---------------------------
-const int IMUsdaPin = 20;
-const int IMUsclPin = 21;
-
-// Create ICM-20948 object
-//TwoWire customWire(i2c0, 20, 21);
 IMU myIMU;
 
 
 // --------------------------- TOF Vars ---------------------------
-#define TCAADDR 0x70
-#define NUM_SENSORS 5
-const uint8_t channels[NUM_SENSORS] = {3, 4, 5, 6, 7};
-
-VL53L0X sensors[NUM_SENSORS];
+ToF myToFs(3, 4, 5, 6, 7);  // Setup sensors by mux channels
 
 
 // --------------------------- LED Vars ---------------------------
@@ -125,6 +117,9 @@ void setup() {
   // IMU Setup
   myIMU.begin(Wire);
 
+  // ToFs Setup
+  myToFs.begin(Wire1);
+
   // LED
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH);
@@ -136,23 +131,6 @@ void setup() {
 
   pinMode(robotLight, OUTPUT);
   digitalWrite(robotLight, HIGH);
-
-  // TOF Setup
-  for (int i = 0; i < NUM_SENSORS; i++) {
-    tcaSelect(channels[i]);
-    sensors[i].setBus(&Wire1);   // ✔ Works in Pololu lib
-    if (!sensors[i].init()) {
-      Serial.print("Failed to init sensor on channel ");
-      Serial.println(channels[i]);
-    } else {
-      sensors[i].setTimeout(500);
-      sensors[i].setMeasurementTimingBudget(20000);  // ✅ Fast mode
-      sensors[i].startContinuous();
-      Serial.print("Sensor ");
-      Serial.print(channels[i]);
-      Serial.println(" started.");
-    }
-  }
 
 
   ledT0 = millis();
@@ -203,9 +181,6 @@ void loop() {
   else if (message == "DD") { ballStorageServo.dropDead(); Serial.print("Ok\n"); }  // Drop Dead Victims Command | Drop Dead
   else if (message == "BC") { ballStorageServo.close(); Serial.print("Ok\n"); } // Close Ball Storage Command | Ball Close
 
-  else if (message == "LD") { collectToFData(); Serial.print("Ok\n"); }  // Collect ToF Data from All Sensors | Laser Data
-  else if (message == "LX") { collectToFDataX(); Serial.print("Ok\n"); }  // Collect ToF Data from X Sensor | Laser X - LX,X
-
   else if (message == "HO") { Grip.openHand(); Serial.print("Ok\n"); }  // Open Hand Command | Hand Open
   else if (message == "HC") { Grip.closeHand(); Serial.print("Ok\n"); }  // Close Hand Command | Hand Close
   else if (message == "HA") { Grip.moveAlive(); Serial.print("Ok\n"); }  // Move Hand to Alive Position Command | Hand Alive
@@ -218,13 +193,14 @@ void loop() {
 
   else if (message.startsWith("SF,")) { servoFreeControl(message); Serial.print("Ok\n"); } //Free a servo | Servo Free
 
-  else if (message == "IMU10") { Serial.println(myIMU.getAllString()); } // Print IMU All Data | IMU 10 DOF
+  else if (message == "IMU10") { Serial.println(myIMU.getAllString()); } // Print All IMU Data | IMU 10 DOF
   else if (message == "IMUAcc") { Serial.println(myIMU.getAccelString()); } // Print IMU Acceleration Data | IMU Acceleration DOF
   else if (message == "IMUGyro") { Serial.println(myIMU.getGyroString()); } // Print IMU Gyroscope Data | IMU Gyroscope DOF
   else if (message == "IMUMag") { Serial.println(myIMU.getMagString()); } // Print IMU Magnetometer Data | IMU Magnetometer DOF
   else if (message == "IMUTemp") { Serial.println(myIMU.getTempString()); } // Print IMU Temperature Data | IMU Temperature DOF
 
-  else if (message == "ToF5") { collectToFData(); } // Print ToF Data
+  else if (message == "ToF5") { Serial.println(myToFs.getAllString()); } // Print All ToF Data | ToF 5 Sensors
+  else if (message.startsWith("ToFX")) { tofControlMessage(message); }  
 
   else if (message == "L0") { digitalWrite(robotLight, LOW); }
   else if (message == "L1") { digitalWrite(robotLight, HIGH); }
@@ -311,7 +287,8 @@ void ControlMotor(String input) {
 }
 
 
-
+// --------------------------------------------------------------
+// Function to Handle RGB Command | Command: RGB,X,X,X
 void handleRGBCommand(String command) {
   if (command.startsWith("RGB,")) {
     int firstComma = command.indexOf(',');              // Position of first comma
@@ -328,40 +305,6 @@ void handleRGBCommand(String command) {
       Serial.println("Error: Malformed RGB command");
     }
   }
-}
-
-
-void tcaSelect(uint8_t channel) {
-  Wire1.beginTransmission(TCAADDR);
-  Wire1.write(1 << channel);
-  Wire1.endTransmission();
-  delay(5);  // Let it settle
-}
-
-
-// --------------------------------------------------------------
-// Function to Collect Distance Measurements from ALL Time of Flights | Command: collectToFData
-void collectToFData() {
-  for (int i = 0; i < NUM_SENSORS; i++) {
-    tcaSelect(channels[i]);
-    uint16_t distance = sensors[i].readRangeContinuousMillimeters();
-    Serial.print("Channel ");
-    Serial.print(channels[i]);
-    Serial.print(": ");
-    Serial.print(distance);
-    if (sensors[i].timeoutOccurred()) Serial.print(" TIMEOUT");
-    Serial.print("\t");
-  }
-  Serial.println();
-}
-
-
-
-// --------------------------------------------------------------
-// Function to Collect Distance Measurements from One Specific Time of Flight | Command: collectToFDataX | LX,X
-void collectToFDataX() {
-  // Sill Empty
-  // Pass
 }
 
 
@@ -394,6 +337,46 @@ void servoControlMessage(String input) {
     }
   } else {
     Serial.println("Invalid command format. Use SC,R,Angle");
+  }
+}
+
+
+// Function to handle ToF read commands | Format: ToFX,Index (1 to 5)
+void tofControlMessage(String input) {
+  int commaIndex = input.indexOf(',');
+
+  if (commaIndex != -1) {
+    String indexStr = input.substring(commaIndex + 1);
+    int sensorIndex = indexStr.toInt();
+
+    // Read and print the corresponding sensor value
+    switch (sensorIndex) {
+      case 1:
+        //Serial.print("Back Right: ");
+        Serial.println(myToFs.getBackRight());
+        break;
+      case 2:
+        //Serial.print("Front Right: ");
+        Serial.println(myToFs.getFrontRight());
+        break;
+      case 3:
+        //Serial.print("Front Center: ");
+        Serial.println(myToFs.getFrontCenter());
+        break;
+      case 4:
+        //Serial.print("Front Left: ");
+        Serial.println(myToFs.getFrontLeft());
+        break;
+      case 5:
+        //Serial.print("Back Left: ");
+        Serial.println(myToFs.getBackLeft());
+        break;
+      default:
+        Serial.println("Invalid ToF sensor index. Use 1 to 5.");
+        break;
+    }
+  } else {
+    Serial.println("Invalid ToF command format. Use ToFX,Index (1-5)");
   }
 }
 
