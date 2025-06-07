@@ -204,9 +204,9 @@ void loop() {
 
   else if (message == "ITData") {Serial.print("D, "); Serial.print(myIMU.getAllString()); Serial.print(", "); Serial.println(myToFs.getAllString()); }
 
-  else if (message == "L0") { digitalWrite(robotLight, LOW); }
-  else if (message == "L1") { digitalWrite(robotLight, HIGH); }
-  else if (message.startsWith("LX")) { lightControlMessage(message); }
+  else if (message == "L0") { digitalWrite(robotLight, LOW); Serial.print("Ok\n"); }
+  else if (message == "L1") { digitalWrite(robotLight, HIGH); Serial.print("Ok\n"); }
+  else if (message.startsWith("LX")) { lightControlMessage(message); Serial.print("Ok\n"); }
   
   else if (message.startsWith("RGB,")) { handleRGBCommand(message); Serial.print("Ok\n"); }
   
@@ -396,8 +396,8 @@ void lightControlMessage(String input) {
 
     // Validate the PWM value (between 0 and 255)
     if (pwmValue >= 0 && pwmValue <= 255) {
-      Serial.print("Setting light brightness to: ");
-      Serial.println(pwmValue);
+      //Serial.print("Setting light brightness to: ");
+      //Serial.println(pwmValue);
       
       // Set the PWM value to control brightness
       analogWrite(robotLight, pwmValue);
