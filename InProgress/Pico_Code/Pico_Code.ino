@@ -1,11 +1,12 @@
 #include <Servo.h>
+#include <Wire.h>
+#include <VL53L0X.h>
+#include <Adafruit_PWMServoDriver.h>
 #include "myServo.h"
 #include "Motor.h"
-#include <Adafruit_PWMServoDriver.h>
 #include "ArmGrip.h"
-#include <Wire.h>
-#include <ICM_20948.h>
-#include <VL53L0X.h>
+#include "IMU.h"
+
 
 // --------------------------- Motor Vars ---------------------------
 
@@ -58,7 +59,7 @@ const int IMUsclPin = 21;
 
 // Create ICM-20948 object
 //TwoWire customWire(i2c0, 20, 21);
-ICM_20948_I2C myIMU;
+IMU myIMU;
 
 
 // --------------------------- TOF Vars ---------------------------
@@ -108,13 +109,6 @@ void setup() {
   Wire1.setSCL(7);
   Wire1.begin(); // Bus 1 GPIO 6 and 7
 
-  if (myIMU.begin(Wire,1) != ICM_20948_Stat_Ok) {
-    Serial.println("IMU initialization failed. Check connections.");
-    while (1) {Serial.println("IMU initialization failed. Check connections.");}
-  } else {
-    Serial.println("IMU initialized successfully.");
-  }
-  delay(1000);
 
   // Get The Servos Ready - Correct Position
   Grip.begin();
@@ -127,6 +121,9 @@ void setup() {
   Grip.freeAllServos();
   camServo.freeServo();
   ballStorageServo.freeServo();
+
+  // IMU Setup
+  myIMU.begin(Wire);
 
   // LED
   pinMode(LED_BUILTIN, OUTPUT);
@@ -173,14 +170,18 @@ void loop() {
   t1 = t0 + timeInterval;
 
 
+  // Update Sensors
+  myIMU.update10DOF();
+
+
   // Read Serial Port
   message = readSerial(); 
-
 
   if (message != "") {
     Serial.print("Pico Received: ");
     Serial.println(message);
   }
+
 
   // Act According Message:
   if (message.startsWith("M(") && message.endsWith(")")) { ControlMotor(message); }  // Motor Command | M(x,x)
@@ -217,7 +218,11 @@ void loop() {
 
   else if (message.startsWith("SF,")) { servoFreeControl(message); Serial.print("Ok\n"); } //Free a servo | Servo Free
 
-  else if (message == "IMU10") { getAndPrintIMUData(); } // Print IMU Data
+  else if (message == "IMU10") { Serial.println(myIMU.getAllString()); } // Print IMU All Data | IMU 10 DOF
+  else if (message == "IMUAcc") { Serial.println(myIMU.getAccelString()); } // Print IMU Acceleration Data | IMU Acceleration DOF
+  else if (message == "IMUGyro") { Serial.println(myIMU.getGyroString()); } // Print IMU Gyroscope Data | IMU Gyroscope DOF
+  else if (message == "IMUMag") { Serial.println(myIMU.getMagString()); } // Print IMU Magnetometer Data | IMU Magnetometer DOF
+  else if (message == "IMUTemp") { Serial.println(myIMU.getTempString()); } // Print IMU Temperature Data | IMU Temperature DOF
 
   else if (message == "ToF5") { collectToFData(); } // Print ToF Data
 
@@ -267,43 +272,6 @@ String readSerial() {
   }
 
   return str;
-}
-
-
-void getAndPrintIMUData() {
-  if (myIMU.dataReady()) {
-    myIMU.getAGMT();  // Update accel, gyro, mag, and temp
-
-    // Accel
-    Serial.print("Acc [g]: ");
-    Serial.print(myIMU.accX());
-    Serial.print(", ");
-    Serial.print(myIMU.accY());
-    Serial.print(", ");
-    Serial.print(myIMU.accZ());
-
-    // Gyro
-    Serial.print("  | Gyro [dps]: ");
-    Serial.print(myIMU.gyrX());
-    Serial.print(", ");
-    Serial.print(myIMU.gyrY());
-    Serial.print(", ");
-    Serial.print(myIMU.gyrZ());
-
-    // Magnetometer
-    Serial.print("  |  Mag [uT]: ");
-    Serial.print(myIMU.magX());
-    Serial.print(", ");
-    Serial.print(myIMU.magY());
-    Serial.print(", ");
-    Serial.print(myIMU.magZ());
-
-    // Temperature
-    Serial.print("  |  Temp [C]: ");
-    Serial.println(myIMU.temp());
-  } else {
-    Serial.println("Waiting for IMU data...");
-  }
 }
 
 
