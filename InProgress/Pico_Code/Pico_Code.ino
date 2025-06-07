@@ -5,6 +5,7 @@
 #include "ArmGrip.h"
 #include <Wire.h>
 #include <ICM_20948.h>
+#include <VL53L0X.h>
 
 // --------------------------- Motor Vars ---------------------------
 
@@ -60,6 +61,14 @@ const int IMUsclPin = 21;
 ICM_20948_I2C myIMU;
 
 
+// --------------------------- TOF Vars ---------------------------
+#define TCAADDR 0x70
+#define NUM_SENSORS 5
+const uint8_t channels[NUM_SENSORS] = {3, 4, 5, 6, 7};
+
+VL53L0X sensors[NUM_SENSORS];
+
+
 // --------------------------- LED Vars ---------------------------
 const int redLed = 18;
 const int greenLed = 17;
@@ -92,9 +101,12 @@ void setup() {
   for (int i = 0; i < 4; i++) {
     motors[i].getReady();
   }*/
-  // Get the IMU Ready
-  // Manually assign I2C to GPIO 20 (SDA) and GPIO 21 (SCL)
-  Wire.begin();
+
+  // I2C Communitations
+  Wire.begin(); // Bus 0 GPIO 4 and 5
+  Wire1.setSDA(6); 
+  Wire1.setSCL(7);
+  Wire1.begin(); // Bus 1 GPIO 6 and 7
 
   if (myIMU.begin(Wire,1) != ICM_20948_Stat_Ok) {
     Serial.println("IMU initialization failed. Check connections.");
@@ -127,6 +139,24 @@ void setup() {
 
   pinMode(robotLight, OUTPUT);
   digitalWrite(robotLight, HIGH);
+
+  // TOF Setup
+  for (int i = 0; i < NUM_SENSORS; i++) {
+    tcaSelect(channels[i]);
+    sensors[i].setBus(&Wire1);   // ✔ Works in Pololu lib
+    if (!sensors[i].init()) {
+      Serial.print("Failed to init sensor on channel ");
+      Serial.println(channels[i]);
+    } else {
+      sensors[i].setTimeout(500);
+      sensors[i].setMeasurementTimingBudget(20000);  // ✅ Fast mode
+      sensors[i].startContinuous();
+      Serial.print("Sensor ");
+      Serial.print(channels[i]);
+      Serial.println(" started.");
+    }
+  }
+
 
   ledT0 = millis();
   t0 = millis();
@@ -188,6 +218,8 @@ void loop() {
   else if (message.startsWith("SF,")) { servoFreeControl(message); Serial.print("Ok\n"); } //Free a servo | Servo Free
 
   else if (message == "IMU10") { getAndPrintIMUData(); } // Print IMU Data
+
+  else if (message == "ToF5") { collectToFData(); } // Print ToF Data
 
   else if (message == "L0") { digitalWrite(robotLight, LOW); }
   else if (message == "L1") { digitalWrite(robotLight, HIGH); }
@@ -311,13 +343,6 @@ void ControlMotor(String input) {
 }
 
 
-// --------------------------------------------------------------
-// Function to Collect Distance Measurements from ALL Time of Flights | Command: collectToFData
-void collectToFData() {
-  // Sill Empty
-  // Pass
-}
-
 
 void handleRGBCommand(String command) {
   if (command.startsWith("RGB,")) {
@@ -335,6 +360,31 @@ void handleRGBCommand(String command) {
       Serial.println("Error: Malformed RGB command");
     }
   }
+}
+
+
+void tcaSelect(uint8_t channel) {
+  Wire1.beginTransmission(TCAADDR);
+  Wire1.write(1 << channel);
+  Wire1.endTransmission();
+  delay(5);  // Let it settle
+}
+
+
+// --------------------------------------------------------------
+// Function to Collect Distance Measurements from ALL Time of Flights | Command: collectToFData
+void collectToFData() {
+  for (int i = 0; i < NUM_SENSORS; i++) {
+    tcaSelect(channels[i]);
+    uint16_t distance = sensors[i].readRangeContinuousMillimeters();
+    Serial.print("Channel ");
+    Serial.print(channels[i]);
+    Serial.print(": ");
+    Serial.print(distance);
+    if (sensors[i].timeoutOccurred()) Serial.print(" TIMEOUT");
+    Serial.print("\t");
+  }
+  Serial.println();
 }
 
 
