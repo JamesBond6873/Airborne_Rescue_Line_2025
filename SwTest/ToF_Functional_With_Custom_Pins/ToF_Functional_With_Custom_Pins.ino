@@ -1,4 +1,4 @@
-#include <Wire.h>
+#include <Wire1.h>
 #include <Adafruit_VL53L0X.h>
 
 #define TCAADDR 0x70  // Default I2C address for TCA9548A
@@ -10,14 +10,16 @@ int ToFData[2] = {-1, -1};
 // Function to select a channel on the TCA9548A
 void tcaSelect(uint8_t channel) {
   if (channel > 7) return;
-  Wire.beginTransmission(TCAADDR);
-  Wire.write(1 << channel);  // Enable only one channel at a time
-  Wire.endTransmission();
+  Wire1.beginTransmission(TCAADDR);
+  Wire1.write(1 << channel);  // Enable only one channel at a time
+  Wire1.endTransmission();
 }
 
 void setup() {
   Serial.begin(115200);
-  Wire.begin();
+  Wire1.setSDA(6);
+  Wire1.setSCL(7);
+  Wire1.begin();
 
   for (int i = 0; i < 2; i++) {
     tcaSelect(i);
@@ -58,9 +60,21 @@ void loop() {
   Serial.print(ToFData[0]);
   Serial.print("\t Channel 1: ");
   Serial.println(ToFData[1]);
+  Serial.print("\t Channel 1: ");
+  Serial.println(ToFData[1]);
+  Serial.print("\t Channel 1: ");
+  Serial.println(ToFData[1]);
+  Serial.print("\t Channel 1: ");
+  Serial.println(ToFData[1]);
+  Serial.print("\t Channel 1: ");
+  Serial.println(ToFData[1]);
+  Serial.print("\t Channel 1: ");
+  Serial.println(ToFData[1]);
+  Serial.print("\t Channel 1: ");
+  Serial.println(ToFData[1]);
   Serial.println();
 
-  delay(1000);  // Wait 1s before next measurement
+  delay(500);  // Wait 0.5s before next measurement
 }
 
 
