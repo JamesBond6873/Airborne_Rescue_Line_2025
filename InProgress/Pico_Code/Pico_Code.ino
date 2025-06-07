@@ -200,7 +200,9 @@ void loop() {
   else if (message == "IMUTemp") { Serial.println(myIMU.getTempString()); } // Print IMU Temperature Data | IMU Temperature DOF
 
   else if (message == "ToF5") { Serial.println(myToFs.getAllString()); } // Print All ToF Data | ToF 5 Sensors
-  else if (message.startsWith("ToFX")) { tofControlMessage(message); }  
+  else if (message.startsWith("ToFX")) { tofControlMessage(message); } // Print Specific ToF Data | ToF X Sensor
+
+  else if (message == "ITData") {Serial.print("D, "); Serial.print(myIMU.getAllString()); Serial.print(", "); Serial.println(myToFs.getAllString()); }
 
   else if (message == "L0") { digitalWrite(robotLight, LOW); }
   else if (message == "L1") { digitalWrite(robotLight, HIGH); }

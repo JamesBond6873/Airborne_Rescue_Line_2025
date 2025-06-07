@@ -76,9 +76,9 @@ String ToF::getBackLeftString()    { updateToF5(); return String(_distances[4]);
 
 String ToF::getAllString() {
   updateToF5();
-  return String(_distances[0]) + "," + 
-         String(_distances[1]) + "," + 
-         String(_distances[2]) + "," + 
-         String(_distances[3]) + "," + 
+  return String(_distances[0]) + ", " + 
+         String(_distances[1]) + ", " + 
+         String(_distances[2]) + ", " + 
+         String(_distances[3]) + ", " + 
          String(_distances[4]);
 }
