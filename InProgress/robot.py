@@ -224,55 +224,47 @@ def updateSensorAverages():
         newSensorData.value = False
 
 
-def updateRampState():
-    # --- PARAMETERS (tweakable) ---
-    PITCH_THRESHOLD = 18   # Degrees: detected ramp if abs(pitch) > this
-    GYRO_UP_THRESH = 8     # deg/s (positive = up ramp)
-    GYRO_DOWN_THRESH = -8  # deg/s (negative = down ramp)
-    SMOOTH_TIME = 0.6      # seconds of history for smoothing
-    STICKY_TIME = 1.0      # time to remember we "were" on ramp
+def updateRampStateAccelOnly():
+    # --- PARAMETERS ---
+    PITCH_THRESHOLD = 18       # Minimum angle to consider ramp
+    STICKY_TIME = 1.0          # Time to remember we were on a ramp
+    SMOOTH_TIME = 0.5          # Time window to smooth accel data
 
-    # --- Compute Smoothed Pitch ---
-    accX = calculateAverageArray(Accel_X_Array, SMOOTH_TIME)
+    # --- Get Smoothed Accel Values (use Y-Z plane for pitch) ---
+    accY = calculateAverageArray(Accel_Y_Array, SMOOTH_TIME)
     accZ = calculateAverageArray(Accel_Z_Array, SMOOTH_TIME)
 
-    if accX == -1 or accZ == -1:
-        return  # Not enough data
+    if accY == -1 or accZ == -1:
+        return  # Not enough data yet
 
-    pitch = np.degrees(np.arctan2(accX, accZ))
-
-    # --- Get smoothed Gyro Y (pitch rate) ---
-    gyroY = calculateAverageArray(Gyro_Y_Array, SMOOTH_TIME)
-
-    if gyroY == -1:
-        return  # Not enough data
-
-    # --- Detect Ramp Status ---
+    pitch = np.degrees(np.arctan2(accY, accZ))
     absPitch = abs(pitch)
 
+    pitchDebug.value = pitch  # For debugging or monitoring
+
     if absPitch > PITCH_THRESHOLD:
-        # Definitely on a ramp
         rampDetected.value = True
         timer_manager.set_timer("wasOnRamp", STICKY_TIME)
 
-        if gyroY > GYRO_UP_THRESH:
-            rampUp.value = True
-            rampDown.value = False
-        elif gyroY < GYRO_DOWN_THRESH:
+        # --- Use Sign of Pitch Directly ---
+        if pitch < 0:
             rampUp.value = False
             rampDown.value = True
+        elif pitch > 0:
+            rampUp.value = True
+            rampDown.value = False
         else:
             rampUp.value = False
             rampDown.value = False
     else:
-        # Not enough tilt to be on a ramp
+        # Flat surface, reset all
         rampDetected.value = False
         rampUp.value = False
         rampDown.value = False
 
-    # --- Handle Sticky State (recently was on ramp) ---
-    wasOnRamp.value = timer_manager.get_timer("wasOnRamp")
-
+    # --- Sticky ramp memory ---
+    wasOnRamp.value = not timer_manager.is_timer_expired("wasOnRamp")
+    
 
 # Pick Victim Function (takes "Alive" or "Dead")
 def pickVictim(type, step=0):
@@ -736,6 +728,7 @@ def controlLoop():
 
         # Loop
         updateSensorAverages()
+        updateRampStateAccelOnly()
 
 
         LoPSwitchController()
