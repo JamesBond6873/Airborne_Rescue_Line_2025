@@ -78,7 +78,7 @@ bool ledState = true;
 // --------------------------- Time Vars ---------------------------
 unsigned long t0;  // control sampling rate (period ini)
 unsigned long t1;  // control sampling rate (period end)
-long timeInterval = 5;  // 10ms per loop = 100Hz
+long timeInterval = 2.5;  // 2.5ms per loop = 400Hz
 
 
 
@@ -199,7 +199,11 @@ void loop() {
   else if (message == "IMUMag") { Serial.println(myIMU.getMagString()); } // Print IMU Magnetometer Data | IMU Magnetometer DOF
   else if (message == "IMUTemp") { Serial.println(myIMU.getTempString()); } // Print IMU Temperature Data | IMU Temperature DOF
 
-  else if (message == "ToF5") { Serial.print("T5, "); Serial.println(myToFs.getAllString()); } // Print All ToF Data | ToF 5 Sensors
+  else if (message == "ToF5") {
+    String allData = "T5, ";
+    allData += myToFs.getAllString(); 
+    Serial.println(allData);
+  } // Print All ToF Data | ToF 5 Sensors
   else if (message.startsWith("ToFX")) { tofControlMessage(message); } // Print Specific ToF Data | ToF X Sensor
 
   else if (message == "ITData") {
@@ -224,7 +228,7 @@ void loop() {
 
 
   while (millis() <= t1) {
-    delay(1);
+    delay(0.025);
   }
   t0 = t1;
 }
