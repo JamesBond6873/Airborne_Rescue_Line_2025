@@ -25,6 +25,7 @@ buzzerState = False
 lineDelayMS = 25 # Frame Rate = 40 FPS
 controlDelayMS = 25 # 40 Hz
 serialDelayMS = 10 # 100 Hz
+dataRequestDelayMS = 50 # 25 ms
 intersectionMaxTime = 1.000 #s
 
 # Color Configs

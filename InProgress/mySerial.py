@@ -11,6 +11,7 @@ from mp_manager import *
 print("Serial Interface: \t \t OK")
 
 waitingResponse = False # Flag to indicate if we are waiting for a response
+waitingSensorData = False # Flag to indicate if we are waiting for sensor data
 commandConfirmationAborted = False
 commandWaitingListConfirmation = [] # List of commands to be sent to the RPi
 lastUnsentCommandWithoutConfirmation = None # Last command that was not sent
@@ -87,7 +88,7 @@ def sendSerial(message, confirmation = False):
     
     if timer_manager.is_timer_expired("serialCooldownbetweenCommands"):
         printDebug(f"Sent to Serial at {time.perf_counter()}: {message.strip()}", serialSoftDEBUG)
-        timer_manager.set_timer("serialCooldownbetweenCommands", 0.010) # Wait 10ms before sending the next command
+        timer_manager.set_timer("serialCooldownbetweenCommands", 0.005) # Wait 5ms before sending the next command
         ser.write(message.encode('utf-8'))
 
     else:
@@ -98,13 +99,16 @@ def sendSerial(message, confirmation = False):
 
 # Interpret Received Message
 def interpretMessage(message):
-    global waitingResponse, commandWaitingListConfirmation
+    global waitingResponse, waitingSensorData, commandWaitingListConfirmation
     if "-Nothing-" not in message:
         printDebug(f"Received Message at {time.perf_counter()}: {message.strip()}", serialSoftDEBUG)
     if "Ok" in message:
         commandWaitingListConfirmation.pop(0)
         printDebug(f"Command List ({len(commandWaitingListConfirmation)} commands): {commandWaitingListConfirmation}", False)
         waitingResponse = False
+    elif "D," in message:
+        parseSensorData(message)
+        waitingSensorData = False
     if DEBUG == True:
         commandWaitingListConfirmation.pop(0)
         printDebug(f"Command List ({len(commandWaitingListConfirmation)} commands): {commandWaitingListConfirmation}", False)
@@ -123,7 +127,7 @@ def updateCommandWithoutConfirmation():
     global commandWithoutConfirmation, lastUnsentCommandWithoutConfirmation
 
     if commandWithoutConfirmation.value != "none":
-        if not waitingResponse:
+        if not waitingResponse and not waitingSensorData:
             sendSerial(commandWithoutConfirmation.value)
             lastUnsentCommandWithoutConfirmation = None  # Clear, it was sent
         else:
@@ -132,10 +136,61 @@ def updateCommandWithoutConfirmation():
         commandWithoutConfirmation.value = "none"
 
     # If nothing new came and one was missed before, try to send it
-    elif lastUnsentCommandWithoutConfirmation and not waitingResponse:
+    elif lastUnsentCommandWithoutConfirmation and not waitingResponse and not waitingSensorData:
         print(f"Retrying last unsent command: {lastUnsentCommandWithoutConfirmation}")
         sendSerial(lastUnsentCommandWithoutConfirmation)
         lastUnsentCommandWithoutConfirmation = None
+
+
+def getSensorData(data = "All"):
+    if not waitingResponse and not waitingSensorData:
+        printDebug(f"Requesting sensor data: {data}", True)
+        if data == "All":
+            sendSerial(f"ITData")
+        elif data == "IMU":
+            sendSerial(f"IMU10")
+        elif data == "TOF":
+            sendSerial(f"TOF5")
+
+
+def parseSensorData(data):
+    try:
+        # Stop at the first full line
+        line = data.strip().split('\n')[0].strip()
+
+        if not line.startswith("D,"):
+            printDebug(f"Ignoring line (no 'D,'): {line} {data}", True)
+            return
+
+        parts = line[2:].split(",")  # Remove 'D,' and split
+
+        if len(parts) != 15:
+            printDebug(f"Unexpected number of values: {len(parts)} in line: {line}", True)
+            return
+
+        # Assign to manager variables
+        Accel_X.value = float(parts[0])
+        Accel_Y.value = float(parts[1])
+        Accel_Z.value = float(parts[2])
+
+        Gyro_X.value = float(parts[3])
+        Gyro_Y.value = float(parts[4])
+        Gyro_Z.value = float(parts[5])
+
+        Mag_X.value = float(parts[6])
+        Mag_Y.value = float(parts[7])
+        Mag_Z.value = float(parts[8])
+
+        Temp.value = float(parts[9])
+
+        Tof_1.value = float(parts[10])
+        Tof_2.value = float(parts[11])
+        Tof_3.value = float(parts[12])
+        Tof_4.value = float(parts[13])
+        Tof_5.value = float(parts[14])
+
+    except Exception as e:
+        printDebug(f"Error parsing sensor data: {e}", True)
 
 
 #############################################################################
@@ -150,6 +205,7 @@ def serialLoop():
     ser = initSerial(SERIAL_PORT, BAUD_RATE, 10, DEBUG)
     
     timer_manager.add_timer("serialCooldownbetweenCommands", 0.05)
+    timer_manager.add_timer("sensorRequest", 0.025)  # 25ms interval for sensor data
     time.sleep(0.05)
 
     t0 = time.perf_counter()
@@ -178,6 +234,12 @@ def serialLoop():
             if len(commandWaitingListConfirmation) > 0:
                 sendSerial(commandWaitingListConfirmation[0], confirmation=True)
                 waitingResponse = True  # We are now waiting for a response
+
+
+        # Request sensor data if timer expired
+        if timer_manager.is_timer_expired("sensorRequest"):
+            getSensorData()
+            timer_manager.set_timer("sensorRequest", dataRequestDelayMS * 0.001)
 
 
         while (time.perf_counter() <= t1):
