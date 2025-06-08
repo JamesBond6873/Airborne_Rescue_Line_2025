@@ -26,6 +26,8 @@ consoleLines.append("Sensor timeout!")
 
 
 # Sensor Data
+newSensorData = manager.Value("i", False)
+
 Accel_X = manager.Value("i", -1)
 Accel_Y = manager.Value("i", -1)
 Accel_Z = manager.Value("i", -1)
@@ -54,6 +56,11 @@ lineDetected = manager.Value("i", False)
 turnReason = manager.Value("i", 0)
 redDetected = manager.Value("i", False)
 silverValue = manager.Value("i", 0) # 0 = Line, 1 = Silver
+
+rampDetected = manager.Value("i", False)
+rampUp = manager.Value("i", False)
+rampDown = manager.Value("i", False)
+wasOnRamp = manager.Value("i", False)
 
 ballCenterX = manager.Value("i", -1) # Average
 ballBottomY = manager.Value("i", -1) # Average
@@ -96,6 +103,19 @@ m2MP = manager.Value("i", 1500)
 zoneStatusLoopDebug = manager.Value("i", "notStarted")
 pickSequenceStatusDebug = manager.Value("i", "goingToBall")
 pickingVictimDebug = manager.Value("i", False)
+AccelXArrayDebug = manager.Value("i", -1)
+AccelYArrayDebug = manager.Value("i", -1)
+AccelZArrayDebug = manager.Value("i", -1)
+GyroXArrayDebug = manager.Value("i", -1)
+GyroYArrayDebug = manager.Value("i", -1)
+GyroZArrayDebug = manager.Value("i", -1)
+TempArrayDebug = manager.Value("i", -1)
+Tof1ArrayDebug = manager.Value("i", -1)
+Tof2ArrayDebug = manager.Value("i", -1)
+Tof3ArrayDebug = manager.Value("i", -1)
+Tof4ArrayDebug = manager.Value("i", -1)
+Tof5ArrayDebug = manager.Value("i", -1)
+pitchDebug = manager.Value("i", -1)
 
 # ARRAY FUNCTIONS
 def createEmptyTimeArray(length: int = 240):

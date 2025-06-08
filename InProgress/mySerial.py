@@ -144,7 +144,7 @@ def updateCommandWithoutConfirmation():
 
 def getSensorData(data = "All"):
     if not waitingResponse and not waitingSensorData:
-        printDebug(f"Requesting sensor data: {data}", True)
+        printDebug(f"Requesting sensor data: {data}", serialSoftDEBUG)
         if data == "All":
             sendSerial(f"ITData")
         elif data == "IMU":
@@ -188,6 +188,8 @@ def parseSensorData(data):
         Tof_3.value = float(parts[12])
         Tof_4.value = float(parts[13])
         Tof_5.value = float(parts[14])
+
+        newSensorData.value = True
 
     except Exception as e:
         printDebug(f"Error parsing sensor data: {e}", True)
