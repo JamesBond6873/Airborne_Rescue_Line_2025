@@ -193,13 +193,13 @@ void loop() {
 
   else if (message.startsWith("SF,")) { servoFreeControl(message); Serial.print("Ok\n"); } //Free a servo | Servo Free
 
-  else if (message == "IMU10") { Serial.println(myIMU.getAllString()); } // Print All IMU Data | IMU 10 DOF
+  else if (message == "IMU10") { Serial.print("I10, "); Serial.println(myIMU.getAllString()); } // Print All IMU Data | IMU 10 DOF
   else if (message == "IMUAcc") { Serial.println(myIMU.getAccelString()); } // Print IMU Acceleration Data | IMU Acceleration DOF
   else if (message == "IMUGyro") { Serial.println(myIMU.getGyroString()); } // Print IMU Gyroscope Data | IMU Gyroscope DOF
   else if (message == "IMUMag") { Serial.println(myIMU.getMagString()); } // Print IMU Magnetometer Data | IMU Magnetometer DOF
   else if (message == "IMUTemp") { Serial.println(myIMU.getTempString()); } // Print IMU Temperature Data | IMU Temperature DOF
 
-  else if (message == "ToF5") { Serial.println(myToFs.getAllString()); } // Print All ToF Data | ToF 5 Sensors
+  else if (message == "ToF5") { Serial.print("T5, "); Serial.println(myToFs.getAllString()); } // Print All ToF Data | ToF 5 Sensors
   else if (message.startsWith("ToFX")) { tofControlMessage(message); } // Print Specific ToF Data | ToF X Sensor
 
   else if (message == "ITData") {Serial.print("D, "); Serial.print(myIMU.getAllString()); Serial.print(", "); Serial.println(myToFs.getAllString()); }
