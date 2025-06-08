@@ -40,6 +40,25 @@ M1 = M2 = 1520 # Left - Right
 oldM1 = oldM2 = M1
 error = errorAcc = lastError = 0
 
+
+# Sensor Vars
+Accel_X_Array = createEmptyTimeArray()
+Accel_Y_Array = createEmptyTimeArray()
+Accel_Z_Array = createEmptyTimeArray()
+
+Gyro_X_Array = createEmptyTimeArray()
+Gyro_Y_Array = createEmptyTimeArray()
+Gyro_Z_Array = createEmptyTimeArray()
+
+Temp_Array = createEmptyTimeArray()
+
+Tof_1_Array = createEmptyTimeArray()
+Tof_2_Array = createEmptyTimeArray()
+Tof_3_Array = createEmptyTimeArray()
+Tof_4_Array = createEmptyTimeArray()
+Tof_5_Array = createEmptyTimeArray()
+
+
 timer_manager = TimerManager()
 
 # Interpret CLI Commands
@@ -181,6 +200,29 @@ def sendCommandNoConfirmation(command):
         commandWithoutConfirmation.value = command
     else:
         printConsoles(f"Check Error: Command with no confirmation pending: {commandWithoutConfirmation.value} at {time.perf_counter()}")
+
+
+def updateSensorAverages():
+    global Accel_X_Array, Accel_Y_Array, Accel_Z_Array, Gyro_X_Array, Gyro_Y_Array, Gyro_Z_Array, Temp_Array, Tof_1_Array, Tof_2_Array, Tof_3_Array, Tof_4_Array, Tof_5_Array
+    if newSensorData.value:
+        Accel_X_Array = addNewTimeValue(Accel_X_Array, Accel_X.value)
+        Accel_Y_Array = addNewTimeValue(Accel_Y_Array, Accel_Y.value)
+        Accel_Z_Array = addNewTimeValue(Accel_Z_Array, Accel_Z.value)
+
+        Gyro_X_Array = addNewTimeValue(Gyro_X_Array, Gyro_X.value)
+        Gyro_Y_Array = addNewTimeValue(Gyro_Y_Array, Gyro_Y.value)
+        Gyro_Z_Array = addNewTimeValue(Gyro_Z_Array, Gyro_Z.value)
+
+        Temp_Array = addNewTimeValue(Temp_Array, Temp.value)
+
+        Tof_1_Array = addNewTimeValue(Tof_1_Array, Tof_1.value)
+        Tof_2_Array = addNewTimeValue(Tof_2_Array, Tof_2.value)
+        Tof_3_Array = addNewTimeValue(Tof_3_Array, Tof_3.value)
+        Tof_4_Array = addNewTimeValue(Tof_4_Array, Tof_4.value)
+        Tof_5_Array = addNewTimeValue(Tof_5_Array, Tof_5.value)
+    
+        newSensorData.value = False
+
 
 # Pick Victim Function (takes "Alive" or "Dead")
 def pickVictim(type, step=0):
@@ -642,6 +684,9 @@ def controlLoop():
         t1 = t0 + controlDelayMS * 0.001
 
         # Loop
+        updateSensorAverages()
+
+
         LoPSwitchController()
         LOPstate.value = 1 if switchState == True else 0
         if not pickingVictim:
@@ -789,6 +834,19 @@ def controlLoop():
         zoneStatusLoopDebug.value = zoneStatusLoop
         pickSequenceStatusDebug.value = pickSequenceStatus
         pickingVictimDebug.value = pickingVictim
+        # Sensor Data
+        AccelXArrayDebug.value = calculateAverageArray(Accel_X_Array, 0.25)
+        AccelYArrayDebug.value = calculateAverageArray(Accel_Y_Array, 0.25)
+        AccelZArrayDebug.value = calculateAverageArray(Accel_Z_Array, 0.25)
+        GyroXArrayDebug.value = calculateAverageArray(Gyro_X_Array, 0.25)
+        GyroYArrayDebug.value = calculateAverageArray(Gyro_Y_Array, 0.25)
+        GyroZArrayDebug.value = calculateAverageArray(Gyro_Z_Array, 0.25)
+        TempArrayDebug.value = calculateAverageArray(Temp_Array, 0.25)
+        Tof1ArrayDebug.value = calculateAverageArray(Tof_1_Array, 0.25)
+        Tof2ArrayDebug.value = calculateAverageArray(Tof_2_Array, 0.25)
+        Tof3ArrayDebug.value = calculateAverageArray(Tof_3_Array, 0.25)
+        Tof4ArrayDebug.value = calculateAverageArray(Tof_4_Array, 0.25) 
+        Tof5ArrayDebug.value = calculateAverageArray(Tof_5_Array, 0.25)
 
         if objectiveLoop == "follow_line":
             debugMessage = (

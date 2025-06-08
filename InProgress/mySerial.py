@@ -189,6 +189,8 @@ def parseSensorData(data):
         Tof_4.value = float(parts[13])
         Tof_5.value = float(parts[14])
 
+        newSensorData.value = True
+
     except Exception as e:
         printDebug(f"Error parsing sensor data: {e}", True)
 

@@ -695,7 +695,7 @@ def resetBallArrayVars():
 
 
 def resetEvacZoneArrayVars():
-    global cornerCenterArrayGreen, cornerHeightArrayGreen, cornerHeightArrayRed, cornerCenterArrayRed
+    global cornerCenterArrayGreen, cornerHeightArrayGreen
     if resetEvacZoneArrays.value:
         cornerCenterArrayGreen = createFilledArray(camera_x // 2)
         cornerHeightArrayGreen = createEmptyTimeArray()
