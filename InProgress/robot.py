@@ -224,6 +224,56 @@ def updateSensorAverages():
         newSensorData.value = False
 
 
+def updateRampState():
+    # --- PARAMETERS (tweakable) ---
+    PITCH_THRESHOLD = 18   # Degrees: detected ramp if abs(pitch) > this
+    GYRO_UP_THRESH = 8     # deg/s (positive = up ramp)
+    GYRO_DOWN_THRESH = -8  # deg/s (negative = down ramp)
+    SMOOTH_TIME = 0.6      # seconds of history for smoothing
+    STICKY_TIME = 1.0      # time to remember we "were" on ramp
+
+    # --- Compute Smoothed Pitch ---
+    accX = calculateAverageArray(Accel_X_Array, SMOOTH_TIME)
+    accZ = calculateAverageArray(Accel_Z_Array, SMOOTH_TIME)
+
+    if accX == -1 or accZ == -1:
+        return  # Not enough data
+
+    pitch = np.degrees(np.arctan2(accX, accZ))
+
+    # --- Get smoothed Gyro Y (pitch rate) ---
+    gyroY = calculateAverageArray(Gyro_Y_Array, SMOOTH_TIME)
+
+    if gyroY == -1:
+        return  # Not enough data
+
+    # --- Detect Ramp Status ---
+    absPitch = abs(pitch)
+
+    if absPitch > PITCH_THRESHOLD:
+        # Definitely on a ramp
+        rampDetected.value = True
+        timer_manager.set_timer("wasOnRamp", STICKY_TIME)
+
+        if gyroY > GYRO_UP_THRESH:
+            rampUp.value = True
+            rampDown.value = False
+        elif gyroY < GYRO_DOWN_THRESH:
+            rampUp.value = False
+            rampDown.value = True
+        else:
+            rampUp.value = False
+            rampDown.value = False
+    else:
+        # Not enough tilt to be on a ramp
+        rampDetected.value = False
+        rampUp.value = False
+        rampDown.value = False
+
+    # --- Handle Sticky State (recently was on ramp) ---
+    wasOnRamp.value = timer_manager.get_timer("wasOnRamp")
+
+
 # Pick Victim Function (takes "Alive" or "Dead")
 def pickVictim(type, step=0):
     if not LOPstate.value:
@@ -656,6 +706,7 @@ def controlLoop():
     timer_manager.add_timer("zoneForward", 0.05)
     timer_manager.add_timer("do180", 0.05)
     timer_manager.add_timer("wiggle", 0.05)
+    timer_manager.add_timer("wasOnRamp", 0.05)
     time.sleep(0.1)
 
 

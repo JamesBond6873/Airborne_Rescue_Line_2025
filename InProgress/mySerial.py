@@ -144,7 +144,7 @@ def updateCommandWithoutConfirmation():
 
 def getSensorData(data = "All"):
     if not waitingResponse and not waitingSensorData:
-        printDebug(f"Requesting sensor data: {data}", True)
+        printDebug(f"Requesting sensor data: {data}", serialSoftDEBUG)
         if data == "All":
             sendSerial(f"ITData")
         elif data == "IMU":

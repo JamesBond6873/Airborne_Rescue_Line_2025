@@ -57,6 +57,11 @@ turnReason = manager.Value("i", 0)
 redDetected = manager.Value("i", False)
 silverValue = manager.Value("i", 0) # 0 = Line, 1 = Silver
 
+rampDetected = manager.Value("i", False)
+rampUp = manager.Value("i", False)
+rampDown = manager.Value("i", False)
+wasOnRamp = manager.Value("i", False)
+
 ballCenterX = manager.Value("i", -1) # Average
 ballBottomY = manager.Value("i", -1) # Average
 ballWidth = manager.Value("i", -1) # Average
