@@ -116,6 +116,8 @@ Tof3ArrayDebug = manager.Value("i", -1)
 Tof4ArrayDebug = manager.Value("i", -1)
 Tof5ArrayDebug = manager.Value("i", -1)
 pitchDebug = manager.Value("i", -1)
+silverValueDebug = manager.Value("i", -1)
+silverValueArrayDebug = manager.Value("i", -1)
 
 # ARRAY FUNCTIONS
 def createEmptyTimeArray(length: int = 240):

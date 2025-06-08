@@ -143,7 +143,7 @@ def updateCommandWithoutConfirmation():
 
 
 def getSensorData(data = "All"):
-    if not waitingResponse and not waitingSensorData:
+    if not waitingResponse and not waitingSensorData and objective.value == "follow_line":
         printDebug(f"Requesting sensor data: {data}", serialSoftDEBUG)
         if data == "All":
             sendSerial(f"ITData")

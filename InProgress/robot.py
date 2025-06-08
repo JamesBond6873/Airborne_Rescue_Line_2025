@@ -88,6 +88,13 @@ def CLIinterpretCommand(mpMessage):
         printConsoles(f"  - LOPState <0 or 1>")
         printConsoles(f"  - Objective <FL or EZ>")
         printConsoles(f"  - ZoneStatus <notStarted, begin, entry, findVictims, goToBall, depositRed, depositGreen, exit>")
+        printConsoles(f"  - cameraFree <15-90>")
+        printConsoles(f"  - setLights <0 or 1>")
+        printConsoles(f"  - setCustomLights <0-255>")
+        printConsoles(f"  - rgbLed <R> <G> <B>  (0-255 each)")
+        printConsoles(f"  - PV <Alive|Dead> [step]")
+        printConsoles(f"  - DV <Alive|Dead>")
+        printConsoles(f"  - BC")
     elif message == "vars":
         printConsoles(f"  - LOPOverride: {LOPOverride}")
         printConsoles(f"  - LOPVirtualState: {LOPVirtualState}")
@@ -129,10 +136,12 @@ def CLIinterpretCommand(mpMessage):
 
             if objectiveCode == "FL":
                 objective.value = "follow_line"
+                cameraDefault("Line")
                 printConsoles("Objective set to FOLLOW LINE.")
             elif objectiveCode == "EZ":
                 objective.value = "zone"
                 zoneStatus.value = "begin"
+                cameraDefault("Zone")
                 printConsoles("Objective set to ZONE.")
             else:
                 printConsoles(f"Unknown Objective '{objectiveCode}'. Use 'FL' or 'EZ'.")
@@ -155,7 +164,66 @@ def CLIinterpretCommand(mpMessage):
                 printConsoles(f"Unknown ZoneStatus '{zoneCode}'. Allowed: {allowedZoneStatuses}")
         except (ValueError, IndexError):
             printConsoles("Invalid ZoneStatus command. Example: 'ZoneStatus begin'")
-    
+    elif message.startswith("cameraFree"):
+        try:
+            _, posStr = message.split(maxsplit=1)
+            pos = int(posStr)
+            cameraFree(pos)
+        except (ValueError, IndexError):
+            printConsoles("Invalid cameraFree command. Use 'cameraFree <15-90>'")
+    elif message.startswith("setLights"):
+        try:
+            _, lightStr = message.split(maxsplit=1)
+            lightVal = int(lightStr)
+            if lightVal in [0, 1]:
+                setLights(lightVal == 1)
+            else:
+                raise ValueError()
+        except (ValueError, IndexError):
+            printConsoles("Invalid setLights command. Use 'setLights <0 or 1>'")
+    elif message.startswith("setCustomLights"):
+        try:
+            _, pwmStr = message.split(maxsplit=1)
+            pwm = int(pwmStr)
+            setCustomLights(pwm)
+        except (ValueError, IndexError):
+            printConsoles("Invalid setCustomLights command. Use 'setCustomLights <0-255>'")
+    elif message.startswith("rgbLed"):
+        try:
+            parts = message.split()
+            r, g, b = int(parts[1]), int(parts[2]), int(parts[3])
+            rgbPicoLed(r, g, b)
+            printConsoles(f"Set RGB LED to ({r}, {g}, {b})")
+        except (ValueError, IndexError):
+            printConsoles("Invalid rgbLed command. Use: rgbLed <R> <G> <B> with values 0-255")
+    elif message.startswith("PV"):
+        try:
+            parts = message.split()
+            victimType = parts[1].capitalize()
+            step = int(parts[2]) if len(parts) > 2 else 0
+            if victimType in ["Alive", "Dead"]:
+                pickVictim(victimType, step)
+                printConsoles(f"pickVictim called with type '{victimType}' and step {step}")
+            else:
+                printConsoles("Invalid victim type. Use 'Alive' or 'Dead'.")
+        except (ValueError, IndexError):
+            printConsoles("Invalid pickVictim command. Use: pickVictim <Alive|Dead> [step]")
+    elif message.startswith("DV"):
+        try:
+            parts = message.split()
+            victimType = parts[1].capitalize()
+            if victimType in ["Alive", "Dead"]:
+                ballRelease(victimType)
+                printConsoles(f"Dropped victim type '{victimType}'")
+            else:
+                printConsoles("Invalid victim type. Use 'Alive' or 'Dead'.")
+        except (IndexError):
+            printConsoles("Invalid dropVictim command. Use: dropVictim <Alive|Dead>")
+    elif message == "BC":
+        closeBallStorage()
+        printConsoles("Ball Storage closed.")
+
+
     # Reset command to none
     mpMessage.value = "none"
 
@@ -309,6 +377,35 @@ def cameraDefault(position):
     elif position == "Evacuation":
         printDebug(f"Set Camera to Evacaution Zone Mode", softDEBUG)
         sendCommandListWithConfirmation(["CE", "SF,4,F"])
+
+
+def cameraFree(position):
+    if position < 15 or position > 90:
+        printDebug(f"Invalid Camera Free Position: {position}", softDEBUG)
+        return
+    command = "SC,4," + str(position)
+    sendCommandListWithConfirmation([str(command), "SF,4,F"])
+
+
+def setLights(on = True):
+    if on:
+        sendCommandListWithConfirmation(["L1"])
+    else:
+        sendCommandListWithConfirmation(["L0"])
+
+
+def setCustomLights(pwm):
+    if 0 <= pwm <= 255:
+        command = "LX," + str(pwm)
+        sendCommandListWithConfirmation([command])
+
+
+def rgbPicoLed(r, g, b):
+    if r < 0 or r > 255 or g < 0 or g > 255 or b < 0 or b > 255:
+        printConsoles(f"Invalid RGB values: {r}, {g}, {b}")
+        return
+    command = "RGB," + str(r) + "," + str(g) + "," + str(b)
+    sendCommandListWithConfirmation([command])
 
 
 #Returns True if the switch is ON, False otherwise.
@@ -659,6 +756,16 @@ def gapController():
     lastLineDetected = lineDetected.value  # Update previous state
 
 
+def silverLineController():
+    silverLine = silverValue.value > 0.6
+    if silverLine:
+        printDebug(f"Silver Line Detected: {silverValue.value} | Entering Zone", True)
+        objective.value = "zone"
+        zoneStatus.value = "begin"
+        silverValue.value = -2
+
+
+
 #############################################################################
 #                           Robot Control Loop
 #############################################################################
@@ -667,7 +774,7 @@ def controlLoop():
     global switchState, M1, M2, M1info, M2info, oldM1, oldM2, motorSpeedDiference, error_theta, error_x, errorAcc, lastError, inGap
     global pickingVictim, pickSequenceStatus, pickVictimType
 
-    sendCommandListWithConfirmation(["GR","BC", "SF,5,F", "CL", "SF,4,F", "AU", "PA", "SF,0,F", "SF,1,F", "SF,2,F", "SF,3,F"])
+    sendCommandListWithConfirmation(["GR","BC", "SF,5,F", "CL", "SF,4,F", "AU", "PA", "SF,0,F", "SF,1,F", "SF,2,F", "SF,3,F", "LX,200", "RGB,255,255,255"])
 
     if False: # True if only testing Evac
         objective.value = "zone"
@@ -727,10 +834,6 @@ def controlLoop():
         t1 = t0 + controlDelayMS * 0.001
 
         # Loop
-        updateSensorAverages()
-        updateRampStateAccelOnly()
-
-
         LoPSwitchController()
         LOPstate.value = 1 if switchState == True else 0
         if not pickingVictim:
@@ -741,6 +844,9 @@ def controlLoop():
         # ----- LINE FOLLOWING ----- 
         if objectiveLoop == "follow_line":
             gapController()
+            silverLineController()
+            updateSensorAverages()
+            updateRampStateAccelOnly()
 
             setMotorsSpeeds(lineCenterX.value)
             intersectionController()
@@ -879,18 +985,19 @@ def controlLoop():
         pickSequenceStatusDebug.value = pickSequenceStatus
         pickingVictimDebug.value = pickingVictim
         # Sensor Data
-        AccelXArrayDebug.value = calculateAverageArray(Accel_X_Array, 0.25)
-        AccelYArrayDebug.value = calculateAverageArray(Accel_Y_Array, 0.25)
-        AccelZArrayDebug.value = calculateAverageArray(Accel_Z_Array, 0.25)
-        GyroXArrayDebug.value = calculateAverageArray(Gyro_X_Array, 0.25)
-        GyroYArrayDebug.value = calculateAverageArray(Gyro_Y_Array, 0.25)
-        GyroZArrayDebug.value = calculateAverageArray(Gyro_Z_Array, 0.25)
-        TempArrayDebug.value = calculateAverageArray(Temp_Array, 0.25)
-        Tof1ArrayDebug.value = calculateAverageArray(Tof_1_Array, 0.25)
-        Tof2ArrayDebug.value = calculateAverageArray(Tof_2_Array, 0.25)
-        Tof3ArrayDebug.value = calculateAverageArray(Tof_3_Array, 0.25)
-        Tof4ArrayDebug.value = calculateAverageArray(Tof_4_Array, 0.25) 
-        Tof5ArrayDebug.value = calculateAverageArray(Tof_5_Array, 0.25)
+        if objectiveLoop == "follow_line":
+            AccelXArrayDebug.value = calculateAverageArray(Accel_X_Array, 0.25)
+            AccelYArrayDebug.value = calculateAverageArray(Accel_Y_Array, 0.25)
+            AccelZArrayDebug.value = calculateAverageArray(Accel_Z_Array, 0.25)
+            GyroXArrayDebug.value = calculateAverageArray(Gyro_X_Array, 0.25)
+            GyroYArrayDebug.value = calculateAverageArray(Gyro_Y_Array, 0.25)
+            GyroZArrayDebug.value = calculateAverageArray(Gyro_Z_Array, 0.25)
+            TempArrayDebug.value = calculateAverageArray(Temp_Array, 0.25)
+            Tof1ArrayDebug.value = calculateAverageArray(Tof_1_Array, 0.25)
+            Tof2ArrayDebug.value = calculateAverageArray(Tof_2_Array, 0.25)
+            Tof3ArrayDebug.value = calculateAverageArray(Tof_3_Array, 0.25)
+            Tof4ArrayDebug.value = calculateAverageArray(Tof_4_Array, 0.25) 
+            Tof5ArrayDebug.value = calculateAverageArray(Tof_5_Array, 0.25)
 
         if objectiveLoop == "follow_line":
             debugMessage = (

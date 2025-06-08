@@ -21,7 +21,7 @@ print("Line Camera: \t \t \t OK")
 
 # Debug Features
 cameraDebugMode = computerOnlyDebug
-debugImageFolder = "DataSet/EvacZoneTest"
+debugImageFolder = "DataSet/SilverLineTest"
 debugImagePaths = sorted(glob(os.path.join(debugImageFolder, "*.jpg")))
 currentFakeImageIndex = 0
 raw_capture = None
@@ -67,6 +67,9 @@ ballTypeArray = createEmptyTimeArray()
 ballExistsArray = createEmptyTimeArray()
 cornerCenterArrayGreen = createEmptyTimeArray()
 cornerHeightArrayGreen = createEmptyTimeArray()
+
+# Silver Line Array
+silverValueArray = createEmptyTimeArray()
 
 
 def savecv2_img(folder, cv2_img):
@@ -756,8 +759,6 @@ def getRedContours(red_image):
     return contoursRed
 
 
-
-
 def obstacleController():
     pass
 
@@ -767,7 +768,7 @@ def obstacleController():
 #############################################################################
 
 def lineCamLoop():
-    global cv2_img, blackImage, greenImage, redImage, x_last, y_last, ballCenterXArray, ballBottomYArray, ballWidthArray, ballTypeArray, ballExistsArray
+    global cv2_img, blackImage, greenImage, redImage, x_last, y_last, ballCenterXArray, ballBottomYArray, ballWidthArray, ballTypeArray, ballExistsArray, silverValueArray
 
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/ball_zone_s/ball_detect_s_edgetpu.tflite', task='detect')
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v3/victim_ball_detection_int8_edgetpu.tflite', task='detect')
@@ -780,7 +781,8 @@ def lineCamLoop():
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.3/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect') # Used format = edgetpu
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.4/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect') # Used format = edgetpu
 
-    modelSilverLine = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/silver_zone_entry/silver_classify_s.onnx', task='classify')
+    #modelSilverLine = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/silver_zone_entry/silver_classify_s.onnx', task='classify')
+    modelSilverLine = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/silver_strip/SilverStripDetection.onnx', task='classify')
     
     camera = None # PlaceHolder for Debugging
     if not cameraDebugMode:
@@ -807,7 +809,7 @@ def lineCamLoop():
     lastLineAngle = 90
     lastLinePoint = [x_last, y_last] # center points 
 
-    do_inference_limit = 7
+    do_inference_limit = 2
     do_inference_counter = 0
     last_best_box = None
 
@@ -868,20 +870,26 @@ def lineCamLoop():
 
 
             # -- SILVER Line --
-            """if do_inference_counter >= do_inference_limit:
+            if do_inference_counter >= do_inference_limit:
                 results = modelSilverLine.predict(raw_capture, imgsz=128, conf=0.4, workers=4, verbose=False)
                 result = results[0].numpy()
 
                 confidences = result.probs.top5conf
-                silverValue.value = round(confidences[0] if result.probs.top1 == 1 else confidences[1], 3)  # 0 = Line, 1 = Silver
+                rawSilverValue = round(confidences[0] if result.probs.top1 == 1 else confidences[1], 3)  # 0 = Line, 1 = Silver
+
+                silverValueArray = addNewTimeValue(silverValueArray, rawSilverValue)# Add value to Array
+                silverValue.value = calculateAverageArray(silverValueArray, 1.0) # Average Array
+
                 do_inference_counter = 0
 
+                # Debug
+                if silverValue.value > 0.5:
+                    cv2.circle(cv2_img, (10, camera_y - 10), 5, (255, 255, 255), -1, cv2.LINE_AA)
+                silverValueDebug.value = rawSilverValue
+                silverValueArrayDebug.value = calculateAverageArray(silverValueArray, 1.0) # Average Array
+
             do_inference_counter += 1
-            if silverValue.value > .6 and LOPstate.value == 0:
-                cv2.circle(cv2_img, (10, camera_y - 10), 5, (255, 255, 255), -1, cv2.LINE_AA)
-                objective.value = "zone"
-                zoneStatus.value = "begin"
-            """
+           
             
             # -- INTERSECTIONS -- Deal with intersections
             intersectionDetector()
