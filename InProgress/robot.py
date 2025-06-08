@@ -441,8 +441,8 @@ def LoPSwitchController():
 
     if isSwitchOn():
         if switchState == False: # First time detected as on
-            printDebug(f"LoP Switch is now ON: {switchState}", softDEBUG)
             switchState = True
+            printDebug(f"LoP Switch is now ON: {switchState}", softDEBUG)
             
             setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)
             controlMotors()

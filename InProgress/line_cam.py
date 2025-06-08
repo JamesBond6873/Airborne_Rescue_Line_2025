@@ -870,7 +870,7 @@ def lineCamLoop():
 
 
             # -- SILVER Line --
-            if do_inference_counter >= do_inference_limit:
+            if do_inference_counter >= do_inference_limit and LOPstate.value == 0:
                 results = modelSilverLine.predict(raw_capture, imgsz=128, conf=0.4, workers=4, verbose=False)
                 result = results[0].numpy()
 

@@ -89,6 +89,7 @@ def sendSerial(message, confirmation = False):
     if timer_manager.is_timer_expired("serialCooldownbetweenCommands"):
         printDebug(f"Sent to Serial at {time.perf_counter()}: {message.strip()}", serialSoftDEBUG)
         timer_manager.set_timer("serialCooldownbetweenCommands", 0.005) # Wait 5ms before sending the next command
+        message += "\n" # is this fixing the problem?
         ser.write(message.encode('utf-8'))
 
     else:
@@ -106,7 +107,7 @@ def interpretMessage(message):
         commandWaitingListConfirmation.pop(0)
         printDebug(f"Command List ({len(commandWaitingListConfirmation)} commands): {commandWaitingListConfirmation}", False)
         waitingResponse = False
-    elif "D," in message:
+    elif "D," in message or "T5," in message:
         parseSensorData(message)
         waitingSensorData = False
     if DEBUG == True:
@@ -161,38 +162,53 @@ def parseSensorData(data):
         # Stop at the first full line
         line = data.strip().split('\n')[0].strip()
 
-        if not line.startswith("D,"):
-            printDebug(f"Ignoring line (no 'D,'): {line} {data}", True)
-            return
+        if line.startswith("D,"):
+            parts = line[2:].split(",")  # Remove 'D,' and split
 
-        parts = line[2:].split(",")  # Remove 'D,' and split
+            if len(parts) != 15:
+                printDebug(f"Unexpected number of values in D-message: {len(parts)} in line: {line}", True)
+                return
 
-        if len(parts) != 15:
-            printDebug(f"Unexpected number of values: {len(parts)} in line: {line}", True)
-            return
+            # Assign to manager variables
+            Accel_X.value = float(parts[0])
+            Accel_Y.value = float(parts[1])
+            Accel_Z.value = float(parts[2])
 
-        # Assign to manager variables
-        Accel_X.value = float(parts[0])
-        Accel_Y.value = float(parts[1])
-        Accel_Z.value = float(parts[2])
+            Gyro_X.value = float(parts[3])
+            Gyro_Y.value = float(parts[4])
+            Gyro_Z.value = float(parts[5])
 
-        Gyro_X.value = float(parts[3])
-        Gyro_Y.value = float(parts[4])
-        Gyro_Z.value = float(parts[5])
+            Mag_X.value = float(parts[6])
+            Mag_Y.value = float(parts[7])
+            Mag_Z.value = float(parts[8])
 
-        Mag_X.value = float(parts[6])
-        Mag_Y.value = float(parts[7])
-        Mag_Z.value = float(parts[8])
+            Temp.value = float(parts[9])
 
-        Temp.value = float(parts[9])
+            Tof_1.value = float(parts[10])
+            Tof_2.value = float(parts[11])
+            Tof_3.value = float(parts[12])
+            Tof_4.value = float(parts[13])
+            Tof_5.value = float(parts[14])
 
-        Tof_1.value = float(parts[10])
-        Tof_2.value = float(parts[11])
-        Tof_3.value = float(parts[12])
-        Tof_4.value = float(parts[13])
-        Tof_5.value = float(parts[14])
+            newSensorData.value = True
 
-        newSensorData.value = True
+        elif line.startswith("T5,"):
+            parts = line[3:].split(",")  # Remove 'T5,' and split
+
+            if len(parts) != 5:
+                printDebug(f"Unexpected number of values in T5-message: {len(parts)} in line: {line}", True)
+                return
+
+            Tof_1.value = float(parts[0])
+            Tof_2.value = float(parts[1])
+            Tof_3.value = float(parts[2])
+            Tof_4.value = float(parts[3])
+            Tof_5.value = float(parts[4])
+
+            newSensorData.value = True
+
+        else:
+            printDebug(f"Ignoring line (no 'D,' or 'T5,'): {line}", True)
 
     except Exception as e:
         printDebug(f"Error parsing sensor data: {e}", True)
@@ -245,6 +261,8 @@ def serialLoop():
         if timer_manager.is_timer_expired("sensorRequest"):
             getSensorData()
             timer_manager.set_timer("sensorRequest", dataRequestDelayMS * 0.001)
+            if objective.value == "zone":
+                timer_manager.set_timer("sensorRequest", 3 * dataRequestDelayMS * 0.001)
 
 
         while (time.perf_counter() <= t1):
