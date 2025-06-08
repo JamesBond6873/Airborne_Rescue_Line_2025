@@ -143,14 +143,17 @@ def updateCommandWithoutConfirmation():
 
 
 def getSensorData(data = "All"):
-    if not waitingResponse and not waitingSensorData and objective.value == "follow_line":
-        printDebug(f"Requesting sensor data: {data}", serialSoftDEBUG)
-        if data == "All":
-            sendSerial(f"ITData")
-        elif data == "IMU":
-            sendSerial(f"IMU10")
-        elif data == "TOF":
-            sendSerial(f"TOF5")
+    if not waitingResponse and not waitingSensorData:
+        if objective.value == "follow_line":
+            printDebug(f"Requesting sensor data: {data}", serialSoftDEBUG)
+            if data == "All":
+                sendSerial(f"ITData")
+            elif data == "IMU":
+                sendSerial(f"IMU10")
+            elif data == "TOF":
+                sendSerial(f"ToF5")
+        elif objective.value == "zone":
+            sendSerial(f"ToF5")
 
 
 def parseSensorData(data):

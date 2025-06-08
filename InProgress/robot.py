@@ -292,6 +292,21 @@ def updateSensorAverages():
         newSensorData.value = False
 
 
+        # Sensor Data for Debug
+        AccelXArrayDebug.value = calculateAverageArray(Accel_X_Array, 0.25)
+        AccelYArrayDebug.value = calculateAverageArray(Accel_Y_Array, 0.25)
+        AccelZArrayDebug.value = calculateAverageArray(Accel_Z_Array, 0.25)
+        GyroXArrayDebug.value = calculateAverageArray(Gyro_X_Array, 0.25)
+        GyroYArrayDebug.value = calculateAverageArray(Gyro_Y_Array, 0.25)
+        GyroZArrayDebug.value = calculateAverageArray(Gyro_Z_Array, 0.25)
+        TempArrayDebug.value = calculateAverageArray(Temp_Array, 0.25)
+        Tof1ArrayDebug.value = calculateAverageArray(Tof_1_Array, 0.25)
+        Tof2ArrayDebug.value = calculateAverageArray(Tof_2_Array, 0.25)
+        Tof3ArrayDebug.value = calculateAverageArray(Tof_3_Array, 0.25)
+        Tof4ArrayDebug.value = calculateAverageArray(Tof_4_Array, 0.25) 
+        Tof5ArrayDebug.value = calculateAverageArray(Tof_5_Array, 0.25)
+
+
 def updateRampStateAccelOnly():
     # --- PARAMETERS ---
     PITCH_THRESHOLD = 18       # Minimum angle to consider ramp
@@ -768,10 +783,10 @@ def silverLineController():
     silverLine = silverValue.value > 0.6
     if silverLine:
         printDebug(f"Silver Line Detected: {silverValue.value} | Entering Zone", True)
-        objective.value = "zone"
-        zoneStatus.value = "begin"
-        silverValue.value = -2
-
+        if not LOPstate.value:
+            objective.value = "zone"
+            zoneStatus.value = "begin"
+            silverValue.value = -2
 
 
 #############################################################################
@@ -789,6 +804,7 @@ def controlLoop():
         zoneStatus.value = "begin"
         time.sleep(5)
         cameraDefault("Evacuation")
+        setLights(on=False)
 
     switchState = isSwitchOn()
     motorSpeedDiference = 0
@@ -842,6 +858,9 @@ def controlLoop():
         t1 = t0 + controlDelayMS * 0.001
 
         # Loop
+        updateSensorAverages()
+
+
         LoPSwitchController()
         LOPstate.value = 1 if switchState == True else 0
         if not pickingVictim:
@@ -853,7 +872,6 @@ def controlLoop():
         if objectiveLoop == "follow_line":
             gapController()
             silverLineController()
-            updateSensorAverages()
             updateRampStateAccelOnly()
 
             setMotorsSpeeds(lineCenterX.value)
@@ -870,10 +888,12 @@ def controlLoop():
                 zoneStatusLoop = "depositRed"
     
             if zoneStatusLoop == "begin":
-                timer_manager.set_timer("stop", 5.0) # 10 seconds to signal that we entered
+                timer_manager.set_timer("stop", 5.0) # 5 seconds to signal that we entered
                 timer_manager.set_timer("zoneEntry", 8.0) # 3 (5+3) seconds to entry the zone
+
                 cameraDefault("Evacuation")
-                silverValue.value = -1
+                setLights(on=False)
+
                 if zoneStartTime.value == -1:
                     zoneStartTime.value = time.perf_counter()
                 zoneStatus.value = "entry" # go to next Step
@@ -883,7 +903,7 @@ def controlLoop():
                     M1, M2 = 1800, 1800
                     controlMotors()
                 else: # timer expired
-                    timer_manager.set_timer("stop", 5.0) # 10 seconds to signal that we entered
+                    timer_manager.set_timer("stop", 2.5) # 10 seconds to signal that we entered
                     zoneStatus.value = "findVictims"
             
             elif zoneStatusLoop == "findVictims":
@@ -992,20 +1012,7 @@ def controlLoop():
         zoneStatusLoopDebug.value = zoneStatusLoop
         pickSequenceStatusDebug.value = pickSequenceStatus
         pickingVictimDebug.value = pickingVictim
-        # Sensor Data
-        if objectiveLoop == "follow_line":
-            AccelXArrayDebug.value = calculateAverageArray(Accel_X_Array, 0.25)
-            AccelYArrayDebug.value = calculateAverageArray(Accel_Y_Array, 0.25)
-            AccelZArrayDebug.value = calculateAverageArray(Accel_Z_Array, 0.25)
-            GyroXArrayDebug.value = calculateAverageArray(Gyro_X_Array, 0.25)
-            GyroYArrayDebug.value = calculateAverageArray(Gyro_Y_Array, 0.25)
-            GyroZArrayDebug.value = calculateAverageArray(Gyro_Z_Array, 0.25)
-            TempArrayDebug.value = calculateAverageArray(Temp_Array, 0.25)
-            Tof1ArrayDebug.value = calculateAverageArray(Tof_1_Array, 0.25)
-            Tof2ArrayDebug.value = calculateAverageArray(Tof_2_Array, 0.25)
-            Tof3ArrayDebug.value = calculateAverageArray(Tof_3_Array, 0.25)
-            Tof4ArrayDebug.value = calculateAverageArray(Tof_4_Array, 0.25) 
-            Tof5ArrayDebug.value = calculateAverageArray(Tof_5_Array, 0.25)
+    
 
         if objectiveLoop == "follow_line":
             debugMessage = (
