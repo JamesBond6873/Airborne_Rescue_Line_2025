@@ -7,7 +7,6 @@ void IMU::begin(TwoWire &wire) {
     _wire = &wire;
     if (_imu.begin(*_wire, 1) != ICM_20948_Stat_Ok) {
         Serial.println("IMU initialization failed. Check connections.");
-        while (1) { Serial.println("IMU initialization failed. Check connections."); }
     } else {
         Serial.println("IMU initialized successfully.");
     }
@@ -44,8 +43,8 @@ void IMU::update10DOF() {
         _all[9] = _temp;
     }
     else {
-        Serial.print("Data ready? ");
-        Serial.println(_imu.dataReady());
+        //Serial.print("Data ready? ");
+        //Serial.println(_imu.dataReady());
     }
 }
 
