@@ -878,7 +878,7 @@ def lineCamLoop():
                 rawSilverValue = round(confidences[0] if result.probs.top1 == 1 else confidences[1], 3)  # 0 = Line, 1 = Silver
 
                 silverValueArray = addNewTimeValue(silverValueArray, rawSilverValue)# Add value to Array
-                silverValue.value = calculateAverageArray(silverValueArray, 1.0) # Average Array
+                silverValue.value = calculateAverageArray(silverValueArray, 0.75) # Average Array
 
                 do_inference_counter = 0
 
@@ -886,7 +886,7 @@ def lineCamLoop():
                 if silverValue.value > 0.5:
                     cv2.circle(cv2_img, (10, camera_y - 10), 5, (255, 255, 255), -1, cv2.LINE_AA)
                 silverValueDebug.value = rawSilverValue
-                silverValueArrayDebug.value = calculateAverageArray(silverValueArray, 1.0) # Average Array
+                silverValueArrayDebug.value = calculateAverageArray(silverValueArray, 0.75) # Average Array
 
             do_inference_counter += 1
            

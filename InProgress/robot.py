@@ -426,23 +426,31 @@ def LoPSwitchController():
 
     if isSwitchOn():
         if switchState == False: # First time detected as on
-            switchState = True
             printDebug(f"LoP Switch is now ON: {switchState}", softDEBUG)
+            switchState = True
+            
+            setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)
+            controlMotors()
+            cameraDefault("Line")
+            setCustomLights(200)
+
             objective.value = "follow_line"
             zoneStatus.value = "notStarted"
+            pickedUpAliveCount.value = 0
+            pickedUpDeadCount.value = 0
+            rotateTo = "right" if rotateTo == "left" else "left" # Toggles rotate To
+
             timer_manager.clear_all_timers()
-            cameraDefault("Line")
+
             lopCounter.value += 1
-            #message = f"M({1525}, {1524})"
-            #mySerial.sendSerial(f"M({1525}, {1524})")
+            
     else:
         if switchState == True:
             switchState = False
             printDebug(f"LoP Switch is now OFF: {switchState}", softDEBUG)
             objective.value = "follow_line"
             zoneStatus.value = "notStarted"
-            rotateTo = "right" if rotateTo == "left" else "left" # Toggles rotate To
-
+            
 
 # Calculate motor Speed difference from default
 def PID(lineCenterX):
