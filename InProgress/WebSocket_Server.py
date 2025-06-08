@@ -40,11 +40,21 @@ async def handler(websocket):
                 f"",
                 f"",
                 f"",
+                f"{Accel_X.value}",
+                f"{Accel_Y.value}",
+                f"{Accel_Z.value}",
                 f"",
                 f"",
+                f"{Gyro_X.value}",
+                f"{Gyro_Y.value}",
+                f"{Gyro_Z.value}",
                 f"",
                 f"",
-                f"",
+                f"{Tof_1.value}",
+                f"{Tof_2.value}",
+                f"{Tof_3.value}",
+                f"{Tof_4.value}",
+                f"{Tof_5.value}",
                 f"-!-",
                 f"",
                 f"",
@@ -88,7 +98,7 @@ def websocket_process():
     async def monitor_termination(server):
         while not terminate.value:
             await asyncio.sleep(0.2)
-        print("Shutting down Web Socket Loop")
+        print("Shutting Down Web Socket Loop")
         server.close()
         await server.wait_closed()
         # Cancel all handlers if needed

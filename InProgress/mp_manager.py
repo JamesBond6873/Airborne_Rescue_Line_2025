@@ -24,6 +24,29 @@ CLIWebSocketCommand = manager.Value("i", "none")
 consoleLines = manager.list()
 consoleLines.append("Sensor timeout!")
 
+
+# Sensor Data
+Accel_X = manager.Value("i", -1)
+Accel_Y = manager.Value("i", -1)
+Accel_Z = manager.Value("i", -1)
+
+Gyro_X = manager.Value("i", -1)
+Gyro_Y = manager.Value("i", -1)
+Gyro_Z = manager.Value("i", -1)
+
+Mag_X = manager.Value("i", -1)
+Mag_Y = manager.Value("i", -1)
+Mag_Z = manager.Value("i", -1)
+
+Temp = manager.Value("i", -1)
+
+Tof_1 = manager.Value("i", -1) # Back Right Side
+Tof_2 = manager.Value("i", -1) # Front Right Side
+Tof_3 = manager.Value("i", -1) # Front
+Tof_4 = manager.Value("i", -1) # Front Left Side
+Tof_5 = manager.Value("i", -1) # Back Left Side
+
+
 lineCenterX = manager.Value("i", 600)
 lineAngle = manager.Value("i", 0.)
 line_angle_y = manager.Value("i", -1)
