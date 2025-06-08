@@ -202,7 +202,13 @@ void loop() {
   else if (message == "ToF5") { Serial.print("T5, "); Serial.println(myToFs.getAllString()); } // Print All ToF Data | ToF 5 Sensors
   else if (message.startsWith("ToFX")) { tofControlMessage(message); } // Print Specific ToF Data | ToF X Sensor
 
-  else if (message == "ITData") {Serial.print("D, "); Serial.print(myIMU.getAllString()); Serial.print(", "); Serial.println(myToFs.getAllString()); }
+  else if (message == "ITData") {
+    String allData = "D, ";
+    allData += myIMU.getAllString();     // e.g., 9 IMU values + temp
+    allData += ", ";
+    allData += myToFs.getAllString();    // 5 TOF values
+    Serial.println(allData);             // One complete line
+  }
 
   else if (message == "L0") { digitalWrite(robotLight, LOW); Serial.print("Ok\n"); }
   else if (message == "L1") { digitalWrite(robotLight, HIGH); Serial.print("Ok\n"); }
