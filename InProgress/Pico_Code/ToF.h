@@ -30,6 +30,8 @@ private:
   int _channels[5];          // [BR, FR, FC, FL, BL]
   float _distances[5];       // Raw distance values in mm or cm
 
+  VL53L0X _sensors[5];  // One instance per sensor
+
 };
 
 #endif

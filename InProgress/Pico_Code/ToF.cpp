@@ -19,22 +19,20 @@ ToF::ToF(int backRightChan, int frontRightChan, int frontCenterChan, int frontLe
   _channels[4] = backLeftChan;
 }
 
-// Initialization
 void ToF::begin(TwoWire &wire) {
   _wire = &wire;
 
   for (int i = 0; i < 5; i++) {
     tcaSelect(_channels[i], _wire);
-    VL53L0X sensor;
-    sensor.setBus(_wire);
 
-    if (!sensor.init()) {
+    _sensors[i].setBus(_wire);
+    if (!_sensors[i].init()) {
       Serial.print("Failed to init ToF sensor on channel ");
       Serial.println(_channels[i]);
     } else {
-      sensor.setTimeout(500);
-      sensor.setMeasurementTimingBudget(20000);  // Fast mode
-      sensor.startContinuous();
+      _sensors[i].setTimeout(50);
+      _sensors[i].setMeasurementTimingBudget(20000);
+      _sensors[i].startContinuous();
       Serial.print("ToF sensor on channel ");
       Serial.print(_channels[i]);
       Serial.println(" started.");
@@ -42,17 +40,13 @@ void ToF::begin(TwoWire &wire) {
   }
 }
 
-// Update distances from all sensors
 void ToF::updateToF5() {
   for (int i = 0; i < 5; i++) {
-    tcaSelect(_channels[i], _wire);
+    tcaSelect(_channels[i], _wire);  // switch to the correct channel
 
-    VL53L0X sensor;
-    sensor.setBus(_wire);
-    uint16_t dist = sensor.readRangeContinuousMillimeters();
-
-    if (sensor.timeoutOccurred()) {
-      _distances[i] = -1;  // Error case
+    uint16_t dist = _sensors[i].readRangeContinuousMillimeters();
+    if (_sensors[i].timeoutOccurred()) {
+      _distances[i] = -1;
     } else {
       _distances[i] = dist;
     }
@@ -75,7 +69,7 @@ String ToF::getFrontLeftString()   { updateToF5(); return String(_distances[3]);
 String ToF::getBackLeftString()    { updateToF5(); return String(_distances[4]); }
 
 String ToF::getAllString() {
-  updateToF5();
+  //updateToF5();
   return String(_distances[0]) + ", " + 
          String(_distances[1]) + ", " + 
          String(_distances[2]) + ", " + 

@@ -72,18 +72,18 @@
     <div class="field"><span class="label">Left Motors:</span><span class="value" id="leftMotors"></span></div>
     <div class="field"><span class="label">Right Motors:</span><span class="value" id="rightMotors"></span></div>
     <div class="field"><span class="label">Data 3:</span><span class="value" id="Data3G"></span></div>
-    <div class="field"><span class="label">Data 4:</span><span class="value" id="Data4G"></span></div>
+    <div class="field"><span class="label">Pitch:</span><span class="value" id="Data4G"></span></div>
     <div class="field"><span class="label">Data 5:</span><span class="value" id="Data5G"></span></div>
     <div class="field"><span class="label">Accel X:</span><span class="value" id="Data6G"></span></div>
     <div class="field"><span class="label">Accel Y:</span><span class="value" id="Data7G"></span></div>
     <div class="field"><span class="label">Accel Z:</span><span class="value" id="Data8G"></span></div>
-    <div class="field"><span class="label">Data 9:</span><span class="value" id="Data9G"></span></div>
-    <div class="field"><span class="label">Data 10:</span><span class="value" id="Data10G"></span></div>
+    <div class="field"><span class="label">Ramp Detected:</span><span class="value" id="Data9G"></span></div>
+    <div class="field"><span class="label">Was On Ramp:</span><span class="value" id="Data10G"></span></div>
     <div class="field"><span class="label">Gyro X:</span><span class="value" id="Data11G"></span></div>
     <div class="field"><span class="label">Gyro Y:</span><span class="value" id="Data12G"></span></div>
     <div class="field"><span class="label">Gyro Z:</span><span class="value" id="Data13G"></span></div>
-    <div class="field"><span class="label">Data 14:</span><span class="value" id="Data14G"></span></div>
-    <div class="field"><span class="label">Data 15:</span><span class="value" id="Data15G"></span></div>
+    <div class="field"><span class="label">Ramp Up:</span><span class="value" id="Data14G"></span></div>
+    <div class="field"><span class="label">Ramp Down:</span><span class="value" id="Data15G"></span></div>
     <div class="field"><span class="label">ToF 1:</span><span class="value" id="Data16G"></span></div>
     <div class="field"><span class="label">ToF 2:</span><span class="value" id="Data17G"></span></div>
     <div class="field"><span class="label">ToF 3:</span><span class="value" id="Data18G"></span></div>
@@ -138,7 +138,7 @@
   <button class="selector-btn" data-name="ZoneStatusDepositRed" data-group="group2" data-output="ZoneStatus depositRed">Deposit Red</button>
   <button class="selector-btn" data-name="ZoneStatusExit" data-group="group2" data-output="ZoneStatus exit">Exit</button>
 
-  <button class="quick-btn" data-name="DoSomethingQuick" data-output="ACTION_1">Do Something</button>
+  <button class="quick-btn" data-name="DoSomethingQuick" data-output="exit">Terminate</button>
   <div class="section">
     <h2>🖥️ Console</h2>
     <div style="grid-column: span 5; display: flex; flex-direction: column;">
@@ -151,7 +151,7 @@
   </div>
 
   <script>
-    const ws = new WebSocket("ws://192.168.1.177:8000");
+    const ws = new WebSocket("ws://192.168.1.174:8000");
 
     const consoleOutput = document.getElementById("console-output");
     const consoleInput = document.getElementById("console-input");
@@ -198,7 +198,7 @@
       btn.addEventListener("click", () => {
         const name = btn.getAttribute("data-name");
         const output = btn.getAttribute("data-output") || "1";
-        ws.send(`${name} ${output}`);
+        ws.send(`${output}`);
         btn.style.backgroundColor = "lightcoral"; // flash or show briefly
         setTimeout(() => {
           btn.style.backgroundColor = "";
