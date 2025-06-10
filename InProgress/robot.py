@@ -1008,6 +1008,9 @@ def controlLoop():
         motorOverride.value = MotorOverride
         m1MP.value = M1info
         m2MP.value = M2info
+        lineBiasDebug.value = int(KP * error_x + KD * (error_x - lastError) + KI * errorAcc)
+        AngBiasDebug.value = round(KP_THETA*error_theta,2)
+        inGapDebug.value = inGap
         # Evac Zone
         zoneStatusLoopDebug.value = zoneStatusLoop
         pickSequenceStatusDebug.value = pickSequenceStatus

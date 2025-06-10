@@ -21,7 +21,7 @@ print("Line Camera: \t \t \t OK")
 
 # Debug Features
 cameraDebugMode = computerOnlyDebug
-debugImageFolder = "DataSet/SilverLineTest"
+debugImageFolder = "DataSet/FullRunTest"
 debugImagePaths = sorted(glob(os.path.join(debugImageFolder, "*.jpg")))
 currentFakeImageIndex = 0
 raw_capture = None
