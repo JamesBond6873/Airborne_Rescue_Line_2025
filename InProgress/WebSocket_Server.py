@@ -64,7 +64,7 @@ async def handler(websocket):
                 f"{lineDetected.value}",
                 f"{inGapDebug.value}",
                 f"",
-                f"",
+                f"{turnDirection.value}",
                 f"",
                 f"",
                 f"",

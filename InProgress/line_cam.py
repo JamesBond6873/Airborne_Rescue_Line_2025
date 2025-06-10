@@ -109,7 +109,7 @@ def getCameraImage(camera):
     else:
         if updateFakeCamImage.value:
             if currentFakeImageIndex >= len(debugImagePaths):
-                print("----- End of debug images -----")
+                print(f"----- End of debug images ----- ")
                 return None
 
             imagePath = debugImagePaths[currentFakeImageIndex]
