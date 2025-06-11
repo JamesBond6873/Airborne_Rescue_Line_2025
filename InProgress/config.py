@@ -3,7 +3,7 @@
 print("Robot Configurations: \t \t OK")
 
 # Is it DEBUG?
-computerOnlyDebug = True # True for computer only, False for robot
+computerOnlyDebug = False # True for computer only, False for robot
 gamepadLoopRun = True # False for score runs
 DEBUG = False
 softDEBUG = True
@@ -29,8 +29,8 @@ dataRequestDelayMS = 40 # 20 Hz
 intersectionMaxTime = 1.000 #s
 
 # Line Vars
-default_crop=0.75
-turn_crop=0.45
+default_crop=0.45
+turn_crop=0.75
 
 # Color Configs
 blackThreshold = 55

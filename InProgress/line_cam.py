@@ -1121,19 +1121,19 @@ def updateTurnDirectionAndCrop(time_turn_direction, turn_direction, ramp_up):
 
     if (turning_right or turning_right_up) and not turn_direction == "uTurn" and avg_turn_dir >= 0 and not ramp_up:
         turnDirectionToSet = "right"
-        lineCropToSet = turn_crop
+        lineCropToSet = default_crop
     elif (turning_right or turning_right_up) and not turn_direction == "uTurn" and avg_turn_dir >= 0 and ramp_up:
         turnDirectionToSet = "right"
-        lineCropToSet = default_crop
+        lineCropToSet = turn_crop
     elif (turning_left or turning_left_up) and not turn_direction == "uTurn" and avg_turn_dir <= 0 and not ramp_up:
         turnDirectionToSet = "left"
-        lineCropToSet = turn_crop
+        lineCropToSet = default_crop
     elif (turning_left or turning_left_up) and not turn_direction == "uTurn" and avg_turn_dir <= 0 and ramp_up:
         turnDirectionToSet = "left"
-        lineCropToSet = default_crop
+        lineCropToSet = turn_crop
     else:
         turnDirectionToSet = turn_direction
-        lineCropToSet = default_crop if ramp_up or wasOnRamp.value else default_crop 
+        lineCropToSet = turn_crop if ramp_up or wasOnRamp.value else default_crop 
 
     return time_turn_direction, turnDirectionToSet, lineCropToSet
 
