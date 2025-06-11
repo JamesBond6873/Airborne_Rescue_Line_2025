@@ -38,7 +38,7 @@ switch = Button(SWITCH_PIN, pull_up=True)  # Uses internal pull-up
 # Motor Vars
 M1 = M2 = 1520 # Left - Right
 oldM1 = oldM2 = M1
-error = errorAcc = lastError = 0
+error_x = errorAcc = lastError = 0
 
 
 # Sensor Vars
@@ -267,7 +267,7 @@ def sendCommandNoConfirmation(command):
     if commandWithoutConfirmation.value == "none":
         commandWithoutConfirmation.value = command
     else:
-        printConsoles(f"Check Error: Command with no confirmation pending: {commandWithoutConfirmation.value} at {time.perf_counter()}")
+        printConsoles(f"Check Error: Command with no confirmation pending: {command} at {time.perf_counter()}, {commandWithoutConfirmation.value}")
 
 
 def updateSensorAverages():
@@ -469,13 +469,17 @@ def LoPSwitchController():
 
 # Calculate motor Speed difference from default
 def PID(lineCenterX):
-    global error, errorAcc, lastError
-    error = lineCenterX - 1280 / 2 # Camera view is 1280 pixels
-    errorAcc = errorAcc + error
+    global error_x, errorAcc, lastError
 
-    motorSpeed = KP * error + KD * (error - lastError) + KI * errorAcc
+    # Error
+    error_x = lineCenterX - camera_x / 2
+    
+    # Accumulate error for integral term
+    errorAcc += error_x
 
-    lastError = error
+    motorSpeed = KP * error_x + KD * (error_x - lastError) + KI * errorAcc
+
+    lastError = error_x
 
     return motorSpeed
 
@@ -483,7 +487,7 @@ def PID2(lineCenterX, lineAngle):
     global error_x, errorAcc, lastError, error_theta
     
     # Errors
-    error_x = lineCenterX - camera_x / 2  # Camera view is 1280 pixels
+    error_x = lineCenterX - camera_x / 2
     error_theta = - (lineAngle - (np.pi/2))  # Angle difference from vertical (pi/2)
     
     # Accumulate error for integral term
@@ -525,7 +529,9 @@ def calculateMotorSpeeds(motorSpeed):
 def setMotorsSpeeds(guidanceFactor):
     global M1, M2, M1info, M2info, motorSpeedDiference
     
-    motorSpeedDiference = PID2(guidanceFactor, lineAngle.value)
+    #motorSpeedDiference = PID2(guidanceFactor, lineAngle.value)
+    motorSpeedDiference = PID(guidanceFactor)
+    motorSpeedDiferenceDebug.value = motorSpeedDiference
     M1, M2 = calculateMotorSpeeds(motorSpeedDiference)
 
     if redDetected.value and not objective.value == "zone":

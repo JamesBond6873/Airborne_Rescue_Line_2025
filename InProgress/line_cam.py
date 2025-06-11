@@ -69,6 +69,7 @@ cornerCenterArrayGreen = createEmptyTimeArray()
 cornerHeightArrayGreen = createEmptyTimeArray()
 
 # Time-value arrays
+timeTurnDirection = createEmptyTimeArray()
 timeLineAngleNormalized = createEmptyTimeArray()
 timeLineAngle = createEmptyTimeArray()
 timeBottomPointX = createEmptyTimeArray()
@@ -1060,10 +1061,81 @@ def intersectionDetector():
     contoursGreen, _ = cv2.findContours(greenImage, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
     if len(contoursGreen) > 0:
-        turnDirection.value = checkGreen(contoursGreen)
-                    
+        #turnDirection.value = checkGreen(contoursGreen)
+        return checkGreen(contoursGreen)
+
     else:
-        turnDirection.value = "straight"
+        #turnDirection.value = "straight"
+        return "straight"
+
+
+def average_direction(turn_direction):
+    turn_dir_num = 0
+
+    if turn_direction == "left":
+        turn_dir_num = -1
+    elif turn_direction == "right":
+        turn_dir_num = 1
+
+    return turn_dir_num
+
+
+def updateTurnDirectionAndCrop(time_turn_direction, turn_direction, ramp_up):
+    """
+    Update turn direction history, trigger forced turn timers, and return new line crop value.
+
+    Parameters:
+    - time_turn_direction: np.ndarray, time-value array of recent turn directions
+    - turn_direction: float, current detected turn direction
+    - ramp_up: bool, whether the robot is on a ramp up
+
+    Returns:
+    - updated time_turn_direction (np.ndarray)
+    - turnDirectionToSet (float)
+    - lineCropPercentageToSet (float)
+    """
+
+    # Step 1: Add new value to array
+    time_turn_direction = addNewTimeValue(time_turn_direction, average_direction(turn_direction))
+
+    # Step 2: Calculate average turn direction over last 0.2 seconds
+    avg_turn_dir = calculateAverageArray(time_turn_direction, 0.2)
+
+    # Step 3: Trigger appropriate forced turn timers
+    if avg_turn_dir > 0.1:
+        if ramp_up:
+            timer_manager.set_timer("right_marker_up", 0.8)
+        else:
+            timer_manager.set_timer("right_marker", 0.5)
+    elif avg_turn_dir < -0.1:
+        if ramp_up:
+            timer_manager.set_timer("left_marker_up", 0.8)
+        else:
+            timer_manager.set_timer("left_marker", 0.5)
+
+    # Step 4: Decide line crop based on active timers
+    turning_right = not timer_manager.is_timer_expired("right_marker")
+    turning_right_up = not timer_manager.is_timer_expired("right_marker_up")
+    turning_left = not timer_manager.is_timer_expired("left_marker")
+    turning_left_up = not timer_manager.is_timer_expired("left_marker_up")
+
+    if (turning_right or turning_right_up) and not turn_direction == "uTurn" and avg_turn_dir >= 0 and not ramp_up:
+        turnDirectionToSet = "right"
+        lineCropToSet = turn_crop
+    elif (turning_right or turning_right_up) and not turn_direction == "uTurn" and avg_turn_dir >= 0 and ramp_up:
+        turnDirectionToSet = "right"
+        lineCropToSet = default_crop
+    elif (turning_left or turning_left_up) and not turn_direction == "uTurn" and avg_turn_dir <= 0 and not ramp_up:
+        turnDirectionToSet = "left"
+        lineCropToSet = turn_crop
+    elif (turning_left or turning_left_up) and not turn_direction == "uTurn" and avg_turn_dir <= 0 and ramp_up:
+        turnDirectionToSet = "left"
+        lineCropToSet = default_crop
+    else:
+        turnDirectionToSet = turn_direction
+        lineCropToSet = default_crop if ramp_up or wasOnRamp.value else default_crop 
+
+    return time_turn_direction, turnDirectionToSet, lineCropToSet
 
 
 def resetBallArrayVars():
@@ -1151,7 +1223,7 @@ def obstacleController():
 
 def lineCamLoop():
     global cv2_img, blackImage, greenImage, redImage, x_last, y_last, ballCenterXArray, ballBottomYArray, ballWidthArray, ballTypeArray, ballExistsArray, silverValueArray
-    global timeLineAngleNormalized, timeLineAngle, timeBottomPointX, timeLinePointX
+    global timeTurnDirection, timeLineAngleNormalized, timeLineAngle, timeBottomPointX, timeLinePointX
 
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/ball_zone_s/ball_detect_s_edgetpu.tflite', task='detect')
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v3/victim_ball_detection_int8_edgetpu.tflite', task='detect')
@@ -1274,7 +1346,10 @@ def lineCamLoop():
            
             
             # -- INTERSECTIONS -- Deal with intersections
-            intersectionDetector()
+            #intersectionDetector()
+            turn_direction = intersectionDetector()
+
+            timeTurnDirection, turnDirection.value, lineCropPercentage.value = updateTurnDirectionAndCrop(timeTurnDirection, turn_direction, rampUp.value)
 
 
             # -- RED STRIP -- Check for Red Line - Stop
@@ -1328,13 +1403,6 @@ def lineCamLoop():
             cv2.circle(cv2_img, (int(bottomPoint[0]), int(bottomPoint[1])), 5, (0, 255, 255), -1)
 
             cv2.circle(cv2_img, (int(finalPoi[0]), int(finalPoi[1])), 10, (0, 0, 255), -1)
-
-            draw_angle_line(cv2_img, lineAngle.value, length=150, color=(0, 0, 255), thickness=3)
-            draw_angle_line(cv2_img, np.deg2rad(lineAngleNormalizedDebug.value), length=150, color=(0, 255, 0), thickness=3)    
-
-            #lastBottomPoint_x = bottomPoint[0]
-            #lastLineAngle = lineAngle2
-            #lastLinePoint = finalPoi
 
 
             obstacleController()

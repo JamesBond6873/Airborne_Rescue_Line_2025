@@ -28,6 +28,10 @@ serialDelayMS = 10 # 100 Hz
 dataRequestDelayMS = 40 # 20 Hz
 intersectionMaxTime = 1.000 #s
 
+# Line Vars
+default_crop=0.75
+turn_crop=0.45
+
 # Color Configs
 blackThreshold = 55
 #green_min = [50, 95, 40]    # 58, 95, 39 Night | 126, 94, 145 Day
