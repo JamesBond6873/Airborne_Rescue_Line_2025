@@ -479,6 +479,7 @@ def PID(lineCenterX):
 
     motorSpeed = KP * error_x + KD * (error_x - lastError) + KI * errorAcc
 
+
     lastError = error_x
 
     return motorSpeed
@@ -939,7 +940,7 @@ def controlLoop():
                         timer_manager.set_timer("zoneReverse", 0.5)
 
                 elif pickSequenceStatus == "startReverse":
-                    setManualMotorsSpeeds(1300, 1300)  # Go backward
+                    setManualMotorsSpeeds(1000, 1000)  # Go backward
                     controlMotors()
                     if timer_manager.is_timer_expired("zoneReverse"):
                         setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)  # Stop motors

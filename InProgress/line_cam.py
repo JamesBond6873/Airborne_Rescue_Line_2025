@@ -667,8 +667,8 @@ def interpretPOIW(poi, poi_no_crop, is_crop, max_black_top, bottom_point, averag
 
             # Check for two lines at bottom
             if (
-                (poi_no_crop[1][0] < camera_x * 0.02 and poi_no_crop[1][1] > camera_y * (lineCropPercentage.value * .75)) or
-                (poi_no_crop[2][0] > camera_x * 0.98 and poi_no_crop[2][1] > camera_y * (lineCropPercentage.value * .75))
+                (poi_no_crop[1][0] < camera_x * 0.02 and poi_no_crop[1][1] > camera_y * (lineCropPercentage.value * .65)) or
+                (poi_no_crop[2][0] > camera_x * 0.98 and poi_no_crop[2][1] > camera_y * (lineCropPercentage.value * .65))
             ):
                 final_poi = poi_no_crop[0]
                 turnReason.value = "black_top_with_sides"
@@ -719,11 +719,11 @@ def interpretPOIW(poi, poi_no_crop, is_crop, max_black_top, bottom_point, averag
                 final_poi = poi[2] if is_crop else poi_no_crop[2]
                 turnReason.value = "right_side_still_active"
 
-            elif poi_no_crop[1][0] < camera_x * 0.02:
+            elif poi_no_crop[1][0] < camera_x * 0.04:
                 final_poi = poi[1] if is_crop else poi_no_crop[1]
                 turnReason.value = "left_line_edge"
 
-            elif poi_no_crop[2][0] > camera_x * 0.98:
+            elif poi_no_crop[2][0] > camera_x * 0.96:
                 final_poi = poi[2] if is_crop else poi_no_crop[2]
                 turnReason.value = "right_line_edge"
 
@@ -1291,6 +1291,7 @@ def lineCamLoop():
 
         # Loop
         cv2_img = getCameraImage(camera)
+        original_cv2_img = cv2_img.copy()
 
         savecv2_img("VictimsDataSet", cv2_img)
         resetBallArrayVars() # Reset ball arrays if needed
@@ -1339,6 +1340,8 @@ def lineCamLoop():
                 # Debug
                 if silverValue.value > 0.5:
                     cv2.circle(cv2_img, (10, camera_y - 10), 5, (255, 255, 255), -1, cv2.LINE_AA)
+                    saveFrame.value = True
+                    savecv2_img("Silver", original_cv2_img)
                 silverValueDebug.value = rawSilverValue
                 silverValueArrayDebug.value = calculateAverageArray(silverValueArray, 0.75) # Average Array
 
