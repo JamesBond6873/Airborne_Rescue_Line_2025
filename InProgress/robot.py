@@ -484,7 +484,7 @@ def PID2(lineCenterX, lineAngle):
     
     # Errors
     error_x = lineCenterX - camera_x / 2  # Camera view is 1280 pixels
-    error_theta = lineAngle - (np.pi/2)  # Angle difference from vertical (pi/2)
+    error_theta = - (lineAngle - (np.pi/2))  # Angle difference from vertical (pi/2)
     
     # Accumulate error for integral term
     errorAcc += error_x

@@ -4,6 +4,8 @@ import json
 import time
 from utils import *
 from mp_manager import *
+from config import *
+
 
 # Define global set to hold connections
 connections = set()
@@ -57,24 +59,24 @@ async def handler(websocket):
                 f"{round(Tof5ArrayDebug.value,1)}",
                 f"{lineCenterX.value}",
                 f"{round(np.rad2deg(lineAngle.value),2)}",
+                f"{lineAngleNormalizedDebug.value}",
+                f"",
+                f"{turnReason.value}",
                 f"{lineBiasDebug.value}",
                 f"{AngBiasDebug.value}",
-                f"{turnReason.value}",
+                f"{round(KP_THETA *(- (np.deg2rad(lineAngleNormalizedDebug.value) - np.pi / 2)),2)}",
+                f"",
+                f"",
                 f"{isCropped.value}",
                 f"{lineDetected.value}",
                 f"{inGapDebug.value}",
-                f"",
+                f"{redDetected.value}",
                 f"{turnDirection.value}",
-                f"",
-                f"",
-                f"",
-                f"",
-                f"",
                 f"{round(silverValueDebug.value,3)}",
                 f"{round(silverValueArrayDebug.value,3)}",
                 f"",
                 f"",
-                f"",
+                f"{markerToHighDebug.value}",
                 f"{'Not Started' if zoneStartTime.value == -1 else 'Finished' if zoneStatus.value == 'finished' else (round(time.perf_counter() - zoneStartTime.value, 0))}",
                 f"{dumpedAliveCount.value} Victim(s)",
                 f"{dumpedDeadCount.value} Victim(s)",
