@@ -22,11 +22,15 @@ buzzerOffMs = 5000
 buzzerState = False
 
 # Time Delays
-lineDelayMS = 25 # Frame Rate = 40 FPS
+lineDelayMS = 5 # Frame Rate = 200 FPS
 controlDelayMS = 25 # 40 Hz
 serialDelayMS = 10 # 100 Hz
-dataRequestDelayMS = 40 # 20 Hz
+dataRequestDelayMS = 50 # 20 Hz
 intersectionMaxTime = 1.000 #s
+
+# Line Vars
+default_crop=0.45
+turn_crop=0.75
 
 # Color Configs
 blackThreshold = 55
@@ -66,7 +70,7 @@ defaultSpeed = 1850
 
 # Motor Vars
 speedFactor = 0
-KP = 1.70 #1.50
-KD = 2.05 #2.05
-KI = 0
-KP_THETA = 250 # 407 = 1280/3.14159
+KP = 2.5 #1.50
+KD = 2.50 #2.05
+KI = 0.0
+KP_THETA = 140 # 407 = 1280/3.1415
