@@ -39,6 +39,7 @@ switch = Button(SWITCH_PIN, pull_up=True)  # Uses internal pull-up
 M1 = M2 = 1520 # Left - Right
 oldM1 = oldM2 = M1
 error_x = errorAcc = lastError = 0
+avoidingStuck = False
 
 
 # Sensor Vars
@@ -454,6 +455,9 @@ def LoPSwitchController():
             pickedUpAliveCount.value = 0
             pickedUpDeadCount.value = 0
             rotateTo = "right" if rotateTo == "left" else "left" # Toggles rotate To
+            resetImageSimilarityArrays.value = True
+            resetEvacZoneArrays.value = True
+            resetBallArrays.value = True
 
             timer_manager.clear_all_timers()
 
@@ -462,6 +466,9 @@ def LoPSwitchController():
     else:
         if switchState == True:
             switchState = False
+            resetImageSimilarityArrays.value = True
+            resetEvacZoneArrays.value = True
+            resetBallArrays.value = True
             printDebug(f"LoP Switch is now OFF: {switchState}", softDEBUG)
             objective.value = "follow_line"
             zoneStatus.value = "notStarted"
@@ -559,7 +566,7 @@ def setManualMotorsSpeeds(M1_manual, M2_manual):
 
 
 # Control Motors
-def controlMotors():
+def controlMotors(avoidStuck = False):
     global oldM1, oldM2
     def sendMotorsIfNew(m1, m2):
         """Send motor command only if values changed."""
@@ -570,6 +577,9 @@ def controlMotors():
     def canGamepadControlMotors():
         """Determine if user input should control motors."""
         return switchState or MotorOverride
+
+    if (stuckDetected.value or avoidingStuck) and not avoidStuck:
+        return
 
     if not canGamepadControlMotors():
         # No gamepad control
@@ -796,13 +806,38 @@ def silverLineController():
             silverValue.value = -2
 
 
+def areWeStuck(): 
+    return imageSimilarityAverage.value >= .95 and (timer_manager.is_timer_expired("avoidStuckCoolDown") or avoidingStuck) and not LOPstate.value and not computerOnlyDebug
+
+
+def avoidStuck():
+    global avoidingStuck
+    if timer_manager.is_timer_expired("avoidStuck") and not avoidingStuck:
+        printDebug(f"Avoiding Stuck 1st Time", True)
+        timer_manager.set_timer("avoidStuck", 1.0)
+        avoidingStuck = True
+        avoidingStuckDebug.value = True
+
+    elif timer_manager.is_timer_expired("avoidStuck") and avoidingStuck:
+        printDebug(f"Finished Avoiding Stuck", True)
+        avoidingStuck = False
+        avoidingStuckDebug.value = False
+        stuckDetected.value = False
+        resetImageSimilarityArrays.value = True
+        timer_manager.set_timer("avoidStuckCoolDown", 4)
+
+    else:
+        setManualMotorsSpeeds(1000, 1000)
+        controlMotors(avoidStuck = True)
+
+
 #############################################################################
 #                           Robot Control Loop
 #############################################################################
 
 def controlLoop():
     global switchState, M1, M2, M1info, M2info, oldM1, oldM2, motorSpeedDiference, error_theta, error_x, errorAcc, lastError, inGap
-    global pickingVictim, pickSequenceStatus, pickVictimType
+    global pickingVictim, pickSequenceStatus, pickVictimType, DEFAULT_FORWARD_SPEED
 
     sendCommandListWithConfirmation(["GR","BC", "SF,5,F", "CL", "SF,4,F", "AU", "PA", "SF,0,F", "SF,1,F", "SF,2,F", "SF,3,F", "LX,200", "RGB,255,255,255"])
 
@@ -837,6 +872,8 @@ def controlLoop():
     timer_manager.add_timer("do180", 0.05)
     timer_manager.add_timer("wiggle", 0.05)
     timer_manager.add_timer("wasOnRamp", 0.05)
+    timer_manager.add_timer("avoidStuck", 0.05)
+    timer_manager.add_timer("avoidStuckCoolDown", 0.05)
     time.sleep(0.1)
 
 
@@ -866,14 +903,24 @@ def controlLoop():
 
         # Loop
         updateSensorAverages()
-
-
         LoPSwitchController()
         LOPstate.value = 1 if switchState == True else 0
+
         if not pickingVictim:
             zoneStatusLoop = zoneStatus.value
         objectiveLoop = objective.value
-        
+
+        # Update Because of Ramps DEFAULT_FORWARD_SPEED
+        if rampDetected.value and rampUp.value:
+            DEFAULT_FORWARD_SPEED = 1850
+        elif rampDetected.value and rampDown.value:
+            DEFAULT_FORWARD_SPEED = 1600
+        else:
+            DEFAULT_FORWARD_SPEED = 1700
+
+        stuckDetected.value = areWeStuck()
+        if stuckDetected.value:
+            avoidStuck()
 
         # ----- LINE FOLLOWING ----- 
         if objectiveLoop == "follow_line":
