@@ -1256,7 +1256,8 @@ def silverDetector(modelSilverLine, original_cv2_img):
         if silverValue.value > 0.5:
             cv2.circle(cv2_img, (10, camera_y - 10), 5, (255, 255, 255), -1, cv2.LINE_AA)
             saveFrame.value = True
-            savecv2_img("Silver", original_cv2_img)
+            if not computerOnlyDebug
+                savecv2_img("Silver", original_cv2_img)
         silverValueDebug.value = rawSilverValue
         silverValueArrayDebug.value = calculateAverageArray(silverValueArray, 0.75) # Average Array
 
