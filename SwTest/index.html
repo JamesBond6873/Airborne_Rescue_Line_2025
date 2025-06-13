@@ -56,6 +56,8 @@
 </head>
 <body>
   <h1>Live Robot Data</h1>
+  <input type="text" id="ip-input" placeholder="Enter IP (e.g. 192.168.1.177:8000)" />
+  <button onclick="connectWebSocket()">Connect</button>
 
   <div class="section">
     <h2>General Info </h2> 
@@ -161,89 +163,75 @@
   </div>
 
   <script>
-    const ws = new WebSocket("ws://192.168.1.174:8000");
+    let ws;
 
     const consoleOutput = document.getElementById("console-output");
     const consoleInput = document.getElementById("console-input");
 
-    document.querySelectorAll(".toggle-btn").forEach((btn) => {
-      btn.toggleState = 0;
+    function connectWebSocket() {
+      const ipInput = document.getElementById("ip-input").value.trim();
+      const url = `ws://${ipInput}`;
+      ws = new WebSocket(url);
 
-      btn.addEventListener("click", () => {
-        btn.toggleState = btn.toggleState ? 0 : 1;
+      ws.onopen = () => {
+        appendConsoleMessage(`Connected to ${url}`);
 
-        const outputOn = btn.getAttribute("data-output-on");
-        const outputOff = btn.getAttribute("data-output-off");
-        const message = btn.toggleState ? outputOn : outputOff;
-
-        ws.send(message); // now sending correct string, not just 1/0
-
-        btn.style.backgroundColor = btn.toggleState ? "lightgreen" : "";
-      });
-    });
-
-
-    document.querySelectorAll(".selector-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const group = btn.getAttribute("data-group");
-        const name = btn.getAttribute("data-name");
-        const output = btn.getAttribute("data-output") || name;
-
-        // Deselect all in same group
-        document.querySelectorAll(`.selector-btn[data-group='${group}']`).forEach((b) => {
-          b.classList.remove("selected");
-          b.style.backgroundColor = "";
+        // Move all listeners inside here so they're set up after connection
+        document.querySelectorAll(".toggle-btn").forEach((btn) => {
+          btn.toggleState = 0;
+          btn.onclick = () => {
+            btn.toggleState = btn.toggleState ? 0 : 1;
+            const message = btn.toggleState
+              ? btn.getAttribute("data-output-on")
+              : btn.getAttribute("data-output-off");
+            ws.send(message);
+            btn.style.backgroundColor = btn.toggleState ? "lightgreen" : "";
+          };
         });
 
-        // Select this one
-        btn.style.backgroundColor = "lightgreen";
+        document.querySelectorAll(".selector-btn").forEach((btn) => {
+          btn.onclick = () => {
+            const group = btn.getAttribute("data-group");
+            const output = btn.getAttribute("data-output") || btn.getAttribute("data-name");
 
-        // Send to RPi
-        ws.send(`${output}`);
-      });
-    });
+            document.querySelectorAll(`.selector-btn[data-group='${group}']`).forEach((b) => {
+              b.classList.remove("selected");
+              b.style.backgroundColor = "";
+            });
 
+            btn.classList.add("selected");
+            btn.style.backgroundColor = "lightgreen";
 
-    document.querySelectorAll(".quick-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const name = btn.getAttribute("data-name");
-        const output = btn.getAttribute("data-output") || "1";
-        ws.send(`${output}`);
-        btn.style.backgroundColor = "lightcoral"; // flash or show briefly
-        setTimeout(() => {
-          btn.style.backgroundColor = "";
-        }, 150); // Optional visual feedback
-      });
-    });
+            ws.send(output);
+          };
+        });
 
+        document.querySelectorAll(".quick-btn").forEach((btn) => {
+          btn.onclick = () => {
+            const output = btn.getAttribute("data-output") || "1";
+            ws.send(output);
+            btn.style.backgroundColor = "lightcoral";
+            setTimeout(() => {
+              btn.style.backgroundColor = "";
+            }, 150);
+          };
+        });
 
-    function sendCommand() {
-      const command = consoleInput.value.trim();
-      if (command !== "") {
-        ws.send(command);
-        appendConsoleMessage(">> " + command);
-        consoleInput.value = "";
-      }
-    }
+        consoleInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") sendCommand();
+        });
+      };
 
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
 
-    function appendConsoleMessage(message) {
-      const line = document.createElement("div");
-      line.textContent = message;
-      consoleOutput.appendChild(line);
-      consoleOutput.scrollTop = consoleOutput.scrollHeight;
-    }
+          if (data.type === "console") {
+            appendConsoleMessage(data.content);
+            return;
+          }
 
-
-    ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-
-        if (data.type === "console") {
-          appendConsoleMessage(data.content);
-          return;
-        }
-
-        const ids = [
+          const ids = [
             "timestamp",      
             "terminate",      
             "runtime",      
@@ -306,26 +294,52 @@
             "Data10E",        // --
         ];
 
-        const set = (id, value) => {
+          const set = (id, value) => {
             const el = document.getElementById(id);
-            if (!el) return; // skip if element doesn't exist
+            if (!el) return;
             el.textContent = value;
 
             if (value === "True") {
-            el.classList.add("true");
-            el.classList.remove("false");
+              el.classList.add("true");
+              el.classList.remove("false");
             } else if (value === "False") {
-            el.classList.add("false");
-            el.classList.remove("true");
+              el.classList.add("false");
+              el.classList.remove("true");
             } else {
-            el.classList.remove("true", "false");
+              el.classList.remove("true", "false");
             }
-        };
+          };
 
-        ids.forEach((id, index) => set(id, data[index]));
-    };
+          ids.forEach((id, index) => set(id, data[index]));
+        } catch (err) {
+          appendConsoleMessage("Error parsing message: " + err);
+        }
+      };
 
+      ws.onerror = (err) => {
+        appendConsoleMessage("WebSocket error: " + (err.message || err));
+      };
 
+      ws.onclose = () => {
+        appendConsoleMessage("WebSocket closed.");
+      };
+    }
+
+    function sendCommand() {
+      const command = consoleInput.value.trim();
+      if (command !== "") {
+        ws.send(command);
+        appendConsoleMessage(">> " + command);
+        consoleInput.value = "";
+      }
+    }
+
+    function appendConsoleMessage(message) {
+      const line = document.createElement("div");
+      line.textContent = message;
+      consoleOutput.appendChild(line);
+      consoleOutput.scrollTop = consoleOutput.scrollHeight;
+    }
   </script>
 </body>
 </html>
