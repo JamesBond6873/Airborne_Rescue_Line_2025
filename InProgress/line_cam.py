@@ -10,6 +10,7 @@ from libcamera import controls
 from glob import glob
 from ultralytics import YOLO
 from ultralytics.utils.plotting import colors
+from skimage.metrics import structural_similarity
 
 from config import *
 from utils import printDebug
@@ -59,6 +60,11 @@ lastSide = -1
 
 photoCounter = 0
 
+check_similarity_counter = 0
+check_similarity_limit = 30
+last_image = np.zeros((camera_y, camera_x), dtype=np.uint8)
+
+
 # Initialize sensors data arrays
 ballCenterXArray = createEmptyTimeArray()
 ballBottomYArray = createEmptyTimeArray()
@@ -74,6 +80,8 @@ timeLineAngleNormalized = createEmptyTimeArray()
 timeLineAngle = createEmptyTimeArray()
 timeBottomPointX = createEmptyTimeArray()
 timeLinePointX = createEmptyTimeArray()
+
+imageSimilarityArray = createFilledArray(0, 1200)
 
 # Silver Line Array
 silverValueArray = createEmptyTimeArray()
@@ -1164,6 +1172,17 @@ def resetEvacZoneArrayVars():
         resetEvacZoneArrays.value = False
 
 
+def resetImageSimilarityArrayVars():
+    global imageSimilarityArray
+    if resetImageSimilarityArrays.value:
+        imageSimilarityArray = createFilledArray(0, 1200)
+        
+        stuckDetected.value = False
+
+        print(f"Successfully reset image similarity arrays")
+        resetImageSimilarityArrays.value = False
+
+
 def check_contours(contours, image, color, size=5000):
     if len(contours) > 0:
         largest_contour = max(contours, key=cv2.contourArea)
@@ -1217,13 +1236,28 @@ def obstacleController():
     pass
 
 
+def checkImageSimilarity():
+    global imageSimilarityArray, check_similarity_counter, last_image
+    if check_similarity_counter >= check_similarity_limit:
+        greyImage = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
+        imageSimilarity = structural_similarity(greyImage, last_image)
+        last_image = greyImage.copy()
+        check_similarity_counter = 0
+
+        imageSimilarityArray = addNewTimeValue(imageSimilarityArray, imageSimilarity)
+        imageSimilarityAverage.value = calculateAverageArray(imageSimilarityArray, 15)
+
+    check_similarity_counter += 1
+
+
+
 #############################################################################
 #                            Line Camera Loop
 #############################################################################
 
 def lineCamLoop():
     global cv2_img, blackImage, greenImage, redImage, x_last, y_last, ballCenterXArray, ballBottomYArray, ballWidthArray, ballTypeArray, ballExistsArray, silverValueArray
-    global timeTurnDirection, timeLineAngleNormalized, timeLineAngle, timeBottomPointX, timeLinePointX
+    global timeTurnDirection, timeLineAngleNormalized, timeLineAngle, timeBottomPointX, timeLinePointX, imageSimilarityArray
 
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/ball_zone_s/ball_detect_s_edgetpu.tflite', task='detect')
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v3/victim_ball_detection_int8_edgetpu.tflite', task='detect')
@@ -1296,7 +1330,11 @@ def lineCamLoop():
         savecv2_img("VictimsDataSet", cv2_img)
         resetBallArrayVars() # Reset ball arrays if needed
         resetEvacZoneArrayVars() # Reset evacuation zone corner arrays if needed
+        resetImageSimilarityArrayVars() # Reset image similarity array if needed
 
+
+        # Image Similarity (Stuck Detection)
+        checkImageSimilarity()
 
         if objective.value == "follow_line":
             # Color Processing

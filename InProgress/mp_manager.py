@@ -79,6 +79,9 @@ cornerHeight = manager.Value("i", 0)
 zoneFoundGreen = manager.Value("i", False)
 zoneFoundRed = manager.Value("i", False)
 
+imageSimilarityAverage = manager.Value("i", -1)
+stuckDetected = manager.Value("i", False)
+resetImageSimilarityArrays = manager.Value("i", False)
 isCropped = manager.Value("i", False)
 lineCropPercentage = manager.Value("i", 0.6)
 onIntersection = manager.Value("i", False)
@@ -124,6 +127,7 @@ Tof5ArrayDebug = manager.Value("i", -1)
 pitchDebug = manager.Value("i", -1)
 silverValueDebug = manager.Value("i", -1)
 silverValueArrayDebug = manager.Value("i", -1)
+avoidingStuckDebug = manager.Value("i", False)
 
 # ARRAY FUNCTIONS
 def createEmptyTimeArray(length: int = 240):

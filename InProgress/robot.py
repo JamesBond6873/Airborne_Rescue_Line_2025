@@ -39,6 +39,7 @@ switch = Button(SWITCH_PIN, pull_up=True)  # Uses internal pull-up
 M1 = M2 = 1520 # Left - Right
 oldM1 = oldM2 = M1
 error_x = errorAcc = lastError = 0
+avoidingStuck = False
 
 
 # Sensor Vars
@@ -305,6 +306,8 @@ def updateSensorAverages():
         Tof3ArrayDebug.value = calculateAverageArray(Tof_3_Array, 0.25)
         Tof4ArrayDebug.value = calculateAverageArray(Tof_4_Array, 0.25) 
         Tof5ArrayDebug.value = calculateAverageArray(Tof_5_Array, 0.25)
+    if imageSimilarityAverage.value > 0.95:
+        stuckDetected.value = True
 
 
 def updateRampStateAccelOnly():
@@ -559,7 +562,7 @@ def setManualMotorsSpeeds(M1_manual, M2_manual):
 
 
 # Control Motors
-def controlMotors():
+def controlMotors(avoidStuck = False):
     global oldM1, oldM2
     def sendMotorsIfNew(m1, m2):
         """Send motor command only if values changed."""
@@ -570,6 +573,9 @@ def controlMotors():
     def canGamepadControlMotors():
         """Determine if user input should control motors."""
         return switchState or MotorOverride
+
+    if (stuckDetected.value or avoidingStuck) and not avoidStuck:
+        return
 
     if not canGamepadControlMotors():
         # No gamepad control
@@ -796,6 +802,31 @@ def silverLineController():
             silverValue.value = -2
 
 
+def areWeStuck(): 
+    return imageSimilarityAverage.value >= .95 and (timer_manager.is_timer_expired("avoidStuckCoolDown") or avoidingStuck) and not LOPstate.value and not computerOnlyDebug
+
+
+def avoidStuck():
+    global avoidingStuck
+    if timer_manager.is_timer_expired("avoidStuck") and not avoidingStuck:
+        printDebug(f"Avoiding Stuck 1st Time", True)
+        timer_manager.set_timer("avoidStuck", 1.0)
+        avoidingStuck = True
+        avoidingStuckDebug.value = True
+
+    elif timer_manager.is_timer_expired("avoidStuck") and avoidingStuck:
+        printDebug(f"Finished Avoiding Stuck", True)
+        avoidingStuck = False
+        avoidingStuckDebug.value = False
+        stuckDetected.value = False
+        resetImageSimilarityArrays.value = True
+        timer_manager.set_timer("avoidStuckCoolDown", 4)
+
+    else:
+        setManualMotorsSpeeds(1000, 1000)
+        controlMotors(avoidStuck = True)
+
+
 #############################################################################
 #                           Robot Control Loop
 #############################################################################
@@ -837,6 +868,8 @@ def controlLoop():
     timer_manager.add_timer("do180", 0.05)
     timer_manager.add_timer("wiggle", 0.05)
     timer_manager.add_timer("wasOnRamp", 0.05)
+    timer_manager.add_timer("avoidStuck", 0.05)
+    timer_manager.add_timer("avoidStuckCoolDown", 0.05)
     time.sleep(0.1)
 
 
@@ -881,6 +914,9 @@ def controlLoop():
         else:
             DEFAULT_FORWARD_SPEED = 1700
 
+        stuckDetected.value = areWeStuck()
+        if stuckDetected.value:
+            avoidStuck()
 
         # ----- LINE FOLLOWING ----- 
         if objectiveLoop == "follow_line":
