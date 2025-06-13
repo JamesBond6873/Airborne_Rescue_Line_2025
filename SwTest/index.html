@@ -71,7 +71,7 @@
     <div class="field"><span class="label">Data 2:</span><span class="value" id="Data2G"></span></div>
     <div class="field"><span class="label">Left Motors:</span><span class="value" id="leftMotors"></span></div>
     <div class="field"><span class="label">Right Motors:</span><span class="value" id="rightMotors"></span></div>
-    <div class="field"><span class="label">Data 3:</span><span class="value" id="Data3G"></span></div>
+    <div class="field"><span class="label">Motor Difference:</span><span class="value" id="Data3G"></span></div>
     <div class="field"><span class="label">Pitch:</span><span class="value" id="Data4G"></span></div>
     <div class="field"><span class="label">Data 5:</span><span class="value" id="Data5G"></span></div>
     <div class="field"><span class="label">Accel X:</span><span class="value" id="Data6G"></span></div>
@@ -93,26 +93,36 @@
 
   <div class="section">
     <h2>📏 Line Following</h2>
-    <div class="field"><span class="label">Data 1:</span><span class="value" id="Data1L"></span></div>
-    <div class="field"><span class="label">Data 2:</span><span class="value" id="Data2L"></span></div>
-    <div class="field"><span class="label">Data 3:</span><span class="value" id="Data3L"></span></div>
+    <div class="field"><span class="label">Line Center X:</span><span class="value" id="Data1L"></span></div>
+    <div class="field"><span class="label">Line Angle:</span><span class="value" id="Data2L"></span></div>
+    <div class="field"><span class="label">Line Angle Normalized:</span><span class="value" id="Data3L"></span></div>
     <div class="field"><span class="label">Data 4:</span><span class="value" id="Data4L"></span></div>
-    <div class="field"><span class="label">Data 5:</span><span class="value" id="Data5L"></span></div>
-    <div class="field"><span class="label">Data 6:</span><span class="value" id="Data6L"></span></div>
-    <div class="field"><span class="label">Data 7:</span><span class="value" id="Data7L"></span></div>
+    <div class="field"><span class="label">POI Choice Reason:</span><span class="value" id="Data5L"></span></div>
+    <div class="field"><span class="label">Line Bias:</span><span class="value" id="Data6L"></span></div>
+    <div class="field"><span class="label">Angle Bias:</span><span class="value" id="Data7L"></span></div>
     <div class="field"><span class="label">Data 8:</span><span class="value" id="Data8L"></span></div>
     <div class="field"><span class="label">Data 9:</span><span class="value" id="Data9L"></span></div>
-    <div class="field"><span class="label">Data 10:</span><span class="value" id="Data10L"></span></div>
+    <div class="field"><span class="label">Line Crop Percentage:</span><span class="value" id="Data10L"></span></div>
+    <div class="field"><span class="label">Image Cropped:</span><span class="value" id="Data11L"></span></div>
+    <div class="field"><span class="label">Line Detected:</span><span class="value" id="Data12L"></span></div>
+    <div class="field"><span class="label">In Gap:</span><span class="value" id="Data13L"></span></div>
+    <div class="field"><span class="label">Red Strip Detected:</span><span class="value" id="Data14L"></span></div>
+    <div class="field"><span class="label">Intersection Direction:</span><span class="value" id="Data15L"></span></div>
+    <div class="field"><span class="label">Silver Strip Confidence:</span><span class="value" id="Data16L"></span></div>
+    <div class="field"><span class="label">Silver Strip Average:</span><span class="value" id="Data17L"></span></div>
+    <div class="field"><span class="label">Data 18:</span><span class="value" id="Data18L"></span></div>
+    <div class="field"><span class="label">Data 19:</span><span class="value" id="Data19L"></span></div>
+    <div class="field"><span class="label">Intersection to High:</span><span class="value" id="Data20L"></span></div>
   </div>
 
   <div class="section">
     <h2>🧯 Evacuation Zone</h2>
     <div class="field"><span class="label">Evacuation Zone Time:</span><span class="value" id="evacTime"></span></div>
-    <div class="field"><span class="label">Data 2:</span><span class="value" id="Data2E"></span></div>
-    <div class="field"><span class="label">Data 3:</span><span class="value" id="Data3E"></span></div>
-    <div class="field"><span class="label">Data 4:</span><span class="value" id="Data4E"></span></div>
-    <div class="field"><span class="label">Data 5:</span><span class="value" id="Data5E"></span></div>
-    <div class="field"><span class="label">Data 6:</span><span class="value" id="Data6E"></span></div>
+    <div class="field"><span class="label">Rescued Alive:</span><span class="value" id="Data2E"></span></div>
+    <div class="field"><span class="label">Rescued Dead:</span><span class="value" id="Data3E"></span></div>
+    <div class="field"><span class="label">Picked Up Alive:</span><span class="value" id="Data4E"></span></div>
+    <div class="field"><span class="label">Picked Up Dead:</span><span class="value" id="Data5E"></span></div>
+    <div class="field"><span class="label">Zone Status:</span><span class="value" id="Data6E"></span></div>
     <div class="field"><span class="label">Data 7:</span><span class="value" id="Data7E"></span></div>
     <div class="field"><span class="label">Data 8:</span><span class="value" id="Data8E"></span></div>
     <div class="field"><span class="label">Data 9:</span><span class="value" id="Data9E"></span></div>
@@ -274,6 +284,16 @@
             "Data8L",
             "Data9L",
             "Data10L",        // --
+            "Data11L",
+            "Data12L",
+            "Data13L",
+            "Data14L",
+            "Data15L",        // --
+            "Data16L",
+            "Data17L",
+            "Data18L",
+            "Data19L",
+            "Data20L",        // --
             "evacTime",       
             "Data2E",
             "Data3E",
