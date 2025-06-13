@@ -78,7 +78,7 @@ bool ledState = true;
 // --------------------------- Time Vars ---------------------------
 unsigned long t0;  // control sampling rate (period ini)
 unsigned long t1;  // control sampling rate (period end)
-long timeInterval = 2.5;  // 2.5ms per loop = 400Hz
+long timeInterval = 2.0;  // 2.5ms per loop = 400Hz
 
 
 
@@ -127,7 +127,7 @@ void setup() {
   pinMode(redLed, OUTPUT);
   pinMode(greenLed, OUTPUT);
   pinMode(blueLed, OUTPUT);
-  setRGBColor(0,255,0);
+  setRGBColor(0,255,255);
 
   pinMode(robotLight, OUTPUT);
   digitalWrite(robotLight, HIGH);

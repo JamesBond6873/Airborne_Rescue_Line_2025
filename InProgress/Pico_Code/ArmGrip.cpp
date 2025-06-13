@@ -178,11 +178,11 @@ void ArmGrip::pickAlive() {
 
   // Take Ball to the dead Side
   moveAlive();
-  delay(500);
+  delay(200);
 
   // Go Up to the Drop Zone
   moveUp();
-  delay(1000);
+  delay(200);
 
   // Release the Ball
   openHand();
@@ -198,11 +198,11 @@ void ArmGrip::pickDead() {
 
   // Take Ball to the dead Side
   moveDead();
-  delay(500);
+  delay(200);
 
   // Go Up to the Drop Zone
   moveUp();
-  delay(1000);
+  delay(200);
 
   // Release the Ball
   openHand();
