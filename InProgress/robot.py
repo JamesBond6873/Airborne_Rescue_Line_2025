@@ -802,7 +802,7 @@ def silverLineController():
 
 def controlLoop():
     global switchState, M1, M2, M1info, M2info, oldM1, oldM2, motorSpeedDiference, error_theta, error_x, errorAcc, lastError, inGap
-    global pickingVictim, pickSequenceStatus, pickVictimType
+    global pickingVictim, pickSequenceStatus, pickVictimType, DEFAULT_FORWARD_SPEED
 
     sendCommandListWithConfirmation(["GR","BC", "SF,5,F", "CL", "SF,4,F", "AU", "PA", "SF,0,F", "SF,1,F", "SF,2,F", "SF,3,F", "LX,200", "RGB,255,255,255"])
 
@@ -866,14 +866,21 @@ def controlLoop():
 
         # Loop
         updateSensorAverages()
-
-
         LoPSwitchController()
         LOPstate.value = 1 if switchState == True else 0
+
         if not pickingVictim:
             zoneStatusLoop = zoneStatus.value
         objectiveLoop = objective.value
-        
+
+        # Update Because of Ramps DEFAULT_FORWARD_SPEED
+        if rampDetected.value and rampUp.value:
+            DEFAULT_FORWARD_SPEED = 1850
+        elif rampDetected.value and rampDown.value:
+            DEFAULT_FORWARD_SPEED = 1600
+        else:
+            DEFAULT_FORWARD_SPEED = 1700
+
 
         # ----- LINE FOLLOWING ----- 
         if objectiveLoop == "follow_line":
