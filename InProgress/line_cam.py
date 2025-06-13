@@ -60,6 +60,8 @@ lastSide = -1
 
 photoCounter = 0
 
+do_inference_limit = 2
+do_inference_counter = 0
 check_similarity_counter = 0
 check_similarity_limit = 30
 last_image = np.zeros((camera_y, camera_x), dtype=np.uint8)
@@ -1236,6 +1238,34 @@ def obstacleController():
     pass
 
 
+def silverDetector(modelSilverLine, original_cv2_img):
+    global cv2_img, do_inference_counter, silverValueArray
+    if do_inference_counter >= do_inference_limit and LOPstate.value == 0:
+        results = modelSilverLine.predict(raw_capture, imgsz=128, conf=0.4, workers=4, verbose=False)
+        result = results[0].numpy()
+
+        confidences = result.probs.top5conf
+        rawSilverValue = round(confidences[0] if result.probs.top1 == 1 else confidences[1], 3)  # 0 = Line, 1 = Silver
+
+        silverValueArray = addNewTimeValue(silverValueArray, rawSilverValue)# Add value to Array
+        silverValueAverage = calculateAverageArray(silverValueArray, 0.75) # Average Array
+
+        do_inference_counter = 0
+
+        # Debug
+        if silverValue.value > 0.5:
+            cv2.circle(cv2_img, (10, camera_y - 10), 5, (255, 255, 255), -1, cv2.LINE_AA)
+            saveFrame.value = True
+            savecv2_img("Silver", original_cv2_img)
+        silverValueDebug.value = rawSilverValue
+        silverValueArrayDebug.value = calculateAverageArray(silverValueArray, 0.75) # Average Array
+
+        return silverValueAverage
+
+    do_inference_counter += 1
+    return silverValue.value
+
+
 def checkImageSimilarity():
     global imageSimilarityArray, check_similarity_counter, last_image
     if check_similarity_counter >= check_similarity_limit:
@@ -1297,8 +1327,6 @@ def lineCamLoop():
     lastBottomPoint_x = camera_x / 2
     lastLinePoint = [x_last, y_last] # center points 
 
-    do_inference_limit = 2
-    do_inference_counter = 0
     last_best_box = None
 
     timer_manager.add_timer("image_similarity", .5)
@@ -1363,33 +1391,12 @@ def lineCamLoop():
 
 
             # -- SILVER Line --
-            if do_inference_counter >= do_inference_limit and LOPstate.value == 0:
-                results = modelSilverLine.predict(raw_capture, imgsz=128, conf=0.4, workers=4, verbose=False)
-                result = results[0].numpy()
-
-                confidences = result.probs.top5conf
-                rawSilverValue = round(confidences[0] if result.probs.top1 == 1 else confidences[1], 3)  # 0 = Line, 1 = Silver
-
-                silverValueArray = addNewTimeValue(silverValueArray, rawSilverValue)# Add value to Array
-                silverValue.value = calculateAverageArray(silverValueArray, 0.75) # Average Array
-
-                do_inference_counter = 0
-
-                # Debug
-                if silverValue.value > 0.5:
-                    cv2.circle(cv2_img, (10, camera_y - 10), 5, (255, 255, 255), -1, cv2.LINE_AA)
-                    saveFrame.value = True
-                    savecv2_img("Silver", original_cv2_img)
-                silverValueDebug.value = rawSilverValue
-                silverValueArrayDebug.value = calculateAverageArray(silverValueArray, 0.75) # Average Array
-
-            do_inference_counter += 1
+            silverValue.value = silverDetector(modelSilverLine, original_cv2_img)
            
             
             # -- INTERSECTIONS -- Deal with intersections
             #intersectionDetector()
             turn_direction = intersectionDetector()
-
             timeTurnDirection, turnDirection.value, lineCropPercentage.value = updateTurnDirectionAndCrop(timeTurnDirection, turn_direction, rampUp.value)
 
 

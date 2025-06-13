@@ -306,8 +306,6 @@ def updateSensorAverages():
         Tof3ArrayDebug.value = calculateAverageArray(Tof_3_Array, 0.25)
         Tof4ArrayDebug.value = calculateAverageArray(Tof_4_Array, 0.25) 
         Tof5ArrayDebug.value = calculateAverageArray(Tof_5_Array, 0.25)
-    if imageSimilarityAverage.value > 0.95:
-        stuckDetected.value = True
 
 
 def updateRampStateAccelOnly():
@@ -457,6 +455,9 @@ def LoPSwitchController():
             pickedUpAliveCount.value = 0
             pickedUpDeadCount.value = 0
             rotateTo = "right" if rotateTo == "left" else "left" # Toggles rotate To
+            resetImageSimilarityArrays.value = True
+            resetEvacZoneArrays.value = True
+            resetBallArrays.value = True
 
             timer_manager.clear_all_timers()
 
@@ -465,6 +466,9 @@ def LoPSwitchController():
     else:
         if switchState == True:
             switchState = False
+            resetImageSimilarityArrays.value = True
+            resetEvacZoneArrays.value = True
+            resetBallArrays.value = True
             printDebug(f"LoP Switch is now OFF: {switchState}", softDEBUG)
             objective.value = "follow_line"
             zoneStatus.value = "notStarted"
