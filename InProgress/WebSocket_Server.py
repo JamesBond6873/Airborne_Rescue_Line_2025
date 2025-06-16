@@ -2,10 +2,19 @@ import asyncio
 import websockets
 import json
 import time
+# static_server.py
+import http.server
+import socketserver
+import threading
+import os
+
 from utils import *
 from mp_manager import *
 from config import *
 
+
+PORT = 8081
+DIRECTORY = "/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames"
 
 # Define global set to hold connections
 connections = set()
@@ -31,6 +40,11 @@ async def handler(websocket):
                 "True" if terminate.value else "False",
                 f"{round(time.perf_counter() - runStartTime.value, 0)} s",
                 f"{objective.value}",
+                f"",
+                f"",
+                f"",
+                f"",
+                f"",
                 f"{avoidingStuckDebug.value}",
                 f"{bool(LOPstate.value)}",
                 f"{bool(lopOverride.value)}",
@@ -57,6 +71,11 @@ async def handler(websocket):
                 f"{round(Tof3ArrayDebug.value,1)}",
                 f"{round(Tof4ArrayDebug.value,1)}",
                 f"{round(Tof5ArrayDebug.value,1)}",
+                f"",
+                f"",
+                f"",
+                f"",
+                f"",
                 f"{lineCenterX.value}",
                 f"{round(np.rad2deg(lineAngle.value),2)}",
                 f"{lineAngleNormalizedDebug.value}",
@@ -72,6 +91,11 @@ async def handler(websocket):
                 f"{inGapDebug.value}",
                 f"{redDetected.value}",
                 f"{turnDirection.value}",
+                f"{lineStatus.value}",
+                f"{gapAngle.value}",
+                f"{gapCenterX.value}",
+                f"{gapCenterY.value}",
+                f"",
                 f"{round(silverValueDebug.value,3)}",
                 f"{round(silverValueArrayDebug.value,3)}",
                 f"",
@@ -106,7 +130,17 @@ async def handler(websocket):
     finally:
         connections.remove(websocket)
 
+
 def websocket_process():
+    class Handler(http.server.SimpleHTTPRequestHandler):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, directory=DIRECTORY, **kwargs)
+
+    def start_static_server():
+        with socketserver.TCPServer(("", PORT), Handler) as httpd:
+            print(f"Serving static images at http://0.0.0.0:{PORT}")
+            httpd.serve_forever()
+
     async def monitor_termination(server):
         while not terminate.value:
             await asyncio.sleep(0.2)
@@ -121,4 +155,8 @@ def websocket_process():
         server = await websockets.serve(handler, "0.0.0.0", 8000)
         await monitor_termination(server)
 
+    # Start static file server in a separate thread
+    #threading.Thread(target=start_static_server, daemon=True).start()
+
     asyncio.run(main())
+

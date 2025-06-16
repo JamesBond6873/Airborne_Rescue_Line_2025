@@ -928,6 +928,9 @@ def controlLoop():
             silverLineController()
             updateRampStateAccelOnly()
 
+            if lineStatus.value == "line_detected" and not lineDetected.value:
+                lineStatus.value = "gap_detected"
+
             setMotorsSpeeds(lineCenterX.value)
             intersectionController()
             controlMotors()
