@@ -1116,9 +1116,8 @@ def lineCamLoop():
                     average_bottom_point, average_line_point_x, entry=False
                 )
                 lineAngleNormalizedDebug.value = average_line_angle_normalized
-                lineAngle.value = average_line_angle  # Or raw angle if you prefer
-                lineCenterX.value = average_line_point_x
-                #lineCenterX.value = finalPoi[0]
+                lineAngle.value = lineAngle2  # Or raw angle if you prefer
+                lineCenterX.value = finalPoi[0]
                 isCropped.value = isCrop
 
                 # Update time arrays
@@ -1136,7 +1135,7 @@ def lineCamLoop():
 
                         centerGapPoint = (p1 - p2) / 2 + p2
 
-                        gapCenterX.value = int((centerGapPoint[0] - camera_x / 2) / (camera_x / 2) * 180)
+                        gapCenterX.value = centerGapPoint[0]
                         gapCenterY.value = centerGapPoint[1]
 
                         cv2.line(cv2_img, (int(p1[0]), int(p1[1])), (int(p2[0]), int(p2[1])), (0, 255, 0), 2)

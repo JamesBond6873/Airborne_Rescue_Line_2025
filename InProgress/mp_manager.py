@@ -60,6 +60,10 @@ silverValue = manager.Value("i", 0) # 0 = Line, 1 = Silver
 gapAngle = manager.Value("i", 0)
 gapCenterX = manager.Value("i", 0)
 gapCenterY = manager.Value("i", 0)
+gapCorrectionActive = manager.Value('b', False)
+lastCorrectionDirection = manager.Value('b', False)  # False = backward, True = forward
+gapCorrectionState = manager.Value('i', 0)
+gapState = manager.Value("i", "Not_Started")
 
 rampDetected = manager.Value("i", False)
 rampUp = manager.Value("i", False)

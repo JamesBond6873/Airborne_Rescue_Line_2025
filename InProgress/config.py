@@ -31,6 +31,13 @@ intersectionMaxTime = 1.000 #s
 # Line Vars
 default_crop=0.45
 turn_crop=0.75
+GAP_CORRECTION_TIMEOUT = 5000  # ms
+ANGLE_THRESHOLD = 5.0  # degrees
+# Constants for gap correction state
+GAP_IDLE = 0
+GAP_CORRECTING = 1
+GAP_ALIGNED = 2
+GAP_TIMEOUT = 3
 
 # Color Configs
 blackThreshold = 55
