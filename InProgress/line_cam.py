@@ -60,11 +60,11 @@ lastSide = -1
 
 photoCounter = 0
 
-do_inference_limit = 2
-do_inference_counter = 0
-check_similarity_counter = 0
-check_similarity_limit = 30
-last_image = np.zeros((camera_y, camera_x), dtype=np.uint8)
+doInferenceLimit = 2
+doInferenceCounter = 0
+checkSimilarityCounter = 0
+checkSimilarityLimit = 30
+lastImage = np.zeros((camera_y, camera_x), dtype=np.uint8)
 
 
 # Initialize sensors data arrays
@@ -77,16 +77,54 @@ cornerCenterArrayGreen = createEmptyTimeArray()
 cornerHeightArrayGreen = createEmptyTimeArray()
 
 # Time-value arrays
-timeTurnDirection = createEmptyTimeArray()
-timeLineAngleNormalized = createEmptyTimeArray()
-timeLineAngle = createEmptyTimeArray()
-timeBottomPointX = createEmptyTimeArray()
-timeLinePointX = createEmptyTimeArray()
+TurnDirectionArray = createEmptyTimeArray()
+LineAngleNormalizedArray = createEmptyTimeArray()
+LineAngleArray = createEmptyTimeArray()
+BottomPointXArray = createEmptyTimeArray()
+LinePointXArray = createEmptyTimeArray()
 
 imageSimilarityArray = createFilledArray(0, 1200)
 
 # Silver Line Array
 silverValueArray = createEmptyTimeArray()
+
+
+
+def resetBallArrayVars():
+    global ballCenterXArray, ballBottomYArray, ballWidthArray, ballTypeArray, ballExistsArray
+    if resetBallArrays.value:
+        ballCenterXArray = createFilledArray(camera_x // 2)
+        ballBottomYArray = createFilledArray(camera_y // 2)
+        ballWidthArray = createEmptyTimeArray()
+        ballTypeArray = createFilledArray(0.5)
+        ballExistsArray = createEmptyTimeArray()
+
+        print(f"Successfully reset ball arrays")
+        resetBallArrays.value = False
+
+
+def resetEvacZoneArrayVars():
+    global cornerCenterArrayGreen, cornerHeightArrayGreen
+    if resetEvacZoneArrays.value:
+        cornerCenterArrayGreen = createFilledArray(camera_x // 2)
+        cornerHeightArrayGreen = createEmptyTimeArray()
+
+        cornerCenter.value = camera_x // 2
+        cornerHeight.value = 0
+
+        print(f"Successfully reset evacuation zone corner arrays")
+        resetEvacZoneArrays.value = False
+
+
+def resetImageSimilarityArrayVars():
+    global imageSimilarityArray
+    if resetImageSimilarityArrays.value:
+        imageSimilarityArray = createFilledArray(0, 1200)
+        
+        stuckDetected.value = False
+
+        print(f"Successfully reset image similarity arrays")
+        resetImageSimilarityArrays.value = False
 
 
 def savecv2_img(folder, cv2_img):
@@ -149,7 +187,7 @@ def getCameraImage(camera):
             return cv2_img
 
 
-def draw_angle_line(img, angle_rad, length=100, color=(0, 255, 0), thickness=2):
+def drawAngleLine(img, angle_rad, length=100, color=(0, 255, 0), thickness=2):
     """
     Draw a line on img representing angle_rad (in radians).
     
@@ -174,46 +212,6 @@ def draw_angle_line(img, angle_rad, length=100, color=(0, 255, 0), thickness=2):
     
     # Draw the line
     cv2.line(img, start_point, (end_x, end_y), color, thickness)
-
-
-def computeMoments(contour):
-    # Compute cv2_img moments for the largest contour
-
-    theta = np.pi / 2
-
-    finalContour = cv2.cvtColor(contour, cv2.COLOR_BGR2GRAY)
-
-    M = cv2.moments(finalContour)
-    if M["m00"] != 0:
-        # Centroid (First Moment)
-        cx = int(M["m10"] / M["m00"])
-        cy = int(M["m01"] / M["m00"])
-
-        # Calculate orientation using central moments
-        mu20 = M["mu20"] / M["m00"]
-        mu02 = M["mu02"] / M["m00"]
-        mu11 = M["mu11"] / M["m00"]
-
-        theta = 0.5 * np.arctan2(2 * mu11, mu20 - mu02)  # Principal axis angle
-
-        if theta < 0:
-            printDebug(f"theta og: {round(theta,2)} {round(np.rad2deg(theta),2)}, new {round(np.pi + theta,2)} {round(np.rad2deg(np.pi + theta),2)}", DEBUG)
-            theta = np.pi + theta
-
-        # Define line endpoints along the principal axis
-        length = 100  # Adjust for visualization
-        x1 = int(cx + length * np.cos(theta))
-        y1 = int(cy + length * np.sin(theta))
-        x2 = int(cx - length * np.cos(theta))
-        y2 = int(cy - length * np.sin(theta))
-
-        # Draw centroid
-        cv2.circle(cv2_img, (cx, cy), 5, (0, 255, 255), -1)
-
-        # Draw principal axis line
-        cv2.line(cv2_img, (x1, y1), (x2, y2), (255, 0, 0), 2)
-
-    return theta
 
 
 def ignoreHighFOVCorners(blackImage, xPercentage=0.25, yPercentage=0.15):
@@ -292,132 +290,68 @@ def getLineAndCrop(contours_blk):
 
     y_last = candidates[0][4]
     blackline = contours_blk[candidates[0][0]]
-    blackline_crop = blackline[np.where(blackline[:, 0, 1] > camera_y * lineCropPercentage.value)]
+    blackLineCrop = blackline[np.where(blackline[:, 0, 1] > camera_y * lineCropPercentage.value)]
 
     cv2.drawContours(cv2_img, blackline, -1, (255, 0, 0), 2)
-    cv2.drawContours(cv2_img, blackline_crop, -1, (255, 255, 0), 2)
+    cv2.drawContours(cv2_img, blackLineCrop, -1, (255, 255, 0), 2)
 
     cv2.circle(cv2_img, (int(x_last), int(y_last)), 3, (0, 0, 255), -1)
 
-    return blackline, blackline_crop
+    return blackline, blackLineCrop
 
 
-def getLineAndCrop2(contours_blk):
-    global x_last, y_last
-    candidates = []
-    off_bottom = 0
-    min_area = 1500
-
-    for i, contour in enumerate(contours_blk):
-        box = cv2.boxPoints(cv2.minAreaRect(contour))
-        box = box[box[:, 1].argsort()[::-1]]  # Sort them by their y values and reverse
-        bottom_y = box[0][1]
-        y_mean = (np.clip(box[0][1], 0, camera_y) + np.clip(box[3][1], 0, camera_y)) / 2
-        contour_area = cv2.contourArea(contour)  # Get contour area
-
-        if box[0][1] >= (camera_y * 0.75):
-            off_bottom += 1
-
-        if contour_area < min_area:
-            continue  # Skip small contours
-
-        box = box[box[:, 0].argsort()]
-        x_mean = (np.clip(box[0][0], 0, camera_x) + np.clip(box[3][0], 0, camera_x)) / 2
-        x_y_distance = abs(x_last - x_mean) + abs(y_last - y_mean)  # Distance between the last x/y and current x/y
-
-        candidates.append([i, bottom_y, x_y_distance, x_mean, y_mean])
-
-
-    candidates = np.array(candidates, dtype=np.int32).reshape(-1, 5)
-
-
-    if off_bottom < 2:
-        candidates = candidates[candidates[:, 1].argsort()[::-1]]  # Sort candidates by their bottom_y
-    else:
-        off_bottom_candidates = candidates[np.where(candidates[:, 1] >= (camera_y * 0.25))] # initially * 0.75
-        candidates = off_bottom_candidates[off_bottom_candidates[:, 2].argsort()]
-        
-
-    if len(candidates) == 0: # No valid contours found
-        lineDetected.value = False
-        x_last, y_last = camera_x // 2, camera_y * 0.75
-        return np.array([[[x_last, y_last]]]), np.array([[[x_last, y_last]]])  # Fake contour at center
-    
-
-    lineDetected.value = True
-
-
-    if turnDirection.value == "left":
-        x_last = np.clip(candidates[0][3] - 150, 0, camera_x)
-    elif turnDirection.value == "right":
-        x_last = np.clip(candidates[0][3] + 150, 0, camera_x)
-    else:
-        x_last = candidates[0][3]
-
-    y_last = candidates[0][4]
-    blackLine = contours_blk[int( candidates[0][0] )]
-    blackline_crop = blackLine[np.where(blackLine[:, 0, 1] > camera_y * lineCropPercentage.value)]
-
-    cv2.drawContours(cv2_img, blackLine, -1, (255, 0, 0), 2)
-    cv2.drawContours(cv2_img, blackline_crop, -1, (255, 255, 0), 2)
-
-    cv2.circle(cv2_img, (int(x_last), int(y_last)), 3, (0, 0, 255), -1)
-
-    return blackLine, blackline_crop
-
-
-def calculatePointsOfInterest(blackLine, blackline_crop, last_bottom_point, average_line_point_x):
+def calculatePointsOfInterest(blackLine, blackLineCrop, last_bottom_point, averageLinePointX):
     max_gap = 1
     max_line_width = camera_x * .3
 
     poi_no_crop = np.zeros((4, 2), dtype=np.int32)  # [t, l, r, b]
 
     # Top without crop
-    blackline_y_min = np.amin(blackLine[:, :, 1])
-    blackline_top = blackLine[np.where(blackLine[:, 0, 1] == blackline_y_min)][:, :, 0]
+    blackLineYMin = np.amin(blackLine[:, :, 1])
+    blackLineTop = blackLine[np.where(blackLine[:, 0, 1] == blackLineYMin)][:, :, 0]
 
-    blackline_top = blackline_top[blackline_top[:, 0].argsort()]
-    blackline_top_gap_fill = (blackline_top + max_gap + 1)[:-1]
+    blackLineTop = blackLineTop[blackLineTop[:, 0].argsort()]
+    blacklineTopGapFill = (blackLineTop + max_gap + 1)[:-1]
 
-    blackline_gap_mask = blackline_top_gap_fill < blackline_top[1:]
+    blackline_gap_mask = blacklineTopGapFill < blackLineTop[1:]
 
-    top_mean = (int(np.mean(blackline_top)), blackline_y_min)
+    top_mean = (int(np.mean(blackLineTop)), blackLineYMin)
 
     if np.sum(blackline_gap_mask) == 1:
         gap_index = np.where(blackline_gap_mask)[0][0]
 
-        if blackline_top[:gap_index].size > 0 and blackline_top[gap_index:].size > 0:
-            top_mean_l = int(np.mean(blackline_top[:gap_index]))
-            top_mean_r = int(np.mean(blackline_top[gap_index:]))
+        if blackLineTop[:gap_index].size > 0 and blackLineTop[gap_index:].size > 0:
+            top_mean_l = int(np.mean(blackLineTop[:gap_index]))
+            top_mean_r = int(np.mean(blackLineTop[gap_index:]))
 
-            top_mean = (top_mean_l, blackline_y_min) if np.abs(top_mean_l - average_line_point_x) < np.abs(top_mean_r - average_line_point_x) else (top_mean_r, blackline_y_min)
+            top_mean = (top_mean_l, blackLineYMin) if np.abs(top_mean_l - averageLinePointX) < np.abs(top_mean_r - averageLinePointX) else (top_mean_r, blackLineYMin)
 
     poi_no_crop[0] = [top_mean[0], top_mean[1]]
 
     # Bottom without crop
-    blackline_y_max = np.amax(blackLine[:, :, 1])
-    blackline_bottom = blackLine[np.where(blackLine[:, 0, 1] == blackline_y_max)][:, :, 0]
-    blackline_bottom = blackline_bottom[blackline_bottom[:, 0].argsort()]
-    blackline_bottom_gap_fill = (blackline_bottom + max_gap + 1)[:-1]
+    blackLineYMax = np.amax(blackLine[:, :, 1])
+    blackLineBottom = blackLine[np.where(blackLine[:, 0, 1] == blackLineYMax)][:, :, 0]
+    blackLineBottom = blackLineBottom[blackLineBottom[:, 0].argsort()]
+    blacklineBottomGapFill = (blackLineBottom + max_gap + 1)[:-1]
 
-    blackline_gap_mask = blackline_bottom_gap_fill < blackline_bottom[1:]
+    blackline_gap_mask = blacklineBottomGapFill < blackLineBottom[1:]
 
-    bottom_point_mean = (int(np.mean(blackline_bottom)), blackline_y_max)
+    bottom_point_mean = (int(np.mean(blackLineBottom)), blackLineYMax)
 
     if np.sum(blackline_gap_mask) == 1:
         gap_index = np.where(blackline_gap_mask)[0][0]
 
-        if blackline_bottom[:gap_index].size > 0 and blackline_bottom[gap_index:].size > 0:
-            bottom_mean_l = int(np.mean(blackline_bottom[:gap_index]))
-            bottom_mean_r = int(np.mean(blackline_bottom[gap_index:]))
+        if blackLineBottom[:gap_index].size > 0 and blackLineBottom[gap_index:].size > 0:
+            bottom_mean_l = int(np.mean(blackLineBottom[:gap_index]))
+            bottom_mean_r = int(np.mean(blackLineBottom[gap_index:]))
 
             if np.abs(bottom_mean_l - bottom_mean_r) > 80:
                 if np.abs(bottom_mean_l - last_bottom_point) < np.abs(bottom_mean_r - last_bottom_point):
-                    bottom_point_mean = (bottom_mean_l, blackline_y_max)
-                    bottom_mean = (bottom_mean_r, blackline_y_max)
+                    bottom_point_mean = (bottom_mean_l, blackLineYMax)
+                    bottom_mean = (bottom_mean_r, blackLineYMax)
                 else:
-                    bottom_point_mean = (bottom_mean_r, blackline_y_max)
-                    bottom_mean = (bottom_mean_l, blackline_y_max)
+                    bottom_point_mean = (bottom_mean_r, blackLineYMax)
+                    bottom_mean = (bottom_mean_l, blackLineYMax)
 
                 poi_no_crop[3] = [bottom_mean[0], bottom_mean[1]]
 
@@ -436,29 +370,29 @@ def calculatePointsOfInterest(blackLine, blackline_crop, last_bottom_point, aver
     poi_no_crop[2] = [right_mean[0], right_mean[1]]
 
     poi = np.zeros((3, 2), dtype=np.int32)  # [t, l, r]
-    is_crop = blackline_crop.size > 0
+    is_crop = blackLineCrop.size > 0
 
     max_black_top = False
 
     if is_crop:
         # Top
-        blackline_y_min = np.amin(blackline_crop[:, :, 1])
-        blackline_top = blackline_crop[np.where(blackline_crop[:, 0, 1] == blackline_y_min)][:, :, 0]
-        top_mean = (int(np.mean(blackline_top)), blackline_y_min)
+        blackLineYMin = np.amin(blackLineCrop[:, :, 1])
+        blackLineTop = blackLineCrop[np.where(blackLineCrop[:, 0, 1] == blackLineYMin)][:, :, 0]
+        top_mean = (int(np.mean(blackLineTop)), blackLineYMin)
         poi[0] = [top_mean[0], top_mean[1]]
 
-        blackline_top = blackline_top[blackline_top[:, 0].argsort()]
-        max_black_top = bool(np.abs(blackline_top[0] - blackline_top[-1]) > max_line_width)
+        blackLineTop = blackLineTop[blackLineTop[:, 0].argsort()]
+        max_black_top = bool(np.abs(blackLineTop[0] - blackLineTop[-1]) > max_line_width)
 
         # Left
-        blackline_x_min = np.amin(blackline_crop[:, :, 0])
-        blackline_left = blackline_crop[np.where(blackline_crop[:, 0, 0] == blackline_x_min)]
+        blackline_x_min = np.amin(blackLineCrop[:, :, 0])
+        blackline_left = blackLineCrop[np.where(blackLineCrop[:, 0, 0] == blackline_x_min)]
         left_mean = (blackline_x_min, int(np.mean(blackline_left[:, :, 1])))
         poi[1] = [left_mean[0], left_mean[1]]
 
         # Right
-        blackline_x_max = np.amax(blackline_crop[:, :, 0])
-        blackline_right = blackline_crop[np.where(blackline_crop[:, 0, 0] == blackline_x_max)]
+        blackline_x_max = np.amax(blackLineCrop[:, :, 0])
+        blackline_right = blackLineCrop[np.where(blackLineCrop[:, 0, 0] == blackline_x_max)]
         right_mean = (blackline_x_max, int(np.mean(blackline_right[:, :, 1])))
         poi[2] = [right_mean[0], right_mean[1]]
 
@@ -467,7 +401,7 @@ def calculatePointsOfInterest(blackLine, blackline_crop, last_bottom_point, aver
     return poi, poi_no_crop, is_crop, max_black_top, bottom_point
 
 
-def interpretPOI(poi, poi_no_crop, is_crop, max_black_top, bottom_point, average_line_angle, turn_direction, last_bottom_point, average_line_point_x, entry):
+def interpretPOI(poi, poi_no_crop, is_crop, max_black_top, bottom_point, averageLineAngle, turn_direction, last_bottom_point, averageLinePointX, entry):
     global multiple_bottom_side
 
     black_top = poi_no_crop[0][1] < camera_y * .1
@@ -514,12 +448,12 @@ def interpretPOI(poi, poi_no_crop, is_crop, max_black_top, bottom_point, average
                     elif not black_l_high and black_r_high:
                         near_high_index = 2
                     elif black_l_high and black_r_high:
-                        if abs(poi_no_crop[1][0] - average_line_point_x) < abs(poi_no_crop[2][0] - average_line_point_x):
+                        if abs(poi_no_crop[1][0] - averageLinePointX) < abs(poi_no_crop[2][0] - averageLinePointX):
                             near_high_index = 1
                         else:
                             near_high_index = 2
 
-                    if abs(poi_no_crop[near_high_index][0] - average_line_point_x) < abs(poi_no_crop[0][0] - average_line_point_x):
+                    if abs(poi_no_crop[near_high_index][0] - averageLinePointX) < abs(poi_no_crop[0][0] - averageLinePointX):
                         final_poi = poi_no_crop[near_high_index]
                         turnReason.value = f"black_top_closer_{near_high_index}"
 
@@ -533,7 +467,7 @@ def interpretPOI(poi, poi_no_crop, is_crop, max_black_top, bottom_point, average
                 timer_manager.is_timer_expired("multiple_side_r") and
                 timer_manager.is_timer_expired("multiple_side_l")
             ):
-                if average_line_angle >= 0:
+                if averageLineAngle >= 0:
                     index = 2
                     timer_manager.set_timer("multiple_side_r", 0.6)
                     turnReason.value = "detected_double_side_right"
@@ -805,44 +739,7 @@ def updateTurnDirectionAndCrop(time_turn_direction, turn_direction, ramp_up):
     return time_turn_direction, turnDirectionToSet, lineCropToSet
 
 
-def resetBallArrayVars():
-    global ballCenterXArray, ballBottomYArray, ballWidthArray, ballTypeArray, ballExistsArray
-    if resetBallArrays.value:
-        ballCenterXArray = createFilledArray(camera_x // 2)
-        ballBottomYArray = createFilledArray(camera_y // 2)
-        ballWidthArray = createEmptyTimeArray()
-        ballTypeArray = createFilledArray(0.5)
-        ballExistsArray = createEmptyTimeArray()
-
-        print(f"Successfully reset ball arrays")
-        resetBallArrays.value = False
-
-
-def resetEvacZoneArrayVars():
-    global cornerCenterArrayGreen, cornerHeightArrayGreen
-    if resetEvacZoneArrays.value:
-        cornerCenterArrayGreen = createFilledArray(camera_x // 2)
-        cornerHeightArrayGreen = createEmptyTimeArray()
-
-        cornerCenter.value = camera_x // 2
-        cornerHeight.value = 0
-
-        print(f"Successfully reset evacuation zone corner arrays")
-        resetEvacZoneArrays.value = False
-
-
-def resetImageSimilarityArrayVars():
-    global imageSimilarityArray
-    if resetImageSimilarityArrays.value:
-        imageSimilarityArray = createFilledArray(0, 1200)
-        
-        stuckDetected.value = False
-
-        print(f"Successfully reset image similarity arrays")
-        resetImageSimilarityArrays.value = False
-
-
-def check_contours(contours, image, color, size=5000):
+def checkContours(contours, image, color, size=5000):
     if len(contours) > 0:
         largest_contour = max(contours, key=cv2.contourArea)
 
@@ -862,7 +759,7 @@ def check_contours(contours, image, color, size=5000):
 
 def updateCornerDetection(contours, color):
     global cornerCenterArrayGreen, cornerHeightArrayGreen
-    rawCenter, rawHeight = check_contours(contours, cv2_img, color)
+    rawCenter, rawHeight = checkContours(contours, cv2_img, color)
 
     # Save values over time
     cornerCenterArrayGreen = addNewTimeValue(cornerCenterArrayGreen, rawCenter)
@@ -896,8 +793,8 @@ def obstacleController():
 
 
 def silverDetector(modelSilverLine, original_cv2_img):
-    global cv2_img, do_inference_counter, silverValueArray
-    if do_inference_counter >= do_inference_limit and LOPstate.value == 0:
+    global cv2_img, doInferenceCounter, silverValueArray
+    if doInferenceCounter >= doInferenceLimit and LOPstate.value == 0:
         results = modelSilverLine.predict(raw_capture, imgsz=128, conf=0.4, workers=4, verbose=False)
         result = results[0].numpy()
 
@@ -907,7 +804,7 @@ def silverDetector(modelSilverLine, original_cv2_img):
         silverValueArray = addNewTimeValue(silverValueArray, rawSilverValue)# Add value to Array
         silverValueAverage = calculateAverageArray(silverValueArray, 0.75) # Average Array
 
-        do_inference_counter = 0
+        doInferenceCounter = 0
 
         # Debug
         if silverValue.value > 0.5:
@@ -920,22 +817,22 @@ def silverDetector(modelSilverLine, original_cv2_img):
 
         return silverValueAverage
 
-    do_inference_counter += 1
+    doInferenceCounter += 1
     return silverValue.value
 
 
 def checkImageSimilarity():
-    global imageSimilarityArray, check_similarity_counter, last_image
-    if check_similarity_counter >= check_similarity_limit:
+    global imageSimilarityArray, checkSimilarityCounter, lastImage
+    if checkSimilarityCounter >= checkSimilarityLimit:
         greyImage = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
-        imageSimilarity = structural_similarity(greyImage, last_image)
-        last_image = greyImage.copy()
-        check_similarity_counter = 0
+        imageSimilarity = structural_similarity(greyImage, lastImage)
+        lastImage = greyImage.copy()
+        checkSimilarityCounter = 0
 
         imageSimilarityArray = addNewTimeValue(imageSimilarityArray, imageSimilarity)
         imageSimilarityAverage.value = calculateAverageArray(imageSimilarityArray, 15)
 
-    check_similarity_counter += 1
+    checkSimilarityCounter += 1
 
 
 def getGapAngle(box):
@@ -951,7 +848,7 @@ def getGapAngle(box):
     return box[0], box[1], angle
 
 
-def get_silver_angle(box):
+def getSilverAngle(box):
     box = box[box[:, 0].argsort()]
 
     left_points = box[:2]
@@ -975,7 +872,7 @@ def get_silver_angle(box):
 
 def lineCamLoop():
     global cv2_img, blackImage, greenImage, redImage, x_last, y_last, ballCenterXArray, ballBottomYArray, ballWidthArray, ballTypeArray, ballExistsArray, silverValueArray
-    global timeTurnDirection, timeLineAngleNormalized, timeLineAngle, timeBottomPointX, timeLinePointX, imageSimilarityArray
+    global TurnDirectionArray, LineAngleNormalizedArray, timeLineAngle, BottomPointXArray, LinePointXArray, imageSimilarityArray
 
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/ball_zone_s/ball_detect_s_edgetpu.tflite', task='detect')
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v3/victim_ball_detection_int8_edgetpu.tflite', task='detect')
@@ -1085,7 +982,7 @@ def lineCamLoop():
             # -- INTERSECTIONS -- Deal with intersections
             #intersectionDetector()
             turn_direction = intersectionDetector()
-            timeTurnDirection, turnDirection.value, lineCropPercentage.value = updateTurnDirectionAndCrop(timeTurnDirection, turn_direction, rampUp.value)
+            TurnDirectionArray, turnDirection.value, lineCropPercentage.value = updateTurnDirectionAndCrop(TurnDirectionArray, turn_direction, rampUp.value)
 
 
             # -- RED STRIP -- Check for Red Line - Stop
@@ -1104,27 +1001,27 @@ def lineCamLoop():
                 poiCropped, poi, isCrop, maxBlackTop, bottomPoint = calculatePointsOfInterest(blackLine, blackLineCrop, lastBottomPoint_x, lastLinePoint[0])
 
                 # Get smoothed/averaged values
-                average_line_angle_normalized = calculateAverageArray(timeLineAngleNormalized, 0.3)
-                average_line_angle = calculateAverageArray(timeLineAngle, 0.3)
-                average_bottom_point = calculateAverageArray(timeBottomPointX, 0.15)
-                average_line_point_x = calculateAverageArray(timeLinePointX, 0.15)
+                averageLineAngleNormalized = calculateAverageArray(LineAngleNormalizedArray, 0.3)
+                averageLineAngle = calculateAverageArray(timeLineAngle, 0.3)
+                averageBottomPoint = calculateAverageArray(BottomPointXArray, 0.15)
+                averageLinePointX = calculateAverageArray(LinePointXArray, 0.15)
                 
                 # Use the averaged values
                 lineAngleNormalized, lineAngle2, finalPoi, bottomPoint = interpretPOI(
                     poiCropped, poi, isCrop, maxBlackTop, bottomPoint,
-                    average_line_angle, turnDirection.value,
-                    average_bottom_point, average_line_point_x, entry=False
+                    averageLineAngle, turnDirection.value,
+                    averageBottomPoint, averageLinePointX, entry=False
                 )
-                lineAngleNormalizedDebug.value = average_line_angle_normalized
+                lineAngleNormalizedDebug.value = averageLineAngleNormalized
                 lineAngle.value = lineAngle2  # Or raw angle if you prefer
                 lineCenterX.value = finalPoi[0]
                 isCropped.value = isCrop
 
                 # Update time arrays
-                timeLineAngleNormalized = addNewTimeValue(timeLineAngleNormalized, lineAngleNormalized)
+                LineAngleNormalizedArray = addNewTimeValue(LineAngleNormalizedArray, lineAngleNormalized)
                 timeLineAngle = addNewTimeValue(timeLineAngle, lineAngle2)
-                timeBottomPointX = addNewTimeValue(timeBottomPointX, bottomPoint[0])
-                timeLinePointX = addNewTimeValue(timeLinePointX, finalPoi[0])
+                BottomPointXArray = addNewTimeValue(BottomPointXArray, bottomPoint[0])
+                LinePointXArray = addNewTimeValue(LinePointXArray, finalPoi[0])
 
                 #lineAngle.value = np.pi / 2 # Means ignore line angle when in this situation
 

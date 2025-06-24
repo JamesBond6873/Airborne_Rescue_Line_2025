@@ -863,7 +863,6 @@ def gapCorrectionController(inGap, gapAngle, gapCenterX):
         gapCorrectionState.value = GAP_CORRECTING
 
 
-
 def gapController():
     global inGap, lastLineDetected
 
