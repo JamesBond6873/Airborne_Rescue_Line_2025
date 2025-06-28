@@ -14,7 +14,6 @@ from skimage.metrics import structural_similarity
 
 from config import *
 from utils import printDebug
-from utils import Timer
 from utils import TimerManager
 from mp_manager import *
 
@@ -51,7 +50,6 @@ multiple_bottom_side = camera_x / 2
 lastDirection = "Straight!"
 
 # Timers
-timer_manager = Timer()
 timer_manager = TimerManager()
 
 kernel = np.ones((3, 3), np.uint8)
@@ -834,7 +832,7 @@ def checkImageSimilarity():
 
     checkSimilarityCounter += 1
 
-
+"""
 def getGapAngle(box):
     box = box[box[:, 1].argsort()]
 
@@ -845,9 +843,24 @@ def getGapAngle(box):
     if angle == 180:
         angle = 0
 
+    return box[0], box[1], angle"""
+
+
+def getGapAngle(box):
+    box = box[box[:, 1].argsort()]  # Sort by Y (top-bottom)
+
+    vector = box[0] - box[1]
+    angle = np.arccos(np.dot(vector, [1, 0]) / (np.linalg.norm(vector))) * 180 / np.pi
+
+    angle = angle if box[0][0] < box[1][0] else -angle
+    if angle == 180:
+        angle = 0
+
+    angle = 90 - angle  # Rotate to make 0º = vertical
+
     return box[0], box[1], angle
 
-
+"""
 def getSilverAngle(box):
     box = box[box[:, 0].argsort()]
 
@@ -863,7 +876,63 @@ def getSilverAngle(box):
     if angle == 180:
         angle = 0
 
+    return left_points[0], right_points[0], angle"""
+
+
+def getSilverAngle(box):
+    box = box[box[:, 0].argsort()]  # Sort by X (left-right)
+
+    left_points = box[:2]
+    right_points = box[2:]
+
+    left_points = left_points[left_points[:, 1].argsort()]
+    right_points = right_points[right_points[:, 1].argsort()]
+
+    vector = left_points[0] - right_points[0]
+    angle = np.arccos(np.dot(vector, [1, 0]) / (np.linalg.norm(vector))) * 180 / np.pi
+
+    angle = -angle if left_points[0][1] < right_points[0][1] else angle
+    if angle == 180:
+        angle = 0
+
+    angle = 90 - angle  # Rotate to make 0º = vertical
+
     return left_points[0], right_points[0], angle
+
+
+def calc_silver_angle(silver_image):
+
+    silver_first_row = silver_image[0, :].copy()
+    white_pixel_index = np.where(silver_first_row == 255)[0]
+    if len(white_pixel_index) > 0:
+        first_white_pixel_index = white_pixel_index[0]
+        last_white_pixel_index = white_pixel_index[-1]
+
+        cv2.rectangle(silver_image, (first_white_pixel_index, 0), (last_white_pixel_index, camera_y), 0, -1)
+
+    silver_last_row = silver_image[-1, :].copy()
+    white_pixel_index = np.where(silver_last_row == 255)[0]
+    if len(white_pixel_index) > 0:
+        first_white_pixel_index = white_pixel_index[0]
+        last_white_pixel_index = white_pixel_index[-1]
+
+        cv2.rectangle(silver_image, (first_white_pixel_index, 0), (last_white_pixel_index, camera_y), 0, -1)
+
+    cv2.rectangle(silver_image, (0, 0), (20, camera_y), 0, -1)
+    cv2.rectangle(silver_image, (camera_x - 20, 0), (camera_x, camera_y), 0, -1)
+
+    contours_silver, _ = cv2.findContours(silver_image, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+
+    # save_image(silver_image)
+    if len(contours_silver) > 0:
+        largest_silver_contour = max(contours_silver, key=cv2.contourArea)
+        cv2.drawContours(cv2_img, [np.int0(cv2.boxPoints(cv2.minAreaRect(largest_silver_contour)))], 0, (255, 255, 0), 2)
+        p1, p2, angle = getSilverAngle(cv2.boxPoints(cv2.minAreaRect(largest_silver_contour)))
+        if p1[1] < camera_y * 0.95 and p2[1] < camera_y * 0.95:
+            silverAngle.value = angle
+            cv2.line(cv2_img, (int(p1[0]), int(p1[1])), (int(p2[0]), int(p2[1])), (0, 255, 0), 2)
+    else:
+        silverAngle.value = -181
 
 
 #############################################################################
@@ -872,7 +941,7 @@ def getSilverAngle(box):
 
 def lineCamLoop():
     global cv2_img, blackImage, greenImage, redImage, x_last, y_last, ballCenterXArray, ballBottomYArray, ballWidthArray, ballTypeArray, ballExistsArray, silverValueArray
-    global TurnDirectionArray, LineAngleNormalizedArray, timeLineAngle, BottomPointXArray, LinePointXArray, imageSimilarityArray
+    global TurnDirectionArray, LineAngleNormalizedArray, LineAngleArray, BottomPointXArray, LinePointXArray, imageSimilarityArray
 
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/ball_zone_s/ball_detect_s_edgetpu.tflite', task='detect')
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v3/victim_ball_detection_int8_edgetpu.tflite', task='detect')
@@ -1002,7 +1071,7 @@ def lineCamLoop():
 
                 # Get smoothed/averaged values
                 averageLineAngleNormalized = calculateAverageArray(LineAngleNormalizedArray, 0.3)
-                averageLineAngle = calculateAverageArray(timeLineAngle, 0.3)
+                averageLineAngle = calculateAverageArray(LineAngleArray, 0.3)
                 averageBottomPoint = calculateAverageArray(BottomPointXArray, 0.15)
                 averageLinePointX = calculateAverageArray(LinePointXArray, 0.15)
                 
@@ -1019,7 +1088,7 @@ def lineCamLoop():
 
                 # Update time arrays
                 LineAngleNormalizedArray = addNewTimeValue(LineAngleNormalizedArray, lineAngleNormalized)
-                timeLineAngle = addNewTimeValue(timeLineAngle, lineAngle2)
+                LineAngleArray = addNewTimeValue(LineAngleArray, lineAngle2)
                 BottomPointXArray = addNewTimeValue(BottomPointXArray, bottomPoint[0])
                 LinePointXArray = addNewTimeValue(LinePointXArray, finalPoi[0])
 
@@ -1037,6 +1106,22 @@ def lineCamLoop():
 
                         cv2.line(cv2_img, (int(p1[0]), int(p1[1])), (int(p2[0]), int(p2[1])), (0, 255, 0), 2)
                         cv2.circle(cv2_img, (int(centerGapPoint[0]), int(centerGapPoint[1])), 5, (0, 255, 0), 1, cv2.LINE_AA)
+
+                
+                if silverLineDetected.value:
+                    p1, p2, angle = getSilverAngle(cv2.boxPoints(cv2.minAreaRect(blackLine)))
+
+                    # The silver line is perpendicular to the black line
+                    silverAngle.value = angle
+
+                    centerSilverPoint = (p1 - p2) / 2 + p2
+
+                    silverCenterX.value = centerSilverPoint[0]
+                    silverCenterY.value = centerSilverPoint[1]
+
+                    cv2.line(cv2_img, (int(p1[0]), int(p1[1])), (int(p2[0]), int(p2[1])), (255, 0, 255), 2)  # Magenta line for silver
+                    cv2.circle(cv2_img, (int(centerSilverPoint[0]), int(centerSilverPoint[1])), 5, (255, 0, 255), 1, cv2.LINE_AA)
+
 
                 # Update Image
                 cv2.circle(cv2_img, (int(poiCropped[0][0]), int(poiCropped[0][1])), 5, (0, 0, 255), -1)

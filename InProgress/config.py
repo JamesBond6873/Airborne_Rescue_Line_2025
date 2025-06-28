@@ -3,7 +3,7 @@
 print("Robot Configurations: \t \t OK")
 
 # Is it DEBUG?
-computerOnlyDebug = False # True for computer only, False for robot
+computerOnlyDebug = True # True for computer only, False for robot
 gamepadLoopRun = True # False for score runs
 DEBUG = False
 softDEBUG = True
@@ -31,7 +31,7 @@ intersectionMaxTime = 1.000 #s
 # Line Vars
 default_crop=0.45
 turn_crop=0.75
-GAP_CORRECTION_TIMEOUT = 5000  # ms
+GAP_CORRECTION_TIMEOUT = 5 # s
 ANGLE_THRESHOLD = 5.0  # degrees
 # Constants for gap correction state
 GAP_IDLE = 0
@@ -64,6 +64,7 @@ MIN_DEFAULT_SPEED = 1600 # Gamepad only?!
 MIN_GENERAL_SPEED = 1000
 DEFAULT_STOPPED_SPEED = 1520
 DEFAULT_FORWARD_SPEED = 1700
+DEFAULT_BACKWARD_SPEED = 1300
 ESC_DEADZONE = 50
 SPEED_STEP = 25
 FACTOR_STEP = 25

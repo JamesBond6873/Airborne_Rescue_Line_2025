@@ -656,6 +656,71 @@ def needToDepositDead(zoneStatusLoop):
             return True
    
 
+def goToBall():
+    global pickSequenceStatus, pickingVictim, pickVictimType
+
+    if not ballExists.value:
+        zoneStatus.value = "findVictims"
+
+    if pickSequenceStatus == "goingToBall":
+        setMotorsSpeeds(ballCenterX.value)
+        controlMotors()
+
+        if ballBottomY.value >= camera_y * 0.95:
+            pickSequenceStatus = "startReverse"
+            
+            pickVictimType = decideVictimType()
+
+            pickingVictim = True
+            printDebug(f" ----- Starting {pickVictimType} Victim Catching ----- ", softDEBUG)
+            printDebug(f"Victim Catching - Reversing", False)
+            timer_manager.set_timer("zoneReverse", 0.5)
+
+    elif pickSequenceStatus == "startReverse":
+        setManualMotorsSpeeds(1000, 1000)  # Go backward
+        controlMotors()
+        if timer_manager.is_timer_expired("zoneReverse"):
+            setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)  # Stop motors
+            controlMotors()
+            printDebug(f"Victim Catching - Lowering Arm", False)
+            pickVictim(pickVictimType, step=1) # Lower Arm
+            pickSequenceStatus = "loweringArm"
+            timer_manager.set_timer("lowerArm", 2.0)
+    
+    elif pickSequenceStatus == "loweringArm":
+        setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)
+        controlMotors()
+        if timer_manager.is_timer_expired("lowerArm"):
+            printDebug(f"Victim Catching - Moving Forward", False)
+            pickSequenceStatus = "moveForward"
+            timer_manager.set_timer("zoneForward", 0.4)
+
+    elif pickSequenceStatus == "moveForward":
+        setManualMotorsSpeeds(1800, 1800)  # Go forward slowly
+        controlMotors()
+        if timer_manager.is_timer_expired("zoneForward"):
+            setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)
+            controlMotors()
+            pickVictim(pickVictimType, step=2)
+            printDebug(f"Victim Catching - Picking Victim", False)
+            pickSequenceStatus = "finished"
+
+    elif pickSequenceStatus == "finished":
+        printDebug(f"Victim Catching - Finished", False)
+        pickingVictim = False
+        resetBallArrays.value = True
+        zoneStatus.value = "findVictims"
+        pickSequenceStatus = "goingToBall"
+
+        if pickVictimType == "A" and pickedUpAliveCount.value < 2:
+            pickedUpAliveCount.value += 1
+        else:
+            pickedUpDeadCount.value += 1
+
+        printDebug(f"Picked up {'alive' if pickVictimType == 'A' else 'dead'} victim, new total: {pickedUpAliveCount.value + pickedUpDeadCount.value} victims", softDEBUG)
+        printDebug(f"Picked up {pickedUpAliveCount.value} alive and {pickedUpDeadCount.value} dead", softDEBUG)
+
+
 def zoneDeposit(type):
     global dropSequenceStatus, dumpedAliveVictims, dumpedDeadVictims
 
@@ -780,36 +845,45 @@ def intersectionController():
         lastTurn = turnDirection.value
 
 
-def getGapMotorSpeeds(angle, centerX, forward=True):
+def getAngleMotorSpeedsYAxis(angle, centerX, forward=True):
+    """
+    angle: in degrees, relative to Y-axis.
+        0 = vertical
+        + = tilt right (bottom-left to top-right)
+        - = tilt left  (bottom-right to top-left)
+
+    centerX: gap center X position in pixels
+    camera_x: total camera width in pixels
+    """
     # Constants
-    BASE_SPEED = DEFAULT_FORWARD_SPEED  # e.g. 1520
     MAX_SPEED = 2000
     MIN_SPEED = 1000
-    CAMERA_CENTER_X = camera_x / 2  # global or pass as argument
-    
-    # Normalize angle and centerX
-    maxAngle = 45.0  # degrees, max expected deviation
-    maxOffset = CAMERA_CENTER_X  # max deviation left/right
+    CAMERA_CENTER_X = camera_x / 2
 
-    # Combine angle + lateral deviation into one correction factor
+    # Normalize angle and centerX
+    maxAngle = 45.0  # maximum expected tilt
+    maxOffset = CAMERA_CENTER_X  # max lateral offset (half image width)
+
     angleComponent = angle / maxAngle
     offsetComponent = (centerX - CAMERA_CENTER_X) / maxOffset
-    correctionFactor = 0.6 * angleComponent + 0.4 * offsetComponent  # weighted
-    
+
+    # Weighted combination (tune weights as needed)
+    correctionFactor = 0.6 * angleComponent + 0.4 * offsetComponent
+
     # Clamp to [-1, 1]
     correctionFactor = max(min(correctionFactor, 1.0), -1.0)
 
-    # Convert to motor speeds
-    delta = 100 * correctionFactor  # adjust this gain
+    # Convert to motor speed delta
+    delta = 100 * correctionFactor  # Gain factor
 
     if forward:
-        left = BASE_SPEED - delta
-        right = BASE_SPEED + delta
+        left = DEFAULT_FORWARD_SPEED - delta
+        right = DEFAULT_FORWARD_SPEED + delta
     else:
-        left = BASE_SPEED + delta
-        right = BASE_SPEED - delta
+        left = DEFAULT_BACKWARD_SPEED + delta
+        right = DEFAULT_BACKWARD_SPEED - delta
 
-    # Clamp to valid range
+    # Clamp speeds to motor limits
     left = int(max(MIN_SPEED, min(MAX_SPEED, left)))
     right = int(max(MIN_SPEED, min(MAX_SPEED, right)))
 
@@ -821,27 +895,25 @@ def gapCorrectionController(inGap, gapAngle, gapCenterX):
 
     currentTime = time.perf_counter()
 
-    if not gapCorrectionActive.value:
+    if not gapCorrectionActive.value and timer_manager.is_timer_expired("gapCooldown"):
         if inGap and abs(gapAngle) > ANGLE_THRESHOLD:
             gapCorrectionActive.value = True
             gapCorrectionStartTime = currentTime
             lastCorrectionDirection.value = False  # Start by reversing
-            gapCorrectionState.value = GAP_CORRECTING
+            gapCorrectionState.value = "Starting Gap Correction"
         else:
             if inGap:
                 gapCorrectionState.value = "We were already alligned"
-                gapState.value = "Finished"
             else:
                 gapCorrectionState.value = "Not in a gap"
-                gapState.value = "Not_Finished"
     else:
         if abs(gapAngle) <= ANGLE_THRESHOLD:
             # Aligned — stop correcting and drive forward
             setManualMotorsSpeeds(DEFAULT_FORWARD_SPEED, DEFAULT_FORWARD_SPEED)
             controlMotors()
             gapCorrectionActive.value = False
-            gapCorrectionState.value = GAP_ALIGNED
-            gapState.value = "Finished"
+            gapCorrectionState.value = "Aligned - Going Forward"
+            timer_manager.set_timer("gapCooldown", 1.5)
             return
 
         if currentTime - gapCorrectionStartTime > GAP_CORRECTION_TIMEOUT:
@@ -849,22 +921,27 @@ def gapCorrectionController(inGap, gapAngle, gapCenterX):
             setManualMotorsSpeeds(DEFAULT_FORWARD_SPEED, DEFAULT_FORWARD_SPEED)
             controlMotors()
             gapCorrectionActive.value = False
-            gapCorrectionState.value = GAP_TIMEOUT
-            gapState.value = "Finished"
+            gapCorrectionState.value = "Align Timeout - Going Forward"
+            timer_manager.set_timer("gapCooldown", 1.5)
             return
 
         # Still correcting — run one step
         direction = lastCorrectionDirection.value
-        M1_temp, M2_temp = getGapMotorSpeeds(gapAngle, gapCenterX, forward=direction)
+        M1_temp, M2_temp = getAngleMotorSpeedsYAxis(gapAngle, gapCenterX, forward=direction)
         setManualMotorsSpeeds(M1_temp, M2_temp)
         controlMotors()
-        lastCorrectionDirection.value = not lastCorrectionDirection.value
+        if gapCenterY.value < camera_y * 0.10: # Going forward, barely no gap
+            lastCorrectionDirection.value = True
+        else: # Going backward, gap is on the bottom
+            lastCorrectionDirection.value = False
 
-        gapCorrectionState.value = GAP_CORRECTING
+        gapCorrectionState.value = "Correcting Gap"
 
 
 def gapController():
     global inGap, lastLineDetected
+
+    gapCorrectionController(inGap, gapAngle.value, gapCenterX.value)
 
     if not lineDetected.value: # No line detected
         if lastLineDetected: # Just lost the line (last state was true)
@@ -883,10 +960,12 @@ def silverLineController():
     silverLine = silverValue.value > 0.6
     if silverLine:
         printDebug(f"Silver Line Detected: {silverValue.value} | Entering Zone", True)
-        if not LOPstate.value:
+        if not LOPstate.value and silverLineDetected.value == False: # First Time detection
+            silverLineDetected.value = True
+        """if not LOPstate.value:
             objective.value = "zone"
             zoneStatus.value = "begin"
-            silverValue.value = -2
+            silverValue.value = -2"""
 
 
 def areWeStuck(): 
@@ -957,6 +1036,7 @@ def controlLoop():
     timer_manager.add_timer("wasOnRamp", 0.05)
     timer_manager.add_timer("avoidStuck", 0.05)
     timer_manager.add_timer("avoidStuckCoolDown", 0.05)
+    timer_manager.add_timer("gapCooldown", 0.05)
     time.sleep(0.1)
 
 
@@ -1008,16 +1088,16 @@ def controlLoop():
         # ----- LINE FOLLOWING ----- 
         if objectiveLoop == "follow_line":
             gapController()
-            gapCorrectionController(inGap, gapAngle.value, gapCenterX.value)
             silverLineController()
             updateRampStateAccelOnly()
 
             if lineStatus.value == "line_detected" and not lineDetected.value:
                 lineStatus.value = "gap_detected"
 
-            setMotorsSpeeds(lineCenterX.value)
-            intersectionController()
-            controlMotors()
+            if not gapCorrectionActive.value:
+                setMotorsSpeeds(lineCenterX.value)
+                intersectionController()
+                controlMotors()
         
         # ----- EVACUATION ZONE ----- 
         elif objectiveLoop == "zone":
@@ -1056,70 +1136,7 @@ def controlLoop():
                     zoneStatus.value = "goToBall"
 
             elif zoneStatusLoop == "goToBall":
-                if not ballExists.value:
-                    zoneStatus.value = "findVictims"
-
-                if pickSequenceStatus == "goingToBall":
-                    setMotorsSpeeds(ballCenterX.value)
-                    controlMotors()
-
-                    if ballBottomY.value >= camera_y * 0.95:
-                        pickSequenceStatus = "startReverse"
-                        
-                        pickVictimType = decideVictimType()
-
-                        pickingVictim = True
-                        printDebug(f" ----- Starting {pickVictimType} Victim Catching ----- ", softDEBUG)
-                        printDebug(f"Victim Catching - Reversing", False)
-                        timer_manager.set_timer("zoneReverse", 0.5)
-
-                elif pickSequenceStatus == "startReverse":
-                    setManualMotorsSpeeds(1000, 1000)  # Go backward
-                    controlMotors()
-                    if timer_manager.is_timer_expired("zoneReverse"):
-                        setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)  # Stop motors
-                        controlMotors()
-                        printDebug(f"Victim Catching - Lowering Arm", False)
-                        pickVictim(pickVictimType, step=1) # Lower Arm
-                        pickSequenceStatus = "loweringArm"
-                        timer_manager.set_timer("lowerArm", 2.0)
-                
-                elif pickSequenceStatus == "loweringArm":
-                    setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)
-                    controlMotors()
-                    if timer_manager.is_timer_expired("lowerArm"):
-                        printDebug(f"Victim Catching - Moving Forward", False)
-                        pickSequenceStatus = "moveForward"
-                        timer_manager.set_timer("zoneForward", 0.4)
-
-                elif pickSequenceStatus == "moveForward":
-                    setManualMotorsSpeeds(1800, 1800)  # Go forward slowly
-                    controlMotors()
-                    if timer_manager.is_timer_expired("zoneForward"):
-                        setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)
-                        controlMotors()
-                        pickVictim(pickVictimType, step=2)
-                        printDebug(f"Victim Catching - Picking Victim", False)
-                        pickSequenceStatus = "finished"
-
-                elif pickSequenceStatus == "finished":
-                    printDebug(f"Victim Catching - Finished", False)
-                    pickingVictim = False
-                    resetBallArrays.value = True
-                    zoneStatus.value = "findVictims"
-                    pickSequenceStatus = "goingToBall"
-
-                    if pickVictimType == "A" and pickedUpAliveCount.value < 2:
-                        pickedUpAliveCount.value += 1
-                    else:
-                        pickedUpDeadCount.value += 1
-
-                    printDebug(f"Picked up {'alive' if pickVictimType == 'A' else 'dead'} victim, new total: {pickedUpAliveCount.value + pickedUpDeadCount.value} victims", softDEBUG)
-                    printDebug(f"Picked up {pickedUpAliveCount.value} alive and {pickedUpDeadCount.value} dead", softDEBUG)
-
-                    """if pickedUpAliveCount.value + pickedUpDeadCount.value == 3:
-                        zoneStatus.value = "depositGreen"
-                        continue"""
+                goToBall()
 
             elif zoneStatusLoop == "depositGreen":
                 zoneDeposit("A")
