@@ -744,37 +744,38 @@ def zoneDeposit(type):
             ballRelease(type)  # "A" Or "D" based on the victim
             printDebug("Victim Dropping - Opening Ball Storage", softDEBUG)
             wiggleStage = 1
-            timer_manager.set_timer("wiggle", 0.3)  # Short delay before first wiggle
+            timer_manager.set_timer("wiggle", 0.2)  # Short delay before first wiggle
 
         elif wiggleStage == 1:
             setManualMotorsSpeeds(1800, 1800)  # Small forward movement
             controlMotors()
             if timer_manager.is_timer_expired("wiggle"):
                 wiggleStage = 2
-                timer_manager.set_timer("wiggle", 0.3)
+                timer_manager.set_timer("wiggle", 0.5)
 
         elif wiggleStage == 2:
             setManualMotorsSpeeds(1200, 1200)  # Small backward movement
             controlMotors()
             if timer_manager.is_timer_expired("wiggle"):
                 wiggleStage = 3
-                timer_manager.set_timer("wiggle", 0.3)
+                timer_manager.set_timer("wiggle", 0.2)
 
         elif wiggleStage == 3:
             setManualMotorsSpeeds(1800, 1800)  # Second wiggle forward
             controlMotors()
             if timer_manager.is_timer_expired("wiggle"):
                 wiggleStage = 4
-                timer_manager.set_timer("wiggle", 0.3)
+                timer_manager.set_timer("wiggle", 0.5)
 
         elif wiggleStage == 4:
             setManualMotorsSpeeds(1200, 1200)  # Small backward movement
             controlMotors()
             if timer_manager.is_timer_expired("wiggle"):
                 wiggleStage = 5
-                timer_manager.set_timer("wiggle", 0.3)
+                timer_manager.set_timer("wiggle", 0.2)
                 printDebug("Victim Dropping - Finished Wiggle", softDEBUG)
-                dropSequenceStatus = "finished"
+                dropSequenceStatus = "zoneForward"
+                timer_manager.set_timer("zoneForward", 1)
                 wiggleStage = 0
             
     if dropSequenceStatus == "searchGoCorner":
@@ -809,6 +810,13 @@ def zoneDeposit(type):
             #timer_manager.set_timer("do180", 4.5)
     elif dropSequenceStatus == "dropVictim":
         dropVictim()
+    elif dropSequenceStatus == "goForward":
+        setManualMotorsSpeeds(1800, 1800)  # Go forward slowly
+        controlMotors()
+        if timer_manager.is_timer_expired("zoneForward"):
+            setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)
+            controlMotors()
+            dropSequenceStatus = "finished"
     elif dropSequenceStatus == "finished":
         setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)  # Stop motors
         controlMotors()
@@ -1033,6 +1041,7 @@ def controlLoop():
     timer_manager.add_timer("zoneForward", 0.05)
     timer_manager.add_timer("do180", 0.05)
     timer_manager.add_timer("wiggle", 0.05)
+    timer_manager.add_timer("zoneForward", 0.05)
     timer_manager.add_timer("wasOnRamp", 0.05)
     timer_manager.add_timer("avoidStuck", 0.05)
     timer_manager.add_timer("avoidStuckCoolDown", 0.05)
