@@ -99,7 +99,7 @@ async def handler(websocket):
                 f"{round(silverValueDebug.value,3)}",
                 f"{round(silverValueArrayDebug.value,3)}",
                 f"{silverLineDetected.value}",
-                f"{gapState.value}",
+                f"{gapCorrectionActive.value}",
                 f"",
                 f"{round(silverAngle.value, 2)}",
                 f"{round(silverCenterX.value, 2)}",

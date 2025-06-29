@@ -50,7 +50,7 @@ Tof_5 = manager.Value("i", -1) # Back Left Side
 
 
 lineStatus = manager.Value("i", "line_detected")  # "line_detected"; "gap_detected"; "gap_avoid"; "obstacle_detected"; "obstacle_avoid"; "obstacle_orientate"; "check_silver"; "position_entry"; "position_entry_1"; "position_entry_2"; "stop"
-lineCenterX = manager.Value("i", 600)
+lineCenterX = manager.Value("i", 224)
 lineAngle = manager.Value("i", 0.)
 line_angle_y = manager.Value("i", -1)
 lineDetected = manager.Value("i", False)

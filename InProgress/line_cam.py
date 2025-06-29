@@ -174,7 +174,7 @@ def getCameraImage(camera):
 
             cv2_img = cv2.resize(raw_capture, (camera_x, camera_y))
             cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_original.jpg", cv2_img)
-            print(f"Processing debug image {currentFakeImageIndex + 1}/{len(debugImagePaths)}: {imagePath}")
+            print(f"Processing debug image {currentFakeImageIndex + 1}/{len(debugImagePaths)} at  {time.perf_counter()}: {imagePath}")
             updateFakeCamImage.value = False
 
             currentFakeImageIndex += 1
@@ -807,8 +807,8 @@ def silverDetector(modelSilverLine, original_cv2_img):
         # Debug
         if silverValue.value > 0.5:
             cv2.circle(cv2_img, (10, camera_y - 10), 5, (255, 255, 255), -1, cv2.LINE_AA)
-            saveFrame.value = True
             if not computerOnlyDebug:
+                saveFrame.value = True
                 savecv2_img("Silver", original_cv2_img)
         silverValueDebug.value = rawSilverValue
         silverValueArrayDebug.value = calculateAverageArray(silverValueArray, 0.75) # Average Array
@@ -1094,18 +1094,17 @@ def lineCamLoop():
 
                 #lineAngle.value = np.pi / 2 # Means ignore line angle when in this situation
 
-                if lineStatus.value == "gap_detected":
-                    p1, p2, angle = getGapAngle(cv2.boxPoints(cv2.minAreaRect(blackLine)))
-                    if p1[1] < camera_y * 0.95 and p2[1] < camera_y * 0.95:
-                        gapAngle.value = angle
+                p1, p2, angle = getGapAngle(cv2.boxPoints(cv2.minAreaRect(blackLine)))
+                if p1[1] < camera_y * 0.95 and p2[1] < camera_y * 0.95:
+                    gapAngle.value = angle
 
-                        centerGapPoint = (p1 - p2) / 2 + p2
+                    centerGapPoint = (p1 - p2) / 2 + p2
 
-                        gapCenterX.value = centerGapPoint[0]
-                        gapCenterY.value = centerGapPoint[1]
+                    gapCenterX.value = centerGapPoint[0]
+                    gapCenterY.value = centerGapPoint[1]
 
-                        cv2.line(cv2_img, (int(p1[0]), int(p1[1])), (int(p2[0]), int(p2[1])), (0, 255, 0), 2)
-                        cv2.circle(cv2_img, (int(centerGapPoint[0]), int(centerGapPoint[1])), 5, (0, 255, 0), 1, cv2.LINE_AA)
+                    cv2.line(cv2_img, (int(p1[0]), int(p1[1])), (int(p2[0]), int(p2[1])), (0, 255, 0), 2)
+                    cv2.circle(cv2_img, (int(centerGapPoint[0]), int(centerGapPoint[1])), 5, (0, 255, 0), 1, cv2.LINE_AA)
 
                 
                 if silverLineDetected.value:

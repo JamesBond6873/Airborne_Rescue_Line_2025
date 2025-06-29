@@ -7,7 +7,7 @@ computerOnlyDebug = True # True for computer only, False for robot
 gamepadLoopRun = True # False for score runs
 DEBUG = False
 softDEBUG = True
-serialSoftDEBUG = True
+serialSoftDEBUG = False #True
 LOPOverride = False # If True, LOP state will be updated virtually
 LOPVirtualState = True
 MotorOverride = False # If True, the robot will not move
@@ -31,8 +31,10 @@ intersectionMaxTime = 1.000 #s
 # Line Vars
 default_crop=0.45
 turn_crop=0.75
+SILVER_ANGLE_THRESHOLD = 7.5
+SILVER_CENTER_THRESHOLD = 0.15
 GAP_CORRECTION_TIMEOUT = 5 # s
-ANGLE_THRESHOLD = 5.0  # degrees
+ANGLE_THRESHOLD = 10.0  # degrees
 # Constants for gap correction state
 GAP_IDLE = 0
 GAP_CORRECTING = 1
@@ -78,7 +80,7 @@ defaultSpeed = 1850
 
 # Motor Vars
 speedFactor = 0
-KP = 2.5 #1.50
-KD = 2.50 #2.05
+KP = 1.5 #1.50
+KD = 2.0 #2.05
 KI = 0.0
 KP_THETA = 140 # 407 = 1280/3.1415

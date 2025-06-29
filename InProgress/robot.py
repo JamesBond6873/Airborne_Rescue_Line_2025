@@ -572,6 +572,7 @@ def controlMotors(avoidStuck = False):
         """Send motor command only if values changed."""
         global oldM1, oldM2
         if m1 != oldM1 or m2 != oldM2:
+            printDebug(f"Sent Motor Control to Serial Process: M({int(m1)}, {int(m2)}) at {time.perf_counter()} {lineCenterX.value}", True)
             sendCommandNoConfirmation(f"M({int(m1)}, {int(m2)})")
             oldM1, oldM2 = m1, m2
     def canGamepadControlMotors():
@@ -903,8 +904,12 @@ def gapCorrectionController(inGap, gapAngle, gapCenterX):
 
     currentTime = time.perf_counter()
 
+    if not inGap and not gapCorrectionActive.value:
+        return
+
     if not gapCorrectionActive.value and timer_manager.is_timer_expired("gapCooldown"):
         if inGap and abs(gapAngle) > ANGLE_THRESHOLD:
+            print(f" Here 1 ")
             gapCorrectionActive.value = True
             gapCorrectionStartTime = currentTime
             lastCorrectionDirection.value = False  # Start by reversing
@@ -918,7 +923,7 @@ def gapCorrectionController(inGap, gapAngle, gapCenterX):
         if abs(gapAngle) <= ANGLE_THRESHOLD:
             # Aligned — stop correcting and drive forward
             setManualMotorsSpeeds(DEFAULT_FORWARD_SPEED, DEFAULT_FORWARD_SPEED)
-            controlMotors()
+            #controlMotors() # Control in Loop
             gapCorrectionActive.value = False
             gapCorrectionState.value = "Aligned - Going Forward"
             timer_manager.set_timer("gapCooldown", 1.5)
@@ -927,7 +932,7 @@ def gapCorrectionController(inGap, gapAngle, gapCenterX):
         if currentTime - gapCorrectionStartTime > GAP_CORRECTION_TIMEOUT:
             # Timed out — just go forward
             setManualMotorsSpeeds(DEFAULT_FORWARD_SPEED, DEFAULT_FORWARD_SPEED)
-            controlMotors()
+            #controlMotors() # Control in Loop
             gapCorrectionActive.value = False
             gapCorrectionState.value = "Align Timeout - Going Forward"
             timer_manager.set_timer("gapCooldown", 1.5)
@@ -937,7 +942,7 @@ def gapCorrectionController(inGap, gapAngle, gapCenterX):
         direction = lastCorrectionDirection.value
         M1_temp, M2_temp = getAngleMotorSpeedsYAxis(gapAngle, gapCenterX, forward=direction)
         setManualMotorsSpeeds(M1_temp, M2_temp)
-        controlMotors()
+        #controlMotors() # Control in Loop
         if gapCenterY.value < camera_y * 0.10: # Going forward, barely no gap
             lastCorrectionDirection.value = True
         else: # Going backward, gap is on the bottom
@@ -949,7 +954,7 @@ def gapCorrectionController(inGap, gapAngle, gapCenterX):
 def gapController():
     global inGap, lastLineDetected
 
-    gapCorrectionController(inGap, gapAngle.value, gapCenterX.value)
+    #gapCorrectionController(inGap, gapAngle.value, gapCenterX.value)
 
     if not lineDetected.value: # No line detected
         if lastLineDetected: # Just lost the line (last state was true)
@@ -963,17 +968,27 @@ def gapController():
 
     lastLineDetected = lineDetected.value  # Update previous state
 
+    if inGap:
+        setManualMotorsSpeeds(DEFAULT_FORWARD_SPEED, DEFAULT_FORWARD_SPEED)
+
+
 
 def silverLineController():
+    def readyToEnterZone():
+        return abs( 90 - abs(silverAngle.value)) < SILVER_ANGLE_THRESHOLD and abs(camera_x / 2 - silverCenterX.value) < camera_x * 0.15
+
     silverLine = silverValue.value > 0.6
     if silverLine:
         printDebug(f"Silver Line Detected: {silverValue.value} | Entering Zone", True)
-        if not LOPstate.value and silverLineDetected.value == False: # First Time detection
+        if silverLineDetected.value == False and not LOPstate.value: # First Time detection
             silverLineDetected.value = True
-        """if not LOPstate.value:
-            objective.value = "zone"
-            zoneStatus.value = "begin"
-            silverValue.value = -2"""
+        elif silverLineDetected.value == True and not LOPstate.value:
+            if readyToEnterZone():
+                objective.value = "zone"
+                zoneStatus.value = "begin"
+                silverValue.value = -2
+            else: # not ready to enter zone -  Go back to allign
+                pass
 
 
 def areWeStuck(): 
@@ -1096,17 +1111,18 @@ def controlLoop():
 
         # ----- LINE FOLLOWING ----- 
         if objectiveLoop == "follow_line":
+            updateRampStateAccelOnly()
             gapController()
             silverLineController()
-            updateRampStateAccelOnly()
 
             if lineStatus.value == "line_detected" and not lineDetected.value:
                 lineStatus.value = "gap_detected"
 
-            if not gapCorrectionActive.value:
+            if not inGap:
                 setMotorsSpeeds(lineCenterX.value)
                 intersectionController()
-                controlMotors()
+            
+            controlMotors()
         
         # ----- EVACUATION ZONE ----- 
         elif objectiveLoop == "zone":
