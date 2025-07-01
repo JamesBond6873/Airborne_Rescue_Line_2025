@@ -449,7 +449,7 @@ def LoPSwitchController():
     if isSwitchOn():
         if switchState == False: # First time detected as on
             switchState = True
-            printDebug(f"LoP Switch is now ON: {switchState}", softDEBUG)
+            printDebug(f"LoP Switch is now ON at {time.perf_counter()}: {switchState}", softDEBUG)
             
             setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)
             controlMotors()
@@ -476,7 +476,7 @@ def LoPSwitchController():
             resetImageSimilarityArrays.value = True
             resetEvacZoneArrays.value = True
             resetBallArrays.value = True
-            printDebug(f"LoP Switch is now OFF: {switchState}", softDEBUG)
+            printDebug(f"LoP Switch is now OFF at {time.perf_counter()}: {switchState}", softDEBUG)
             objective.value = "follow_line"
             zoneStatus.value = "notStarted"
             
@@ -1119,6 +1119,7 @@ def controlLoop():
     t0 = time.perf_counter()
     while not terminate.value:
         t1 = t0 + controlDelayMS * 0.001
+        t0Real = time.perf_counter()
 
         # Loop
         updateSensorAverages()
@@ -1143,8 +1144,8 @@ def controlLoop():
                 DEFAULT_FORWARD_SPEED = 1850
             elif rampDetected.value and rampDown.value:
                 DEFAULT_FORWARD_SPEED = 1600
-                if camServoAngle != 45:
-                    cameraFree(45)
+                if camServoAngle != 55:
+                    cameraFree(55)
             else:
                 DEFAULT_FORWARD_SPEED = 1700
                 if camServoAngle != 35:
@@ -1291,6 +1292,19 @@ def controlLoop():
 
         while (time.perf_counter() <= t1):
             time.sleep(0.0005)
-        t0 = t1
+
+        elapsed_time = time.perf_counter() - t0Real
+        if controlDelayMS * 0.001 - elapsed_time > 0:
+            time.sleep(controlDelayMS * 0.001 - elapsed_time)
+
+        loop_duration = time.perf_counter() - t0Real
+        if loop_duration > 0:
+            controlLoopFrequency.value = 1.0 / loop_duration
+        else:
+            controlLoopFrequency.value = 0  # Avoid division by zero
+
+        printDebug(f"Control Frequency: {controlLoopFrequency.value} Hz", DEBUG)
     
+        t0 = t1
+
     printConsoles(f"Shutting Down Robot Control Loop")

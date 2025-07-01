@@ -1012,6 +1012,7 @@ def lineCamLoop():
     t0 = time.perf_counter()
     while not terminate.value:
         t1 = t0 + lineDelayMS * 0.001
+        t0Real = time.perf_counter()
 
         # Loop
         cv2_img = getCameraImage(camera)
@@ -1240,12 +1241,26 @@ def lineCamLoop():
         cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_black.jpg", blackImage)
         cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_red.jpg", redImage)
 
+
         while (time.perf_counter() <= t1):
             time.sleep(0.0005)
 
-        
-        printDebug(f"\t\t\t\t\t\t\t\tLine Cam Loop Time: {t0} | {t1} | {time.perf_counter()}", DEBUG)
+        elapsed_time = time.perf_counter() - t0Real
+        if lineDelayMS * 0.001 - elapsed_time > 0:
+            time.sleep(lineDelayMS * 0.001 - elapsed_time)
+
+        # === Frequency Measurement ===
+        loop_duration = time.perf_counter() - t0Real
+        if loop_duration > 0:
+            lineCamLoopFrequency.value = 1.0 / loop_duration
+        else:
+            lineCamLoopFrequency.value = 0  # Avoid division by zero
+
+        printDebug(f"Line Frequency: {lineCamLoopFrequency.value} Hz", DEBUG)
+        printDebug(f"\t\t\t\t\t\t\t\tLine Cam Loop Time: {t0} | {t1} | {time.perf_counter()}", False)
+
         t0 = t1
+
 
     print(f"Shutting Down Line Cam Loop")
     if not cameraDebugMode: 

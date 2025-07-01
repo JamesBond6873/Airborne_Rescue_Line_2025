@@ -232,6 +232,7 @@ def serialLoop():
     t0 = time.perf_counter()
     while not terminate.value:
         t1 = t0 + serialDelayMS * 0.001
+        t0Real = time.perf_counter()
 
 
         if commandConfirmationAborted:
@@ -259,7 +260,7 @@ def serialLoop():
 
         # Request sensor data if timer expired
         if timer_manager.is_timer_expired("sensorRequest"):
-            getSensorData()
+            #getSensorData()
             timer_manager.set_timer("sensorRequest", dataRequestDelayMS * 0.001)
             if objective.value == "zone":
                 timer_manager.set_timer("sensorRequest", 3 * dataRequestDelayMS * 0.001)
@@ -267,13 +268,27 @@ def serialLoop():
 
         while (time.perf_counter() <= t1):
             time.sleep(0.0005)
-        
-        t0 = t1
 
+        elapsed_time = time.perf_counter() - t0Real
+        if serialDelayMS * 0.001 - elapsed_time > 0:
+            time.sleep(serialDelayMS * 0.001 - elapsed_time)
+        
         printDebug(f"Serial Loop: {waitingResponse} | {len(commandWaitingListConfirmation)} | {commandWaitingListConfirmation}", False)
         serialCommandPendingConfirmation.value = waitingResponse
         serialCommandsPendingIndicator.value = len(commandWaitingListConfirmation)
         serialAliveIndicator.value = 0 if serialAliveIndicator.value == 1 else 1
+
+        # === Frequency Measurement ===
+        loop_duration = time.perf_counter() - t0Real
+        if loop_duration > 0:
+            serialLoopFrequency.value = 1.0 / loop_duration
+        else:
+            serialLoopFrequency.value = 0  # Avoid division by zero
+
+        printDebug(f"Serial Frequency: {serialLoopFrequency.value} Hz", DEBUG)
+
+        
+        t0 = t1
 
     sendSerial(f"M({DEFAULT_STOPPED_SPEED}, {DEFAULT_STOPPED_SPEED})")
     print(f"Shutting Down Serial Loop")
