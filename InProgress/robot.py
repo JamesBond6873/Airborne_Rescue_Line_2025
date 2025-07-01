@@ -560,6 +560,47 @@ def setMotorsSpeeds(guidanceFactor):
     M1info, M2info = M1, M2
 
 
+def setMotorSpeedsAngleYAxis(angle, centerX, forward=True):
+    """
+    angle: in degrees, relative to Y-axis.
+        0 = vertical
+        + = tilt right (bottom-left to top-right)
+        - = tilt left  (bottom-right to top-left)
+
+    centerX: gap center X position in pixels
+    camera_x: total camera width in pixels
+    """
+    # Normalize angle and centerX
+    maxAngle = 45.0  # maximum expected tilt
+    maxOffset = camera_x / 2 # max lateral offset (half image width)
+
+    angleComponent = angle / maxAngle
+    offsetComponent = (centerX - camera_x / 2) / maxOffset
+
+    # Weighted combination (tune weights as needed)
+    correctionFactor = 0.6 * angleComponent + 0.4 * offsetComponent
+
+    # Clamp to [-1.25, 1.25] based on motor speed constants (1000, 1300; 1750, 2000)
+    clampValue = min(abs(DEFAULT_BACKWARD_SPEED-MIN_GENERAL_SPEED), abs(DEFAULT_FORWARD_SPEED-MAX_DEFAULT_SPEED)) / (2 * 100)
+    correctionFactor = max(min(correctionFactor, clampValue), -clampValue)
+
+    # Convert to motor speed delta
+    delta = 100 * correctionFactor  # Gain factor
+
+    if forward:
+        left = DEFAULT_FORWARD_SPEED - delta
+        right = DEFAULT_FORWARD_SPEED + delta
+    else:
+        left = DEFAULT_BACKWARD_SPEED + delta
+        right = DEFAULT_BACKWARD_SPEED - delta
+
+    # Clamp speeds to motor limits
+    left = int(max(MIN_GENERAL_SPEED, min(MAX_DEFAULT_SPEED, left)))
+    right = int(max(MIN_GENERAL_SPEED, min(MAX_DEFAULT_SPEED, right)))
+
+    setManualMotorsSpeeds(left, right)
+
+
 def setManualMotorsSpeeds(M1_manual, M2_manual):
     global M1, M2
     M1, M2 = M1_manual, M2_manual
@@ -597,7 +638,13 @@ def controlMotors(avoidStuck = False):
 
 
 def timeInEvacZone() -> float:
+    zoneDuration.value = time.perf_counter() - zoneStartTime.value
     return time.perf_counter() - zoneStartTime.value
+
+
+def timeAfterDeposit() -> float:
+    zoneTimeAfterDeposit.value = time.perf_counter() - lastDepositTime.value
+    return time.perf_counter() - lastDepositTime.value
 
 
 # Decide which ball needs to be picked up
@@ -656,6 +703,25 @@ def needToDepositDead(zoneStatusLoop):
             printDebug(f"Ready To Drop Dead Ball - Time Safety - {pickedUpDeadCount.value} Dead Victims", softDEBUG)
             return True
    
+
+def readyToLeave(zoneStatusLoop):
+    if zoneStatusLoop == "exit":
+        if ballExists.value:
+            zoneStatus.value = "goToBall"
+            printDebug(f"Aborting Leaving the Evacuation Zone - Ball Detected", softDEBUG)
+            return False
+        else:
+            return True
+    
+    elif zoneStatusLoop == "depositGreen" or zoneStatusLoop == "depositRed": # Still Depositing
+        return False
+
+
+    elif zoneStatusLoop == "findVictims" and timeAfterDeposit() >= 7.5:
+        if dumpedAliveCount.value >= 2 and dumpedDeadCount.value >= 1 and not ballExists.value:
+            printDebug(f"Ready to Leave Evacuation Zone - Exiting Procedure Start at {time.perf_counter()}", softDEBUG)
+            return True
+
 
 def goToBall():
     global pickSequenceStatus, pickingVictim, pickVictimType
@@ -824,6 +890,7 @@ def zoneDeposit(type):
         closeBallStorage()
         dropSequenceStatus = "searchGoCorner"  # Reset to searchGoCorner for next victim
         resetEvacZoneArrays.value = True
+        lastDepositTime.value = time.perf_counter()
 
         if type == "A":
             #dumpedAliveVictims = True # Previous version
@@ -852,51 +919,6 @@ def intersectionController():
                 timer_manager.set_timer("uTurn", 1.5) # Give 1.5 s for 180degree turn
 
         lastTurn = turnDirection.value
-
-
-def getAngleMotorSpeedsYAxis(angle, centerX, forward=True):
-    """
-    angle: in degrees, relative to Y-axis.
-        0 = vertical
-        + = tilt right (bottom-left to top-right)
-        - = tilt left  (bottom-right to top-left)
-
-    centerX: gap center X position in pixels
-    camera_x: total camera width in pixels
-    """
-    # Constants
-    MAX_SPEED = 2000
-    MIN_SPEED = 1000
-    CAMERA_CENTER_X = camera_x / 2
-
-    # Normalize angle and centerX
-    maxAngle = 45.0  # maximum expected tilt
-    maxOffset = CAMERA_CENTER_X  # max lateral offset (half image width)
-
-    angleComponent = angle / maxAngle
-    offsetComponent = (centerX - CAMERA_CENTER_X) / maxOffset
-
-    # Weighted combination (tune weights as needed)
-    correctionFactor = 0.6 * angleComponent + 0.4 * offsetComponent
-
-    # Clamp to [-1, 1]
-    correctionFactor = max(min(correctionFactor, 1.0), -1.0)
-
-    # Convert to motor speed delta
-    delta = 100 * correctionFactor  # Gain factor
-
-    if forward:
-        left = DEFAULT_FORWARD_SPEED - delta
-        right = DEFAULT_FORWARD_SPEED + delta
-    else:
-        left = DEFAULT_BACKWARD_SPEED + delta
-        right = DEFAULT_BACKWARD_SPEED - delta
-
-    # Clamp speeds to motor limits
-    left = int(max(MIN_SPEED, min(MAX_SPEED, left)))
-    right = int(max(MIN_SPEED, min(MAX_SPEED, right)))
-
-    return left, right
 
 
 def gapCorrectionController(inGap, gapAngle, gapCenterX):
@@ -940,7 +962,7 @@ def gapCorrectionController(inGap, gapAngle, gapCenterX):
 
         # Still correcting — run one step
         direction = lastCorrectionDirection.value
-        M1_temp, M2_temp = getAngleMotorSpeedsYAxis(gapAngle, gapCenterX, forward=direction)
+        M1_temp, M2_temp = setMotorSpeedsAngleYAxis(gapAngle, gapCenterX, forward=direction)
         setManualMotorsSpeeds(M1_temp, M2_temp)
         #controlMotors() # Control in Loop
         if gapCenterY.value < camera_y * 0.10: # Going forward, barely no gap
@@ -972,14 +994,13 @@ def gapController():
         setManualMotorsSpeeds(DEFAULT_FORWARD_SPEED, DEFAULT_FORWARD_SPEED)
 
 
-
 def silverLineController():
     def readyToEnterZone():
         return abs( 90 - abs(silverAngle.value)) < SILVER_ANGLE_THRESHOLD and abs(camera_x / 2 - silverCenterX.value) < camera_x * 0.15
 
     silverLine = silverValue.value > 0.6
     if silverLine:
-        printDebug(f"Silver Line Detected: {silverValue.value} | Entering Zone", True)
+        printDebug(f"Silver Line Detected: {silverValue.value} | Entering Zone", False)
         if silverLineDetected.value == False and not LOPstate.value: # First Time detection
             silverLineDetected.value = True
         elif silverLineDetected.value == True and not LOPstate.value:
@@ -988,7 +1009,8 @@ def silverLineController():
                 zoneStatus.value = "begin"
                 silverValue.value = -2
             else: # not ready to enter zone -  Go back to allign
-                pass
+                setMotorSpeedsAngleYAxis(silverAngle.value, silverCenterX.value, forward=False)
+                print(f"Silver Line not Ready to Enter Zone: {silverAngle.value} | {silverCenterX.value} | {M1} | {M2}")
 
 
 def areWeStuck(): 
@@ -1109,21 +1131,20 @@ def controlLoop():
         if stuckDetected.value:
             avoidStuck()
 
+
         # ----- LINE FOLLOWING ----- 
         if objectiveLoop == "follow_line":
             updateRampStateAccelOnly()
+
+            setMotorsSpeeds(lineCenterX.value)
+            intersectionController()
+
             gapController()
             silverLineController()
 
-            if lineStatus.value == "line_detected" and not lineDetected.value:
-                lineStatus.value = "gap_detected"
-
-            if not inGap:
-                setMotorsSpeeds(lineCenterX.value)
-                intersectionController()
-            
             controlMotors()
-        
+
+
         # ----- EVACUATION ZONE ----- 
         elif objectiveLoop == "zone":
             if needToDepositAlive(zoneStatusLoop):
@@ -1132,28 +1153,31 @@ def controlLoop():
             elif needToDepositDead(zoneStatusLoop):
                 zoneStatus.value = "depositRed"
                 zoneStatusLoop = "depositRed"
-    
+            elif readyToLeave(zoneStatusLoop):
+                zoneStatus.value = "exit"
+                zoneStatusLoop = "exit"
+
             if zoneStatusLoop == "begin":
                 timer_manager.set_timer("stop", 5.0) # 5 seconds to signal that we entered
-                timer_manager.set_timer("zoneEntry", 8.0) # 3 (5+3) seconds to entry the zone
+                timer_manager.set_timer("zoneEntry", 6.5) # 1.5 (5+1.5) seconds to entry the zone
 
                 cameraDefault("Evacuation")
                 setLights(on=False)
 
                 if zoneStartTime.value == -1:
                     zoneStartTime.value = time.perf_counter()
+
                 zoneStatus.value = "entry" # go to next Step
 
             elif zoneStatusLoop == "entry":
                 if not timer_manager.is_timer_expired("zoneEntry"):
-                    M1, M2 = 1800, 1800
+                    setManualMotorsSpeeds(1800, 1800)
                     controlMotors()
                 else: # timer expired
-                    timer_manager.set_timer("stop", 2.5) # 10 seconds to signal that we entered
+                    timer_manager.set_timer("stop", 2.5) # 2.5 seconds to signal that we entered
                     zoneStatus.value = "findVictims"
             
             elif zoneStatusLoop == "findVictims":
-                #printConsoles(f"Here 4-----------------")
                 setManualMotorsSpeeds(1230 if rotateTo == "left" else 1750, 1750 if rotateTo == "left" else 1230)
                 controlMotors()
             
@@ -1168,6 +1192,9 @@ def controlLoop():
 
             elif zoneStatusLoop == "depositRed":
                 zoneDeposit("D")
+
+            elif zoneStatusLoop == "exit":
+                pass
 
             elif zoneStatusLoop == "finishEvacuation":
                 pass
@@ -1243,8 +1270,6 @@ def controlLoop():
             if counter % 5 == 0:
                 #printDebug(f"{debugMessage}", softDEBUG)
                 pass
-        
-        #printConsoles(f"ballBottom: {int(ballBottomY.value)} {ballBottomY.value >= camera_y * 0.95} ballType {ballType.value} \t")
 
 
         while (time.perf_counter() <= t1):

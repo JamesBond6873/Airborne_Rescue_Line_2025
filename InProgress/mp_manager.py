@@ -90,6 +90,8 @@ cornerCenter = manager.Value("i", -181)
 cornerHeight = manager.Value("i", 0)
 zoneFoundGreen = manager.Value("i", False)
 zoneFoundRed = manager.Value("i", False)
+lastDepositTime = manager.Value("i", -1)
+
 
 imageSimilarityAverage = manager.Value("i", -1)
 stuckDetected = manager.Value("i", False)
@@ -109,6 +111,8 @@ saveFrame = manager.Value("i", False)
 
 
 # Only for Debugging Purposes
+zoneDuration = manager.Value("i", -1)
+zoneTimeAfterDeposit = manager.Value("i", -1)
 lopOverride = manager.Value("i", 0)
 lopCounter = manager.Value("i", 0)
 motorOverride = manager.Value("i", 0)
