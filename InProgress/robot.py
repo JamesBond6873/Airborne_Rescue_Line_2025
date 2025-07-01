@@ -842,7 +842,7 @@ def zoneDeposit(type):
                 wiggleStage = 5
                 timer_manager.set_timer("wiggle", 0.2)
                 printDebug("Victim Dropping - Finished Wiggle", softDEBUG)
-                dropSequenceStatus = "zoneForward"
+                dropSequenceStatus = "goForward"
                 timer_manager.set_timer("zoneForward", 1)
                 wiggleStage = 0
             
