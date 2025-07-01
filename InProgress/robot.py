@@ -641,6 +641,10 @@ def timeInEvacZone() -> float:
     return time.perf_counter() - zoneStartTime.value
 
 
+def timeAfterDeposit() -> float:
+    return time.perf_counter() - lastDepositTime.value
+
+
 # Decide which ball needs to be picked up
 def decideVictimType():
     if ballType.value == "silver ball":
@@ -697,6 +701,25 @@ def needToDepositDead(zoneStatusLoop):
             printDebug(f"Ready To Drop Dead Ball - Time Safety - {pickedUpDeadCount.value} Dead Victims", softDEBUG)
             return True
    
+
+def readyToLeave(zoneStatusLoop):
+    if zoneStatusLoop == "exit":
+        if ballExists.value:
+            zoneStatus.value = "goToBall"
+            printDebug(f"Aborting Leaving the Evacuation Zone - Ball Detected", softDEBUG)
+            return False
+        else:
+            return True
+    
+    elif zoneStatusLoop == "depositGreen" or zoneStatusLoop == "depositRed": # Still Depositing
+        return False
+
+
+    elif zoneStatusLoop == "findVictims" and timeAfterDeposit() >= 7.5:
+        if dumpedAliveCount.value >= 2 and dumpedDeadCount.value >= 1 and not ballExists.value:
+            printDebug(f"Ready to Leave Evacuation Zone - Exiting Procedure Start at {time.perf_counter()}", softDEBUG)
+            return True
+
 
 def goToBall():
     global pickSequenceStatus, pickingVictim, pickVictimType
@@ -968,7 +991,6 @@ def gapController():
         setManualMotorsSpeeds(DEFAULT_FORWARD_SPEED, DEFAULT_FORWARD_SPEED)
 
 
-
 def silverLineController():
     def readyToEnterZone():
         return abs( 90 - abs(silverAngle.value)) < SILVER_ANGLE_THRESHOLD and abs(camera_x / 2 - silverCenterX.value) < camera_x * 0.15
@@ -1128,28 +1150,31 @@ def controlLoop():
             elif needToDepositDead(zoneStatusLoop):
                 zoneStatus.value = "depositRed"
                 zoneStatusLoop = "depositRed"
-    
+            elif readyToLeave(zoneStatusLoop):
+                zoneStatus.value = "exit"
+                zoneStatusLoop = "exit"
+
             if zoneStatusLoop == "begin":
                 timer_manager.set_timer("stop", 5.0) # 5 seconds to signal that we entered
-                timer_manager.set_timer("zoneEntry", 8.0) # 3 (5+3) seconds to entry the zone
+                timer_manager.set_timer("zoneEntry", 6.5) # 1.5 (5+1.5) seconds to entry the zone
 
                 cameraDefault("Evacuation")
                 setLights(on=False)
 
                 if zoneStartTime.value == -1:
                     zoneStartTime.value = time.perf_counter()
+
                 zoneStatus.value = "entry" # go to next Step
 
             elif zoneStatusLoop == "entry":
                 if not timer_manager.is_timer_expired("zoneEntry"):
-                    M1, M2 = 1800, 1800
+                    setManualMotorsSpeeds(1800, 1800)
                     controlMotors()
                 else: # timer expired
-                    timer_manager.set_timer("stop", 2.5) # 10 seconds to signal that we entered
+                    timer_manager.set_timer("stop", 2.5) # 2.5 seconds to signal that we entered
                     zoneStatus.value = "findVictims"
             
             elif zoneStatusLoop == "findVictims":
-                #printConsoles(f"Here 4-----------------")
                 setManualMotorsSpeeds(1230 if rotateTo == "left" else 1750, 1750 if rotateTo == "left" else 1230)
                 controlMotors()
             
@@ -1164,6 +1189,9 @@ def controlLoop():
 
             elif zoneStatusLoop == "depositRed":
                 zoneDeposit("D")
+
+            elif zoneStatusLoop == "exit":
+                pass
 
             elif zoneStatusLoop == "finishEvacuation":
                 pass
