@@ -362,7 +362,7 @@ def pickVictim(type, step=0):
                 sendCommandListWithConfirmation(["AD"])
             elif step == 2:
                 printDebug(f"Pick {type}", False)
-                sendCommandListWithConfirmation([f"P{type}", "M(1520,1520)", "SF,0,F", "SF,1,F", "SF,2,F", "SF,3,F"])
+                sendCommandListWithConfirmation([f"P{type}", "SF,0,F", "SF,1,F", "SF,2,F", "SF,3,F"])
                 timer_manager.set_timer("armCooldown", 2.5)
             else:
                 printDebug(f"Pick {type}", False)
