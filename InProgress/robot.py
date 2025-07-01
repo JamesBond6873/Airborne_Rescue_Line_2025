@@ -556,7 +556,7 @@ def setMotorsSpeeds(guidanceFactor):
         M1, M2 = 1000, 1000
 
     elif -0.2 < timer_manager.get_remaining_time('uTurn') < 0:
-        timer_manager.set_timer('backwards', 1.0)
+        timer_manager.set_timer('backwards', 0.5)
 
     M1info, M2info = M1, M2
 
