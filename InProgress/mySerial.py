@@ -146,7 +146,7 @@ def updateCommandWithoutConfirmation():
 def getSensorData(data = "All"):
     if not waitingResponse and not waitingSensorData:
         if objective.value == "follow_line":
-            printDebug(f"Requesting sensor data: {data}", serialSoftDEBUG)
+            printDebug(f"Requesting sensor data: {data}", DEBUG)
             if data == "All":
                 sendSerial(f"ITData")
             elif data == "IMU":
@@ -269,6 +269,11 @@ def serialLoop():
             time.sleep(0.0005)
         
         t0 = t1
-    
+
+        printDebug(f"Serial Loop: {waitingResponse} | {len(commandWaitingListConfirmation)} | {commandWaitingListConfirmation}", False)
+        serialCommandPendingConfirmation.value = waitingResponse
+        serialCommandsPendingIndicator.value = len(commandWaitingListConfirmation)
+        serialAliveIndicator.value = 0 if serialAliveIndicator.value == 1 else 1
+
     sendSerial(f"M({DEFAULT_STOPPED_SPEED}, {DEFAULT_STOPPED_SPEED})")
     print(f"Shutting Down Serial Loop")

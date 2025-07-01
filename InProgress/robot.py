@@ -20,7 +20,6 @@ inGap = False
 lastLineDetected = True  # Assume robot starts detecting a line
 gapCorrectionStartTime = 0
 
-pickingVictim = False
 pickSequenceStatus = "goingToBall" #goingToBall, startReverse, lowerArm, moveForward, pickVictim
 pickVictimType = "none"
 dumpedAliveVictims = False
@@ -41,6 +40,8 @@ oldM1 = oldM2 = M1
 error_x = errorAcc = lastError = 0
 avoidingStuck = False
 
+# Camera Servo Angle
+camServoAngle = -1
 
 # Sensor Vars
 Accel_X_Array = createEmptyTimeArray()
@@ -386,21 +387,26 @@ def closeBallStorage():
 
 # Moves Camera to Default Position: Line or Evacuation
 def cameraDefault(position):
+    global camServoAngle
     if position == "Line":
         printDebug(f"Set Camera to Line Following Mode", softDEBUG)
         sendCommandListWithConfirmation(["CL", "SF,4,F"])
+        camServoAngle = 30
 
     elif position == "Evacuation":
         printDebug(f"Set Camera to Evacaution Zone Mode", softDEBUG)
         sendCommandListWithConfirmation(["CE", "SF,4,F"])
+        camServoAngle = 70
 
 
 def cameraFree(position):
+    global camServoAngle
     if position < 15 or position > 90:
         printDebug(f"Invalid Camera Free Position: {position}", softDEBUG)
         return
     command = "SC,4," + str(position)
     sendCommandListWithConfirmation([str(command), "SF,4,F"])
+    camServoAngle = position
 
 
 def setLights(on = True):
@@ -556,7 +562,7 @@ def setMotorsSpeeds(guidanceFactor):
         M1, M2 = 1000, 1000
 
     elif -0.2 < timer_manager.get_remaining_time('uTurn') < 0:
-        timer_manager.set_timer('backwards', 1.0)
+        timer_manager.set_timer('backwards', 0.5)
 
     M1info, M2info = M1, M2
 
@@ -614,7 +620,7 @@ def controlMotors(avoidStuck = False):
         """Send motor command only if values changed."""
         global oldM1, oldM2
         if m1 != oldM1 or m2 != oldM2:
-            printDebug(f"Sent Motor Control to Serial Process: M({int(m1)}, {int(m2)}) at {time.perf_counter()} {lineCenterX.value}", True)
+            printDebug(f"Sent Motor Control to Serial Process: M({int(m1)}, {int(m2)}) at {time.perf_counter()}", False)
             sendCommandNoConfirmation(f"M({int(m1)}, {int(m2)})")
             oldM1, oldM2 = m1, m2
     def canGamepadControlMotors():
@@ -725,7 +731,7 @@ def readyToLeave(zoneStatusLoop):
 
 
 def goToBall():
-    global pickSequenceStatus, pickingVictim, pickVictimType
+    global pickSequenceStatus, pickVictimType
 
     if not ballExists.value:
         zoneStatus.value = "findVictims"
@@ -739,9 +745,11 @@ def goToBall():
             
             pickVictimType = decideVictimType()
 
-            pickingVictim = True
+            pickingVictim.value = True
+            resetBallArrays.value = True
             printDebug(f" ----- Starting {pickVictimType} Victim Catching ----- ", softDEBUG)
-            printDebug(f"Victim Catching - Reversing", False)
+            printDebug(f"Ball detection data: {ballExists.value} {ballCenterX.value} {ballBottomY.value} {ballWidth.value} {ballType.value}", DEBUG)
+            printDebug(f"Victim Catching - Reversing", DEBUG)
             timer_manager.set_timer("zoneReverse", 0.5)
 
     elif pickSequenceStatus == "startReverse":
@@ -761,13 +769,13 @@ def goToBall():
         if timer_manager.is_timer_expired("lowerArm"):
             printDebug(f"Victim Catching - Moving Forward", False)
             pickSequenceStatus = "moveForward"
-            timer_manager.set_timer("zoneForward", 0.4)
+            timer_manager.set_timer("zoneForward", 0.8)
 
     elif pickSequenceStatus == "moveForward":
         setManualMotorsSpeeds(1800, 1800)  # Go forward slowly
         controlMotors()
         if timer_manager.is_timer_expired("zoneForward"):
-            setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)
+            setManualMotorsSpeeds(1300, 1300)
             controlMotors()
             pickVictim(pickVictimType, step=2)
             printDebug(f"Victim Catching - Picking Victim", False)
@@ -775,7 +783,7 @@ def goToBall():
 
     elif pickSequenceStatus == "finished":
         printDebug(f"Victim Catching - Finished", False)
-        pickingVictim = False
+        pickingVictim.value = False
         resetBallArrays.value = True
         zoneStatus.value = "findVictims"
         pickSequenceStatus = "goingToBall"
@@ -787,6 +795,7 @@ def goToBall():
 
         printDebug(f"Picked up {'alive' if pickVictimType == 'A' else 'dead'} victim, new total: {pickedUpAliveCount.value + pickedUpDeadCount.value} victims", softDEBUG)
         printDebug(f"Picked up {pickedUpAliveCount.value} alive and {pickedUpDeadCount.value} dead", softDEBUG)
+        printDebug(f"Ball detection data 2: {ballExists.value} {ballCenterX.value} {ballBottomY.value} {ballWidth.value} {ballType.value}", True)
 
 
 def zoneDeposit(type):
@@ -842,7 +851,7 @@ def zoneDeposit(type):
                 wiggleStage = 5
                 timer_manager.set_timer("wiggle", 0.2)
                 printDebug("Victim Dropping - Finished Wiggle", softDEBUG)
-                dropSequenceStatus = "zoneForward"
+                dropSequenceStatus = "goForward"
                 timer_manager.set_timer("zoneForward", 1)
                 wiggleStage = 0
             
@@ -1045,7 +1054,7 @@ def avoidStuck():
 
 def controlLoop():
     global switchState, M1, M2, M1info, M2info, oldM1, oldM2, motorSpeedDiference, error_theta, error_x, errorAcc, lastError, inGap
-    global pickingVictim, pickSequenceStatus, pickVictimType, DEFAULT_FORWARD_SPEED
+    global pickSequenceStatus, pickVictimType, DEFAULT_FORWARD_SPEED
 
     sendCommandListWithConfirmation(["GR","BC", "SF,5,F", "CL", "SF,4,F", "AU", "PA", "SF,0,F", "SF,1,F", "SF,2,F", "SF,3,F", "LX,200", "RGB,255,255,255"])
 
@@ -1116,17 +1125,9 @@ def controlLoop():
         LoPSwitchController()
         LOPstate.value = 1 if switchState == True else 0
 
-        if not pickingVictim:
+        if not pickingVictim.value:
             zoneStatusLoop = zoneStatus.value
         objectiveLoop = objective.value
-
-        # Update Because of Ramps DEFAULT_FORWARD_SPEED
-        if rampDetected.value and rampUp.value:
-            DEFAULT_FORWARD_SPEED = 1850
-        elif rampDetected.value and rampDown.value:
-            DEFAULT_FORWARD_SPEED = 1600
-        else:
-            DEFAULT_FORWARD_SPEED = 1700
 
         stuckDetected.value = areWeStuck()
         if stuckDetected.value:
@@ -1136,6 +1137,18 @@ def controlLoop():
         # ----- LINE FOLLOWING ----- 
         if objectiveLoop == "follow_line":
             updateRampStateAccelOnly()
+
+            # Update Because of Ramps DEFAULT_FORWARD_SPEED
+            if rampDetected.value and rampUp.value:
+                DEFAULT_FORWARD_SPEED = 1850
+            elif rampDetected.value and rampDown.value:
+                DEFAULT_FORWARD_SPEED = 1600
+                if camServoAngle != 45:
+                    cameraFree(45)
+            else:
+                DEFAULT_FORWARD_SPEED = 1700
+                if camServoAngle != 35:
+                    cameraFree(35)
 
             setMotorsSpeeds(lineCenterX.value)
             intersectionController()
@@ -1148,6 +1161,9 @@ def controlLoop():
 
         # ----- EVACUATION ZONE ----- 
         elif objectiveLoop == "zone":
+            timeInEvacZone()
+            timeAfterDeposit()
+
             if needToDepositAlive(zoneStatusLoop):
                 zoneStatus.value = "depositGreen"
                 zoneStatusLoop = "depositGreen"
@@ -1225,7 +1241,7 @@ def controlLoop():
         # Evac Zone
         zoneStatusLoopDebug.value = zoneStatusLoop
         pickSequenceStatusDebug.value = pickSequenceStatus
-        pickingVictimDebug.value = pickingVictim
+        pickingVictimDebug.value = pickingVictim.value
     
 
         if objectiveLoop == "follow_line":
@@ -1264,7 +1280,7 @@ def controlLoop():
                 #f"LOP: {switchState} \t"
                 #f"Loop: {objective.value}\t"
                 f"var: {zoneStatus.value} {zoneStatusLoop} {pickSequenceStatus} "
-                f"pickVictim: {pickingVictim}"
+                f"pickVictim: {pickingVictim.value}"
                 #f"Commands: {commandWaitingList}"
             )
             counter += 1
