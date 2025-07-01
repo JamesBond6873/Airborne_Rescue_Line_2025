@@ -98,7 +98,14 @@ def resetBallArrayVars():
         ballTypeArray = createFilledArray(0.5)
         ballExistsArray = createEmptyTimeArray()
 
+        ballCenterX.value = calculateAverageArray(ballCenterXArray, 0.15)
+        ballBottomY.value = calculateAverageArray(ballBottomYArray, 0.25)
+        ballWidth.value = calculateAverageArray(ballWidthArray, 0.25)
+        ballType.value = "black ball" if calculateAverageArray(ballTypeArray, 0.45) < 0.5 else "silver ball" # Maybe needs rechecking... (bias towards silver ball)
+        ballExists.value = calculateAverageArray(ballExistsArray, 0.25) >= 0.5 # [0.5, 1.0] = Ball Exist True [0.0, 0.5[ = False
+
         print(f"Successfully reset ball arrays")
+        printDebug(f"Reset Ball Arrays data: {ballExists.value} {ballCenterX.value} {ballBottomY.value} {ballWidth.value} {ballType.value}", DEBUG)
         resetBallArrays.value = False
 
 
@@ -1156,7 +1163,7 @@ def lineCamLoop():
             
             blackImage = ignoreHighFOVCorners(blackImage)
 
-            if zoneStatus.value in ["begin", "entry", "findVictims", "goToBall"]:
+            if zoneStatus.value in ["begin", "entry", "findVictims", "goToBall"] and not pickingVictim.value:
                 img_rgb = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
                 results = modelVictim.predict(img_rgb, imgsz=448, conf=0.3, iou=0.2, agnostic_nms=True, workers=4, verbose=False)  # verbose=True to enable debug info
                 #results = modelVictim.predict(img_rgb, save=True, save_txt=True, imgsz=448, conf=0.3, iou=0.2, agnostic_nms=True, workers=4, verbose=False)

@@ -20,7 +20,6 @@ inGap = False
 lastLineDetected = True  # Assume robot starts detecting a line
 gapCorrectionStartTime = 0
 
-pickingVictim = False
 pickSequenceStatus = "goingToBall" #goingToBall, startReverse, lowerArm, moveForward, pickVictim
 pickVictimType = "none"
 dumpedAliveVictims = False
@@ -732,7 +731,7 @@ def readyToLeave(zoneStatusLoop):
 
 
 def goToBall():
-    global pickSequenceStatus, pickingVictim, pickVictimType
+    global pickSequenceStatus, pickVictimType
 
     if not ballExists.value:
         zoneStatus.value = "findVictims"
@@ -746,9 +745,11 @@ def goToBall():
             
             pickVictimType = decideVictimType()
 
-            pickingVictim = True
+            pickingVictim.value = True
+            resetBallArrays.value = True
             printDebug(f" ----- Starting {pickVictimType} Victim Catching ----- ", softDEBUG)
-            printDebug(f"Victim Catching - Reversing", False)
+            printDebug(f"Ball detection data: {ballExists.value} {ballCenterX.value} {ballBottomY.value} {ballWidth.value} {ballType.value}", DEBUG)
+            printDebug(f"Victim Catching - Reversing", DEBUG)
             timer_manager.set_timer("zoneReverse", 0.5)
 
     elif pickSequenceStatus == "startReverse":
@@ -782,7 +783,7 @@ def goToBall():
 
     elif pickSequenceStatus == "finished":
         printDebug(f"Victim Catching - Finished", False)
-        pickingVictim = False
+        pickingVictim.value = False
         resetBallArrays.value = True
         zoneStatus.value = "findVictims"
         pickSequenceStatus = "goingToBall"
@@ -794,6 +795,7 @@ def goToBall():
 
         printDebug(f"Picked up {'alive' if pickVictimType == 'A' else 'dead'} victim, new total: {pickedUpAliveCount.value + pickedUpDeadCount.value} victims", softDEBUG)
         printDebug(f"Picked up {pickedUpAliveCount.value} alive and {pickedUpDeadCount.value} dead", softDEBUG)
+        printDebug(f"Ball detection data 2: {ballExists.value} {ballCenterX.value} {ballBottomY.value} {ballWidth.value} {ballType.value}", True)
 
 
 def zoneDeposit(type):
@@ -1052,7 +1054,7 @@ def avoidStuck():
 
 def controlLoop():
     global switchState, M1, M2, M1info, M2info, oldM1, oldM2, motorSpeedDiference, error_theta, error_x, errorAcc, lastError, inGap
-    global pickingVictim, pickSequenceStatus, pickVictimType, DEFAULT_FORWARD_SPEED
+    global pickSequenceStatus, pickVictimType, DEFAULT_FORWARD_SPEED
 
     sendCommandListWithConfirmation(["GR","BC", "SF,5,F", "CL", "SF,4,F", "AU", "PA", "SF,0,F", "SF,1,F", "SF,2,F", "SF,3,F", "LX,200", "RGB,255,255,255"])
 
@@ -1123,7 +1125,7 @@ def controlLoop():
         LoPSwitchController()
         LOPstate.value = 1 if switchState == True else 0
 
-        if not pickingVictim:
+        if not pickingVictim.value:
             zoneStatusLoop = zoneStatus.value
         objectiveLoop = objective.value
 
@@ -1159,6 +1161,9 @@ def controlLoop():
 
         # ----- EVACUATION ZONE ----- 
         elif objectiveLoop == "zone":
+            timeInEvacZone()
+            timeAfterDeposit()
+
             if needToDepositAlive(zoneStatusLoop):
                 zoneStatus.value = "depositGreen"
                 zoneStatusLoop = "depositGreen"
@@ -1236,7 +1241,7 @@ def controlLoop():
         # Evac Zone
         zoneStatusLoopDebug.value = zoneStatusLoop
         pickSequenceStatusDebug.value = pickSequenceStatus
-        pickingVictimDebug.value = pickingVictim
+        pickingVictimDebug.value = pickingVictim.value
     
 
         if objectiveLoop == "follow_line":
@@ -1275,7 +1280,7 @@ def controlLoop():
                 #f"LOP: {switchState} \t"
                 #f"Loop: {objective.value}\t"
                 f"var: {zoneStatus.value} {zoneStatusLoop} {pickSequenceStatus} "
-                f"pickVictim: {pickingVictim}"
+                f"pickVictim: {pickingVictim.value}"
                 #f"Commands: {commandWaitingList}"
             )
             counter += 1

@@ -74,6 +74,7 @@ rampUp = manager.Value("i", False)
 rampDown = manager.Value("i", False)
 wasOnRamp = manager.Value("i", False)
 
+pickingVictim = manager.Value("i", False)
 ballCenterX = manager.Value("i", -1) # Average
 ballBottomY = manager.Value("i", -1) # Average
 ballWidth = manager.Value("i", -1) # Average
@@ -129,7 +130,7 @@ inGapDebug = manager.Value("i", False)
 markerToHighDebug = manager.Value("i", False)
 zoneStatusLoopDebug = manager.Value("i", "notStarted")
 pickSequenceStatusDebug = manager.Value("i", "goingToBall")
-pickingVictimDebug = manager.Value("i", False)
+pickingVictimDebug = manager.Value("i", True)
 AccelXArrayDebug = manager.Value("i", -1)
 AccelYArrayDebug = manager.Value("i", -1)
 AccelZArrayDebug = manager.Value("i", -1)

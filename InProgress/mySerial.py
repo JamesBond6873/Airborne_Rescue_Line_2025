@@ -270,7 +270,7 @@ def serialLoop():
         
         t0 = t1
 
-        printDebug(f"Serial Loop: {waitingResponse} | {len(commandWaitingListConfirmation)} | {commandWaitingListConfirmation}", True)
+        printDebug(f"Serial Loop: {waitingResponse} | {len(commandWaitingListConfirmation)} | {commandWaitingListConfirmation}", False)
         serialCommandPendingConfirmation.value = waitingResponse
         serialCommandsPendingIndicator.value = len(commandWaitingListConfirmation)
         serialAliveIndicator.value = 0 if serialAliveIndicator.value == 1 else 1

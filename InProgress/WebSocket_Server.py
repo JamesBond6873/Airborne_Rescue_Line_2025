@@ -116,6 +116,16 @@ async def handler(websocket):
                 f"{pickSequenceStatusDebug.value}",
                 f"{pickingVictimDebug.value}",
                 f"{'Not Started' if zoneTimeAfterDeposit.value == -1 else zoneTimeAfterDeposit.value}",
+                f"{ballExists.value}",
+                f"{ballCenterX.value}",
+                f"{ballBottomY.value}",
+                f"{ballWidth.value}",
+                f"{ballType.value}",
+                f"",
+                f"",
+                f"",
+                f"",
+                f""
             ]
             
             await websocket.send(json.dumps(payload))
