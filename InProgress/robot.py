@@ -1270,8 +1270,6 @@ def controlLoop():
             if counter % 5 == 0:
                 #printDebug(f"{debugMessage}", softDEBUG)
                 pass
-        
-        #printConsoles(f"ballBottom: {int(ballBottomY.value)} {ballBottomY.value >= camera_y * 0.95} ballType {ballType.value} \t")
 
 
         while (time.perf_counter() <= t1):
