@@ -638,10 +638,12 @@ def controlMotors(avoidStuck = False):
 
 
 def timeInEvacZone() -> float:
+    zoneDuration.value = time.perf_counter() - zoneStartTime.value
     return time.perf_counter() - zoneStartTime.value
 
 
 def timeAfterDeposit() -> float:
+    zoneTimeAfterDeposit.value = time.perf_counter() - lastDepositTime.value
     return time.perf_counter() - lastDepositTime.value
 
 
@@ -888,6 +890,7 @@ def zoneDeposit(type):
         closeBallStorage()
         dropSequenceStatus = "searchGoCorner"  # Reset to searchGoCorner for next victim
         resetEvacZoneArrays.value = True
+        lastDepositTime.value = time.perf_counter()
 
         if type == "A":
             #dumpedAliveVictims = True # Previous version

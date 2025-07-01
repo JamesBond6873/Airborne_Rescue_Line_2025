@@ -106,7 +106,7 @@ async def handler(websocket):
                 f"{round(silverCenterY.value, 2)}",
                 f"",
                 f"",
-                f"{'Not Started' if zoneStartTime.value == -1 else 'Finished' if zoneStatus.value == 'finished' else (round(time.perf_counter() - zoneStartTime.value, 0))}",
+                f"{'Not Started' if zoneDuration.value == -1 else 'Finished' if zoneStatus.value == 'finished' else zoneDuration.value}",
                 f"{dumpedAliveCount.value} Victim(s)",
                 f"{dumpedDeadCount.value} Victim(s)",
                 f"{pickedUpAliveCount.value} Victim(s)",
@@ -115,8 +115,7 @@ async def handler(websocket):
                 f"{zoneStatusLoopDebug.value}",
                 f"{pickSequenceStatusDebug.value}",
                 f"{pickingVictimDebug.value}",
-                f"",
-                f"",
+                f"{'Not Started' if zoneTimeAfterDeposit.value == -1 else zoneTimeAfterDeposit.value}",
             ]
             
             await websocket.send(json.dumps(payload))

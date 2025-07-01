@@ -111,6 +111,8 @@ saveFrame = manager.Value("i", False)
 
 
 # Only for Debugging Purposes
+zoneDuration = manager.Value("i", -1)
+zoneTimeAfterDeposit = manager.Value("i", -1)
 lopOverride = manager.Value("i", 0)
 lopCounter = manager.Value("i", 0)
 motorOverride = manager.Value("i", 0)
