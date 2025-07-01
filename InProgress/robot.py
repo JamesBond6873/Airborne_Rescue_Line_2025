@@ -41,6 +41,8 @@ oldM1 = oldM2 = M1
 error_x = errorAcc = lastError = 0
 avoidingStuck = False
 
+# Camera Servo Angle
+camServoAngle = -1
 
 # Sensor Vars
 Accel_X_Array = createEmptyTimeArray()
@@ -386,21 +388,26 @@ def closeBallStorage():
 
 # Moves Camera to Default Position: Line or Evacuation
 def cameraDefault(position):
+    global camServoAngle
     if position == "Line":
         printDebug(f"Set Camera to Line Following Mode", softDEBUG)
         sendCommandListWithConfirmation(["CL", "SF,4,F"])
+        camServoAngle = 30
 
     elif position == "Evacuation":
         printDebug(f"Set Camera to Evacaution Zone Mode", softDEBUG)
         sendCommandListWithConfirmation(["CE", "SF,4,F"])
+        camServoAngle = 70
 
 
 def cameraFree(position):
+    global camServoAngle
     if position < 15 or position > 90:
         printDebug(f"Invalid Camera Free Position: {position}", softDEBUG)
         return
     command = "SC,4," + str(position)
     sendCommandListWithConfirmation([str(command), "SF,4,F"])
+    camServoAngle = position
 
 
 def setLights(on = True):
@@ -1120,14 +1127,6 @@ def controlLoop():
             zoneStatusLoop = zoneStatus.value
         objectiveLoop = objective.value
 
-        # Update Because of Ramps DEFAULT_FORWARD_SPEED
-        if rampDetected.value and rampUp.value:
-            DEFAULT_FORWARD_SPEED = 1850
-        elif rampDetected.value and rampDown.value:
-            DEFAULT_FORWARD_SPEED = 1600
-        else:
-            DEFAULT_FORWARD_SPEED = 1700
-
         stuckDetected.value = areWeStuck()
         if stuckDetected.value:
             avoidStuck()
@@ -1136,6 +1135,18 @@ def controlLoop():
         # ----- LINE FOLLOWING ----- 
         if objectiveLoop == "follow_line":
             updateRampStateAccelOnly()
+
+            # Update Because of Ramps DEFAULT_FORWARD_SPEED
+            if rampDetected.value and rampUp.value:
+                DEFAULT_FORWARD_SPEED = 1850
+            elif rampDetected.value and rampDown.value:
+                DEFAULT_FORWARD_SPEED = 1600
+                if camServoAngle != 45:
+                    cameraFree(45)
+            else:
+                DEFAULT_FORWARD_SPEED = 1700
+                if camServoAngle != 35:
+                    cameraFree(35)
 
             setMotorsSpeeds(lineCenterX.value)
             intersectionController()
