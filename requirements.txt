@@ -1,0 +1,6 @@
+numpy==1.23.5
+opencv-python
+scikit-image==0.22.0  # Older version that works fine with numpy 1.23.5
+scipy==1.10.1          # Same, tested stable
+picamera2
+ultralytics
