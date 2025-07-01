@@ -466,6 +466,7 @@ def LoPSwitchController():
     else:
         if switchState == True:
             switchState = False
+            timer_manager.set_timer("avoidStuckCoolDown", 5) # prevent stuck right after starting
             resetImageSimilarityArrays.value = True
             resetEvacZoneArrays.value = True
             resetBallArrays.value = True
