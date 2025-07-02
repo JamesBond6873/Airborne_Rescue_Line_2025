@@ -441,8 +441,8 @@ def interpretPOI(poi, poi_no_crop, is_crop, max_black_top, bottom_point, average
 
             # Check for two lines at bottom
             if (
-                (poi_no_crop[1][0] < camera_x * 0.02 and poi_no_crop[1][1] > camera_y * (lineCropPercentage.value * .65)) or
-                (poi_no_crop[2][0] > camera_x * 0.98 and poi_no_crop[2][1] > camera_y * (lineCropPercentage.value * .65))
+                (poi_no_crop[1][0] < camera_x * 0.05 and poi_no_crop[1][1] > camera_y * (lineCropPercentage.value * .65)) or
+                (poi_no_crop[2][0] > camera_x * 0.95 and poi_no_crop[2][1] > camera_y * (lineCropPercentage.value * .65))
             ):
                 final_poi = poi_no_crop[0]
                 turnReason.value = "black_top_with_sides"
@@ -469,8 +469,8 @@ def interpretPOI(poi, poi_no_crop, is_crop, max_black_top, bottom_point, average
             turnReason.value = "bottom_default"
 
             if (
-                poi_no_crop[1][0] < camera_x * 0.02 and
-                poi_no_crop[2][0] > camera_x * 0.98 and
+                poi_no_crop[1][0] < camera_x * 0.05 and
+                poi_no_crop[2][0] > camera_x * 0.95 and
                 timer_manager.is_timer_expired("multiple_side_r") and
                 timer_manager.is_timer_expired("multiple_side_l")
             ):
@@ -496,12 +496,12 @@ def interpretPOI(poi, poi_no_crop, is_crop, max_black_top, bottom_point, average
                 final_poi = ( (poi[2][0] + poi_no_crop[2][0]) / 2, (poi[2][1] + poi_no_crop[2][1]) / 2 ) if is_crop else poi_no_crop[2]
                 turnReason.value = "right_side_still_active"
 
-            elif poi_no_crop[1][0] < camera_x * 0.04:
+            elif poi_no_crop[1][0] < camera_x * 0.05:
                 #final_poi = poi[1] if is_crop else poi_no_crop[1]
                 final_poi = ( (poi[1][0] + poi_no_crop[1][0]) / 2, (poi[1][1] + poi_no_crop[1][1]) / 2 ) if is_crop else poi_no_crop[1]
                 turnReason.value = "left_line_edge"
 
-            elif poi_no_crop[2][0] > camera_x * 0.96:
+            elif poi_no_crop[2][0] > camera_x * 0.95:
                 #final_poi = poi[2] if is_crop else poi_no_crop[2]
                 final_poi = ( (poi[2][0] + poi_no_crop[2][0]) / 2, (poi[2][1] + poi_no_crop[2][1]) / 2 ) if is_crop else poi_no_crop[2]
                 turnReason.value = "right_line_edge"
