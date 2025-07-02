@@ -260,7 +260,7 @@ def serialLoop():
 
         # Request sensor data if timer expired
         if timer_manager.is_timer_expired("sensorRequest"):
-            #getSensorData()
+            getSensorData()
             timer_manager.set_timer("sensorRequest", dataRequestDelayMS * 0.001)
             if objective.value == "zone":
                 timer_manager.set_timer("sensorRequest", 3 * dataRequestDelayMS * 0.001)

@@ -429,7 +429,8 @@ def interpretPOI(poi, poi_no_crop, is_crop, max_black_top, bottom_point, average
     # === FORCED TURNS ===
     elif turn_direction in ["left", "right"]:
         index = 1 if turn_direction == "left" else 2
-        final_poi = poi[index] if is_crop else poi_no_crop[index]
+        #final_poi = poi[index] if is_crop else poi_no_crop[index]
+        final_poi = ( (poi[index][0] + poi_no_crop[index][0]) / 2, (poi[index][1] + poi_no_crop[index][1]) / 2  ) if is_crop else poi_no_crop[index]
         turnReason.value = f"forced_turn_{turn_direction}"
 
     # === DEFAULT TRACKING LOGIC ===
@@ -482,22 +483,27 @@ def interpretPOI(poi, poi_no_crop, is_crop, max_black_top, bottom_point, average
                     timer_manager.set_timer("multiple_side_l", 0.6)
                     turnReason.value = "detected_double_side_left"
 
-                final_poi = poi[index] if is_crop else poi_no_crop[index]
+                #final_poi = poi[index] if is_crop else poi_no_crop[index]
+                final_poi = ( (poi[index][0] + poi_no_crop[index][0]) / 2, (poi[index][1] + poi_no_crop[index][1]) / 2  ) if is_crop else poi_no_crop[index]
 
             elif not timer_manager.is_timer_expired("multiple_side_l"):
-                final_poi = poi[1] if is_crop else poi_no_crop[1]
+                #final_poi = poi[1] if is_crop else poi_no_crop[1]
+                final_poi = ( (poi[1][0] + poi_no_crop[1][0]) / 2, (poi[1][1] + poi_no_crop[1][1]) / 2 ) if is_crop else poi_no_crop[1]
                 turnReason.value = "left_side_still_active"
 
             elif not timer_manager.is_timer_expired("multiple_side_r"):
-                final_poi = poi[2] if is_crop else poi_no_crop[2]
+                #final_poi = poi[2] if is_crop else poi_no_crop[2]
+                final_poi = ( (poi[2][0] + poi_no_crop[2][0]) / 2, (poi[2][1] + poi_no_crop[2][1]) / 2 ) if is_crop else poi_no_crop[2]
                 turnReason.value = "right_side_still_active"
 
             elif poi_no_crop[1][0] < camera_x * 0.04:
-                final_poi = poi[1] if is_crop else poi_no_crop[1]
+                #final_poi = poi[1] if is_crop else poi_no_crop[1]
+                final_poi = ( (poi[1][0] + poi_no_crop[1][0]) / 2, (poi[1][1] + poi_no_crop[1][1]) / 2 ) if is_crop else poi_no_crop[1]
                 turnReason.value = "left_line_edge"
 
             elif poi_no_crop[2][0] > camera_x * 0.96:
-                final_poi = poi[2] if is_crop else poi_no_crop[2]
+                #final_poi = poi[2] if is_crop else poi_no_crop[2]
+                final_poi = ( (poi[2][0] + poi_no_crop[2][0]) / 2, (poi[2][1] + poi_no_crop[2][1]) / 2 ) if is_crop else poi_no_crop[2]
                 turnReason.value = "right_line_edge"
 
             elif multiple_bottom and timer_manager.is_timer_expired("multiple_bottom"):
