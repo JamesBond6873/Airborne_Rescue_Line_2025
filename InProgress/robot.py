@@ -1021,6 +1021,8 @@ def silverLineController():
             else: # not ready to enter zone -  Go back to allign
                 setMotorSpeedsAngleYAxis(silverAngle.value, silverCenterX.value, forward=False)
                 print(f"Silver Line not Ready to Enter Zone: {silverAngle.value} | {silverCenterX.value} | {M1} | {M2}")
+    else:
+        silverLineDetected.value = False
 
 
 def areWeStuck(): 
