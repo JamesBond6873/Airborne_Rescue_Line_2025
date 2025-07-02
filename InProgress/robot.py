@@ -269,7 +269,7 @@ def sendCommandNoConfirmation(command):
     if commandWithoutConfirmation.value == "none":
         commandWithoutConfirmation.value = command
     else:
-        printConsoles(f"Check Error: Command with no confirmation pending: {command} at {time.perf_counter()}, {commandWithoutConfirmation.value}")
+        printConsoles(f"Check Error: Command with no confirmation pending: {command} at {time.perf_counter()}, {commandWithoutConfirmation.value}, {commandWaitingListLength.value}, {waitingResponseDebug.value}, {waitingSensorDataDebug.value}")
 
 
 def updateSensorAverages():

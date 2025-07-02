@@ -88,7 +88,7 @@ def sendSerial(message, confirmation = False):
     
     if timer_manager.is_timer_expired("serialCooldownbetweenCommands"):
         printDebug(f"Sent to Serial at {time.perf_counter()}: {message.strip()}", serialSoftDEBUG)
-        timer_manager.set_timer("serialCooldownbetweenCommands", 0.001) # Wait 5ms before sending the next command
+        timer_manager.set_timer("serialCooldownbetweenCommands", 0.001) # Wait 1ms before sending the next command
         message += "\n" # is this fixing the problem?
         ser.write(message.encode('utf-8'))
 
@@ -110,6 +110,7 @@ def interpretMessage(message):
     elif "D," in message or "T5," in message:
         parseSensorData(message)
         waitingSensorData = False
+        printDebug(f"Sensor Data 2: {message.strip()} | at {time.perf_counter()}", False)
     if DEBUG == True:
         commandWaitingListConfirmation.pop(0)
         printDebug(f"Command List ({len(commandWaitingListConfirmation)} commands): {commandWaitingListConfirmation}", False)
@@ -125,36 +126,45 @@ def updateCommandWaitingListConfirmation():
 
 
 def updateCommandWithoutConfirmation():
-    global commandWithoutConfirmation, lastUnsentCommandWithoutConfirmation
+    global lastUnsentCommandWithoutConfirmation
 
     if commandWithoutConfirmation.value != "none":
         if not waitingResponse and not waitingSensorData:
             sendSerial(commandWithoutConfirmation.value)
             lastUnsentCommandWithoutConfirmation = None  # Clear, it was sent
         else:
-            printDebug(f"Check Error Why the heck are we sending this command when waiting response? {commandWithoutConfirmation.value}", False)
+            printDebug(f"Check Error Why the heck are we sending this command when waiting response? {commandWithoutConfirmation.value}", serialSoftDEBUG)
             lastUnsentCommandWithoutConfirmation = commandWithoutConfirmation.value
         commandWithoutConfirmation.value = "none"
 
     # If nothing new came and one was missed before, try to send it
     elif lastUnsentCommandWithoutConfirmation and not waitingResponse and not waitingSensorData:
-        print(f"Retrying last unsent command: {lastUnsentCommandWithoutConfirmation}")
+        printDebug(f"Retrying last unsent no confirmation command: {lastUnsentCommandWithoutConfirmation}", serialSoftDEBUG)
         sendSerial(lastUnsentCommandWithoutConfirmation)
         lastUnsentCommandWithoutConfirmation = None
 
 
 def getSensorData(data = "All"):
+    global waitingSensorData
     if not waitingResponse and not waitingSensorData:
         if objective.value == "follow_line":
             printDebug(f"Requesting sensor data: {data}", DEBUG)
             if data == "All":
                 sendSerial(f"ITData")
+                timer_manager.set_timer("sensorTimeout", 0.05)
+                waitingSensorData = True
             elif data == "IMU":
                 sendSerial(f"IMU10")
+                timer_manager.set_timer("sensorTimeout", 0.05)
+                waitingSensorData = True
             elif data == "TOF":
                 sendSerial(f"ToF5")
+                timer_manager.set_timer("sensorTimeout", 0.05)
+                waitingSensorData = True
         elif objective.value == "zone":
             sendSerial(f"ToF5")
+            timer_manager.set_timer("sensorTimeout", 0.05)
+            waitingSensorData = True
 
 
 def parseSensorData(data):
@@ -212,6 +222,7 @@ def parseSensorData(data):
 
     except Exception as e:
         printDebug(f"Error parsing sensor data: {e}", True)
+        waitingSensorData = False  # Just safety, shouldn't happen
 
 
 #############################################################################
@@ -220,13 +231,14 @@ def parseSensorData(data):
 
 
 def serialLoop():
-    global ser, waitingResponse, commandWaitingListConfirmation, commandConfirmationAborted
+    global ser, waitingResponse, waitingSensorData, commandWaitingListConfirmation, commandConfirmationAborted
     
     # Initialize serial port
     ser = initSerial(SERIAL_PORT, BAUD_RATE, 10, DEBUG)
     
     timer_manager.add_timer("serialCooldownbetweenCommands", 0.05)
-    timer_manager.add_timer("sensorRequest", 0.025)  # 25ms interval for sensor data
+    timer_manager.add_timer("sensorRequest", 0.025)
+    timer_manager.add_timer("sensorTimeout", 0.05)
     time.sleep(0.05)
 
     t0 = time.perf_counter()
@@ -234,18 +246,19 @@ def serialLoop():
         t1 = t0 + serialDelayMS * 0.001
         t0Real = time.perf_counter()
 
+        receivedMessage = readSerial(DEBUG) # Read the serial port
+        interpretMessage(receivedMessage) # Interpret the received message
 
+
+        # Deal with aborted commands with confirmation
         if commandConfirmationAborted:
             commandConfirmationAborted = False # It will go back to True if needed
             sendSerial(commandWaitingListConfirmation[0], confirmation=True)
             printDebug(f"Correcting Command Confirmation Aborted: {commandWaitingListConfirmation[0]}", False)
             waitingResponse = True  # We are now waiting for a response
-
-
-        receivedMessage = readSerial(DEBUG) # Read the serial port
-        interpretMessage(receivedMessage) # Interpret the received message
         
 
+        # Update command waiting lists
         updateCommandWaitingListConfirmation()
         updateCommandWithoutConfirmation()
         commandWaitingListLength.value = len(commandWaitingListConfirmation)
@@ -264,6 +277,9 @@ def serialLoop():
             timer_manager.set_timer("sensorRequest", dataRequestDelayMS * 0.001)
             if objective.value == "zone":
                 timer_manager.set_timer("sensorRequest", 3 * dataRequestDelayMS * 0.001)
+        """if waitingSensorData and timer_manager.is_timer_expired("sensorTimeout"):
+            printDebug(f"Sensor data timeout at {time.perf_counter()}. Resetting waitingSensorData.", True)
+            waitingSensorData = False """
 
 
         while (time.perf_counter() <= t1):
@@ -273,10 +289,10 @@ def serialLoop():
         if serialDelayMS * 0.001 - elapsed_time > 0:
             time.sleep(serialDelayMS * 0.001 - elapsed_time)
         
-        printDebug(f"Serial Loop: {waitingResponse} | {len(commandWaitingListConfirmation)} | {commandWaitingListConfirmation}", False)
-        serialCommandPendingConfirmation.value = waitingResponse
-        serialCommandsPendingIndicator.value = len(commandWaitingListConfirmation)
+        printDebug(f"Serial Loop: {waitingResponse} | {len(commandWaitingListConfirmation)} | {commandWaitingListConfirmation} | {commandWithoutConfirmation.value} | sensor data: {waitingSensorData}", True)
         serialAliveIndicator.value = 0 if serialAliveIndicator.value == 1 else 1
+        waitingResponseDebug.value = waitingResponse
+        waitingSensorDataDebug.value = waitingSensorData
 
         # === Frequency Measurement ===
         loop_duration = time.perf_counter() - t0Real

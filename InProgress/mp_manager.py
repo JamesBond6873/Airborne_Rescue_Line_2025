@@ -115,9 +115,9 @@ saveFrame = manager.Value("i", False)
 
 
 # Only for Debugging Purposes
-serialCommandPendingConfirmation = manager.Value("i", False)
+waitingResponseDebug = manager.Value("i", False)
+waitingSensorDataDebug = manager.Value("i", False)
 serialAliveIndicator = manager.Value("i", 0)
-serialCommandsPendingIndicator = manager.Value("i", 0)
 zoneDuration = manager.Value("i", -1)
 zoneTimeAfterDeposit = manager.Value("i", -1)
 lopOverride = manager.Value("i", 0)
