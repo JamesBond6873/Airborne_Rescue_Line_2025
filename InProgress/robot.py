@@ -1012,8 +1012,10 @@ def silverLineController():
     silverLine = silverValue.value > 0.6
     if silverLine:
         printDebug(f"Silver Line Detected: {silverValue.value} | Entering Zone", False)
+        
         if silverLineDetected.value == False and not LOPstate.value: # First Time detection
             silverLineDetected.value = True
+
         elif silverLineDetected.value == True and not LOPstate.value:
             if readyToEnterZone():
                 objective.value = "zone"

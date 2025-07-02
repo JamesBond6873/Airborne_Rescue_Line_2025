@@ -407,7 +407,7 @@ def calculatePointsOfInterest(blackLine, blackLineCrop, last_bottom_point, avera
     return poi, poi_no_crop, is_crop, max_black_top, bottom_point
 
 
-def interpretPOI(poi, poi_no_crop, is_crop, max_black_top, bottom_point, averageLineAngle, turn_direction, last_bottom_point, averageLinePointX, entry):
+def interpretPOI(poi, poi_no_crop, is_crop, max_black_top, bottom_point, averageLineAngleNormalized, turn_direction, last_bottom_point, averageLinePointX, entry):
     global multiple_bottom_side
 
     black_top = poi_no_crop[0][1] < camera_y * .1
@@ -474,7 +474,7 @@ def interpretPOI(poi, poi_no_crop, is_crop, max_black_top, bottom_point, average
                 timer_manager.is_timer_expired("multiple_side_r") and
                 timer_manager.is_timer_expired("multiple_side_l")
             ):
-                if averageLineAngle >= 0:
+                if averageLineAngleNormalized >= 0:
                     index = 2
                     timer_manager.set_timer("multiple_side_r", 0.6)
                     turnReason.value = "detected_double_side_right"
@@ -1093,7 +1093,7 @@ def lineCamLoop():
                 # Use the averaged values
                 lineAngleNormalized, lineAngle2, finalPoi, bottomPoint = interpretPOI(
                     poiCropped, poi, isCrop, maxBlackTop, bottomPoint,
-                    averageLineAngle, turnDirection.value,
+                    averageLineAngleNormalized, turnDirection.value,
                     averageBottomPoint, averageLinePointX, entry=False
                 )
                 lineAngleNormalizedDebug.value = averageLineAngleNormalized
