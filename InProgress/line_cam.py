@@ -842,7 +842,7 @@ def checkImageSimilarity():
         checkSimilarityCounter = 0
 
         imageSimilarityArray = addNewTimeValue(imageSimilarityArray, imageSimilarity)
-        imageSimilarityAverage.value = calculateAverageArray(imageSimilarityArray, 15)
+        imageSimilarityAverage.value = calculateAverageArray(imageSimilarityArray, 10)
 
     checkSimilarityCounter += 1
 
