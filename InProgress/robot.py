@@ -733,7 +733,7 @@ def readyToLeave(zoneStatusLoop):
 def goToBall():
     global pickSequenceStatus, pickVictimType
 
-    if not ballExists.value:
+    if not ballExists.value or not timer_manager.is_timer_expired("pickVictimCooldown"): # No ball or in cooldown
         zoneStatus.value = "findVictims"
 
     if pickSequenceStatus == "goingToBall":
@@ -775,7 +775,7 @@ def goToBall():
         setManualMotorsSpeeds(1800, 1800)  # Go forward slowly
         controlMotors()
         if timer_manager.is_timer_expired("zoneForward"):
-            setManualMotorsSpeeds(1300, 1300)
+            setManualMotorsSpeeds(1350, 1350)
             controlMotors()
             pickVictim(pickVictimType, step=2)
             printDebug(f"Victim Catching - Picking Victim", False)
@@ -787,6 +787,7 @@ def goToBall():
         resetBallArrays.value = True
         zoneStatus.value = "findVictims"
         pickSequenceStatus = "goingToBall"
+        timer_manager.set_timer("pickVictimCooldown", 3)
 
         if pickVictimType == "A" and pickedUpAliveCount.value < 2:
             pickedUpAliveCount.value += 1
@@ -1095,6 +1096,7 @@ def controlLoop():
     timer_manager.add_timer("avoidStuck", 0.05)
     timer_manager.add_timer("avoidStuckCoolDown", 0.05)
     timer_manager.add_timer("gapCooldown", 0.05)
+    timer_manager.add_timer("pickVictimCooldown", 0.05)
     time.sleep(0.1)
 
 

@@ -1192,9 +1192,6 @@ def lineCamLoop():
                     area = width * height
                     distance = (x1 + x2) // 2
 
-                    """if width >= 400: # Precarius attempt at ignoring random silver balls
-                        continue"""
-
                     boxes.append([area, distance, name, width, y2, class_id])
 
                     color = colors(class_id, True)
