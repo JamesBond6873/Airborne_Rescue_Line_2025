@@ -159,21 +159,21 @@ def getSensorData(data = "All"):
         if objective.value == "follow_line":
             printDebug(f"Requesting sensor data: {data}", DEBUG)
             if data == "All":
-                sendSerial(f"ITData")
-                timer_manager.set_timer("sensorTimeout", 0.05)
                 waitingSensorData = True
+                sendSerial(f"ITData", dataRequest=True)
+                timer_manager.set_timer("sensorTimeout", 0.05)
             elif data == "IMU":
-                sendSerial(f"IMU10")
-                timer_manager.set_timer("sensorTimeout", 0.05)
                 waitingSensorData = True
+                sendSerial(f"IMU10", dataRequest=True)
+                timer_manager.set_timer("sensorTimeout", 0.05)
             elif data == "TOF":
-                sendSerial(f"ToF5")
-                timer_manager.set_timer("sensorTimeout", 0.05)
                 waitingSensorData = True
+                sendSerial(f"ToF5", dataRequest=True)
+                timer_manager.set_timer("sensorTimeout", 0.05)
         elif objective.value == "zone":
-            sendSerial(f"ToF5")
-            timer_manager.set_timer("sensorTimeout", 0.05)
             waitingSensorData = True
+            sendSerial(f"ToF5", dataRequest=True)
+            timer_manager.set_timer("sensorTimeout", 0.05)
 
 
 def parseSensorData(data):
