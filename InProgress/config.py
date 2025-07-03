@@ -3,7 +3,7 @@
 print("Robot Configurations: \t \t OK")
 
 # Is it DEBUG?
-computerOnlyDebug = True # True for computer only, False for robot
+computerOnlyDebug = False # True for computer only, False for robot
 gamepadLoopRun = True # False for score runs
 DEBUG = False
 softDEBUG = True
@@ -22,7 +22,7 @@ buzzerOffMs = 5000
 buzzerState = False
 
 # Time Delays
-lineDelayMS = 5 # Frame Rate = 200 FPS
+lineDelayMS = 25 # Frame Rate = 40 FPS
 controlDelayMS = 25 # 40 Hz
 serialDelayMS = 10 # 100 Hz
 dataRequestDelayMS = 50 # 20 Hz

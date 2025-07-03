@@ -21,8 +21,8 @@ print("Line Camera: \t \t \t OK")
 
 # Debug Features
 cameraDebugMode = computerOnlyDebug
-#debugImageFolder = "DataSet/FullRunTest"
-debugImageFolder = "DataSet/SilverLineTest"
+debugImageFolder = "DataSet/FullRunTest"
+#debugImageFolder = "DataSet/SilverLineTest"
 debugImagePaths = sorted(glob(os.path.join(debugImageFolder, "*.jpg")))
 currentFakeImageIndex = 0
 raw_capture = None
@@ -98,7 +98,14 @@ def resetBallArrayVars():
         ballTypeArray = createFilledArray(0.5)
         ballExistsArray = createEmptyTimeArray()
 
+        ballCenterX.value = calculateAverageArray(ballCenterXArray, 0.15)
+        ballBottomY.value = calculateAverageArray(ballBottomYArray, 0.25)
+        ballWidth.value = calculateAverageArray(ballWidthArray, 0.25)
+        ballType.value = "black ball" if calculateAverageArray(ballTypeArray, 0.45) < 0.5 else "silver ball" # Maybe needs rechecking... (bias towards silver ball)
+        ballExists.value = calculateAverageArray(ballExistsArray, 0.25) >= 0.5 # [0.5, 1.0] = Ball Exist True [0.0, 0.5[ = False
+
         print(f"Successfully reset ball arrays")
+        printDebug(f"Reset Ball Arrays data: {ballExists.value} {ballCenterX.value} {ballBottomY.value} {ballWidth.value} {ballType.value}", DEBUG)
         resetBallArrays.value = False
 
 
@@ -400,7 +407,7 @@ def calculatePointsOfInterest(blackLine, blackLineCrop, last_bottom_point, avera
     return poi, poi_no_crop, is_crop, max_black_top, bottom_point
 
 
-def interpretPOI(poi, poi_no_crop, is_crop, max_black_top, bottom_point, averageLineAngle, turn_direction, last_bottom_point, averageLinePointX, entry):
+def interpretPOI(poi, poi_no_crop, is_crop, max_black_top, bottom_point, averageLineAngleNormalized, turn_direction, last_bottom_point, averageLinePointX, entry):
     global multiple_bottom_side
 
     black_top = poi_no_crop[0][1] < camera_y * .1
@@ -422,7 +429,8 @@ def interpretPOI(poi, poi_no_crop, is_crop, max_black_top, bottom_point, average
     # === FORCED TURNS ===
     elif turn_direction in ["left", "right"]:
         index = 1 if turn_direction == "left" else 2
-        final_poi = poi[index] if is_crop else poi_no_crop[index]
+        #final_poi = poi[index] if is_crop else poi_no_crop[index]
+        final_poi = ( (poi[index][0] + poi_no_crop[index][0]) / 2, (poi[index][1] + poi_no_crop[index][1]) / 2  ) if is_crop else poi_no_crop[index]
         turnReason.value = f"forced_turn_{turn_direction}"
 
     # === DEFAULT TRACKING LOGIC ===
@@ -433,8 +441,8 @@ def interpretPOI(poi, poi_no_crop, is_crop, max_black_top, bottom_point, average
 
             # Check for two lines at bottom
             if (
-                (poi_no_crop[1][0] < camera_x * 0.02 and poi_no_crop[1][1] > camera_y * (lineCropPercentage.value * .65)) or
-                (poi_no_crop[2][0] > camera_x * 0.98 and poi_no_crop[2][1] > camera_y * (lineCropPercentage.value * .65))
+                (poi_no_crop[1][0] < camera_x * 0.05 and poi_no_crop[1][1] > camera_y * (lineCropPercentage.value * .65)) or
+                (poi_no_crop[2][0] > camera_x * 0.95 and poi_no_crop[2][1] > camera_y * (lineCropPercentage.value * .65))
             ):
                 final_poi = poi_no_crop[0]
                 turnReason.value = "black_top_with_sides"
@@ -461,12 +469,12 @@ def interpretPOI(poi, poi_no_crop, is_crop, max_black_top, bottom_point, average
             turnReason.value = "bottom_default"
 
             if (
-                poi_no_crop[1][0] < camera_x * 0.02 and
-                poi_no_crop[2][0] > camera_x * 0.98 and
+                poi_no_crop[1][0] < camera_x * 0.05 and
+                poi_no_crop[2][0] > camera_x * 0.95 and
                 timer_manager.is_timer_expired("multiple_side_r") and
                 timer_manager.is_timer_expired("multiple_side_l")
             ):
-                if averageLineAngle >= 0:
+                if averageLineAngleNormalized >= 0:
                     index = 2
                     timer_manager.set_timer("multiple_side_r", 0.6)
                     turnReason.value = "detected_double_side_right"
@@ -475,22 +483,27 @@ def interpretPOI(poi, poi_no_crop, is_crop, max_black_top, bottom_point, average
                     timer_manager.set_timer("multiple_side_l", 0.6)
                     turnReason.value = "detected_double_side_left"
 
-                final_poi = poi[index] if is_crop else poi_no_crop[index]
+                #final_poi = poi[index] if is_crop else poi_no_crop[index]
+                final_poi = ( (poi[index][0] + poi_no_crop[index][0]) / 2, (poi[index][1] + poi_no_crop[index][1]) / 2  ) if is_crop else poi_no_crop[index]
 
             elif not timer_manager.is_timer_expired("multiple_side_l"):
-                final_poi = poi[1] if is_crop else poi_no_crop[1]
+                #final_poi = poi[1] if is_crop else poi_no_crop[1]
+                final_poi = ( (poi[1][0] + poi_no_crop[1][0]) / 2, (poi[1][1] + poi_no_crop[1][1]) / 2 ) if is_crop else poi_no_crop[1]
                 turnReason.value = "left_side_still_active"
 
             elif not timer_manager.is_timer_expired("multiple_side_r"):
-                final_poi = poi[2] if is_crop else poi_no_crop[2]
+                #final_poi = poi[2] if is_crop else poi_no_crop[2]
+                final_poi = ( (poi[2][0] + poi_no_crop[2][0]) / 2, (poi[2][1] + poi_no_crop[2][1]) / 2 ) if is_crop else poi_no_crop[2]
                 turnReason.value = "right_side_still_active"
 
-            elif poi_no_crop[1][0] < camera_x * 0.04:
-                final_poi = poi[1] if is_crop else poi_no_crop[1]
+            elif poi_no_crop[1][0] < camera_x * 0.05:
+                #final_poi = poi[1] if is_crop else poi_no_crop[1]
+                final_poi = ( (poi[1][0] + poi_no_crop[1][0]) / 2, (poi[1][1] + poi_no_crop[1][1]) / 2 ) if is_crop else poi_no_crop[1]
                 turnReason.value = "left_line_edge"
 
-            elif poi_no_crop[2][0] > camera_x * 0.96:
-                final_poi = poi[2] if is_crop else poi_no_crop[2]
+            elif poi_no_crop[2][0] > camera_x * 0.95:
+                #final_poi = poi[2] if is_crop else poi_no_crop[2]
+                final_poi = ( (poi[2][0] + poi_no_crop[2][0]) / 2, (poi[2][1] + poi_no_crop[2][1]) / 2 ) if is_crop else poi_no_crop[2]
                 turnReason.value = "right_line_edge"
 
             elif multiple_bottom and timer_manager.is_timer_expired("multiple_bottom"):
@@ -829,7 +842,7 @@ def checkImageSimilarity():
         checkSimilarityCounter = 0
 
         imageSimilarityArray = addNewTimeValue(imageSimilarityArray, imageSimilarity)
-        imageSimilarityAverage.value = calculateAverageArray(imageSimilarityArray, 15)
+        imageSimilarityAverage.value = calculateAverageArray(imageSimilarityArray, 10)
 
     checkSimilarityCounter += 1
 
@@ -1005,6 +1018,7 @@ def lineCamLoop():
     t0 = time.perf_counter()
     while not terminate.value:
         t1 = t0 + lineDelayMS * 0.001
+        t0Real = time.perf_counter()
 
         # Loop
         cv2_img = getCameraImage(camera)
@@ -1079,7 +1093,7 @@ def lineCamLoop():
                 # Use the averaged values
                 lineAngleNormalized, lineAngle2, finalPoi, bottomPoint = interpretPOI(
                     poiCropped, poi, isCrop, maxBlackTop, bottomPoint,
-                    averageLineAngle, turnDirection.value,
+                    averageLineAngleNormalized, turnDirection.value,
                     averageBottomPoint, averageLinePointX, entry=False
                 )
                 lineAngleNormalizedDebug.value = averageLineAngleNormalized
@@ -1156,7 +1170,7 @@ def lineCamLoop():
             
             blackImage = ignoreHighFOVCorners(blackImage)
 
-            if zoneStatus.value in ["begin", "entry", "findVictims", "goToBall"]:
+            if zoneStatus.value in ["begin", "entry", "findVictims", "goToBall"] and not pickingVictim.value:
                 img_rgb = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
                 results = modelVictim.predict(img_rgb, imgsz=448, conf=0.3, iou=0.2, agnostic_nms=True, workers=4, verbose=False)  # verbose=True to enable debug info
                 #results = modelVictim.predict(img_rgb, save=True, save_txt=True, imgsz=448, conf=0.3, iou=0.2, agnostic_nms=True, workers=4, verbose=False)
@@ -1177,9 +1191,6 @@ def lineCamLoop():
                     height = y2 - y1
                     area = width * height
                     distance = (x1 + x2) // 2
-
-                    """if width >= 400: # Precarius attempt at ignoring random silver balls
-                        continue"""
 
                     boxes.append([area, distance, name, width, y2, class_id])
 
@@ -1233,12 +1244,26 @@ def lineCamLoop():
         cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_black.jpg", blackImage)
         cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_red.jpg", redImage)
 
+
         while (time.perf_counter() <= t1):
             time.sleep(0.0005)
 
-        
-        printDebug(f"\t\t\t\t\t\t\t\tLine Cam Loop Time: {t0} | {t1} | {time.perf_counter()}", DEBUG)
+        elapsed_time = time.perf_counter() - t0Real
+        if lineDelayMS * 0.001 - elapsed_time > 0:
+            time.sleep(lineDelayMS * 0.001 - elapsed_time)
+
+        # === Frequency Measurement ===
+        loop_duration = time.perf_counter() - t0Real
+        if loop_duration > 0:
+            lineCamLoopFrequency.value = 1.0 / loop_duration
+        else:
+            lineCamLoopFrequency.value = 0  # Avoid division by zero
+
+        printDebug(f"Line Frequency: {lineCamLoopFrequency.value} Hz", DEBUG)
+        printDebug(f"\t\t\t\t\t\t\t\tLine Cam Loop Time: {t0} | {t1} | {time.perf_counter()}", False)
+
         t0 = t1
+
 
     print(f"Shutting Down Line Cam Loop")
     if not cameraDebugMode: 

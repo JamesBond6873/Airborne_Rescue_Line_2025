@@ -11,6 +11,9 @@ terminate = manager.Value("i", False)
 updateFakeCamImage = manager.Value("i", True)
 runStartTime = manager.Value("i", -1)
 zoneStartTime = manager.Value("i", -1)
+serialLoopFrequency = manager.Value("i", -1)
+controlLoopFrequency = manager.Value("i", -1)
+lineCamLoopFrequency = manager.Value("i", -1)
 
 commandWithConfirmation = manager.Value("i", "none")
 commandWithoutConfirmation = manager.Value("i", "none")
@@ -74,6 +77,7 @@ rampUp = manager.Value("i", False)
 rampDown = manager.Value("i", False)
 wasOnRamp = manager.Value("i", False)
 
+pickingVictim = manager.Value("i", False)
 ballCenterX = manager.Value("i", -1) # Average
 ballBottomY = manager.Value("i", -1) # Average
 ballWidth = manager.Value("i", -1) # Average
@@ -111,6 +115,9 @@ saveFrame = manager.Value("i", False)
 
 
 # Only for Debugging Purposes
+waitingResponseDebug = manager.Value("i", False)
+waitingSensorDataDebug = manager.Value("i", False)
+serialAliveIndicator = manager.Value("i", 0)
 zoneDuration = manager.Value("i", -1)
 zoneTimeAfterDeposit = manager.Value("i", -1)
 lopOverride = manager.Value("i", 0)
@@ -126,7 +133,7 @@ inGapDebug = manager.Value("i", False)
 markerToHighDebug = manager.Value("i", False)
 zoneStatusLoopDebug = manager.Value("i", "notStarted")
 pickSequenceStatusDebug = manager.Value("i", "goingToBall")
-pickingVictimDebug = manager.Value("i", False)
+pickingVictimDebug = manager.Value("i", True)
 AccelXArrayDebug = manager.Value("i", -1)
 AccelYArrayDebug = manager.Value("i", -1)
 AccelZArrayDebug = manager.Value("i", -1)

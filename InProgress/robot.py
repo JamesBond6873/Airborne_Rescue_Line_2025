@@ -20,7 +20,6 @@ inGap = False
 lastLineDetected = True  # Assume robot starts detecting a line
 gapCorrectionStartTime = 0
 
-pickingVictim = False
 pickSequenceStatus = "goingToBall" #goingToBall, startReverse, lowerArm, moveForward, pickVictim
 pickVictimType = "none"
 dumpedAliveVictims = False
@@ -270,7 +269,7 @@ def sendCommandNoConfirmation(command):
     if commandWithoutConfirmation.value == "none":
         commandWithoutConfirmation.value = command
     else:
-        printConsoles(f"Check Error: Command with no confirmation pending: {command} at {time.perf_counter()}, {commandWithoutConfirmation.value}")
+        printConsoles(f"Check Error: Command with no confirmation pending: {command} at {time.perf_counter()}, {commandWithoutConfirmation.value}, {commandWaitingListLength.value}, {waitingResponseDebug.value}, {waitingSensorDataDebug.value}")
 
 
 def updateSensorAverages():
@@ -362,7 +361,7 @@ def pickVictim(type, step=0):
                 sendCommandListWithConfirmation(["AD"])
             elif step == 2:
                 printDebug(f"Pick {type}", False)
-                sendCommandListWithConfirmation([f"P{type}", "M(1520,1520)", "SF,0,F", "SF,1,F", "SF,2,F", "SF,3,F"])
+                sendCommandListWithConfirmation([f"P{type}", "SF,0,F", "SF,1,F", "SF,2,F", "SF,3,F"])
                 timer_manager.set_timer("armCooldown", 2.5)
             else:
                 printDebug(f"Pick {type}", False)
@@ -450,7 +449,7 @@ def LoPSwitchController():
     if isSwitchOn():
         if switchState == False: # First time detected as on
             switchState = True
-            printDebug(f"LoP Switch is now ON: {switchState}", softDEBUG)
+            printDebug(f"LoP Switch is now ON at {time.perf_counter()}: {switchState}", softDEBUG)
             
             setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)
             controlMotors()
@@ -477,7 +476,7 @@ def LoPSwitchController():
             resetImageSimilarityArrays.value = True
             resetEvacZoneArrays.value = True
             resetBallArrays.value = True
-            printDebug(f"LoP Switch is now OFF: {switchState}", softDEBUG)
+            printDebug(f"LoP Switch is now OFF at {time.perf_counter()}: {switchState}", softDEBUG)
             objective.value = "follow_line"
             zoneStatus.value = "notStarted"
             
@@ -732,9 +731,9 @@ def readyToLeave(zoneStatusLoop):
 
 
 def goToBall():
-    global pickSequenceStatus, pickingVictim, pickVictimType
+    global pickSequenceStatus, pickVictimType
 
-    if not ballExists.value:
+    if not ballExists.value or not timer_manager.is_timer_expired("pickVictimCooldown"): # No ball or in cooldown
         zoneStatus.value = "findVictims"
 
     if pickSequenceStatus == "goingToBall":
@@ -746,9 +745,11 @@ def goToBall():
             
             pickVictimType = decideVictimType()
 
-            pickingVictim = True
+            pickingVictim.value = True
+            resetBallArrays.value = True
             printDebug(f" ----- Starting {pickVictimType} Victim Catching ----- ", softDEBUG)
-            printDebug(f"Victim Catching - Reversing", False)
+            printDebug(f"Ball detection data: {ballExists.value} {ballCenterX.value} {ballBottomY.value} {ballWidth.value} {ballType.value}", DEBUG)
+            printDebug(f"Victim Catching - Reversing", DEBUG)
             timer_manager.set_timer("zoneReverse", 0.5)
 
     elif pickSequenceStatus == "startReverse":
@@ -774,7 +775,7 @@ def goToBall():
         setManualMotorsSpeeds(1800, 1800)  # Go forward slowly
         controlMotors()
         if timer_manager.is_timer_expired("zoneForward"):
-            setManualMotorsSpeeds(1300, 1300)
+            setManualMotorsSpeeds(1350, 1350)
             controlMotors()
             pickVictim(pickVictimType, step=2)
             printDebug(f"Victim Catching - Picking Victim", False)
@@ -782,10 +783,11 @@ def goToBall():
 
     elif pickSequenceStatus == "finished":
         printDebug(f"Victim Catching - Finished", False)
-        pickingVictim = False
+        pickingVictim.value = False
         resetBallArrays.value = True
         zoneStatus.value = "findVictims"
         pickSequenceStatus = "goingToBall"
+        timer_manager.set_timer("pickVictimCooldown", 3)
 
         if pickVictimType == "A" and pickedUpAliveCount.value < 2:
             pickedUpAliveCount.value += 1
@@ -794,6 +796,7 @@ def goToBall():
 
         printDebug(f"Picked up {'alive' if pickVictimType == 'A' else 'dead'} victim, new total: {pickedUpAliveCount.value + pickedUpDeadCount.value} victims", softDEBUG)
         printDebug(f"Picked up {pickedUpAliveCount.value} alive and {pickedUpDeadCount.value} dead", softDEBUG)
+        printDebug(f"Ball detection data 2: {ballExists.value} {ballCenterX.value} {ballBottomY.value} {ballWidth.value} {ballType.value}", True)
 
 
 def zoneDeposit(type):
@@ -1009,8 +1012,10 @@ def silverLineController():
     silverLine = silverValue.value > 0.6
     if silverLine:
         printDebug(f"Silver Line Detected: {silverValue.value} | Entering Zone", False)
+        
         if silverLineDetected.value == False and not LOPstate.value: # First Time detection
             silverLineDetected.value = True
+
         elif silverLineDetected.value == True and not LOPstate.value:
             if readyToEnterZone():
                 objective.value = "zone"
@@ -1019,6 +1024,8 @@ def silverLineController():
             else: # not ready to enter zone -  Go back to allign
                 setMotorSpeedsAngleYAxis(silverAngle.value, silverCenterX.value, forward=False)
                 print(f"Silver Line not Ready to Enter Zone: {silverAngle.value} | {silverCenterX.value} | {M1} | {M2}")
+    else:
+        silverLineDetected.value = False
 
 
 def areWeStuck(): 
@@ -1052,7 +1059,7 @@ def avoidStuck():
 
 def controlLoop():
     global switchState, M1, M2, M1info, M2info, oldM1, oldM2, motorSpeedDiference, error_theta, error_x, errorAcc, lastError, inGap
-    global pickingVictim, pickSequenceStatus, pickVictimType, DEFAULT_FORWARD_SPEED
+    global pickSequenceStatus, pickVictimType, DEFAULT_FORWARD_SPEED
 
     sendCommandListWithConfirmation(["GR","BC", "SF,5,F", "CL", "SF,4,F", "AU", "PA", "SF,0,F", "SF,1,F", "SF,2,F", "SF,3,F", "LX,200", "RGB,255,255,255"])
 
@@ -1091,6 +1098,7 @@ def controlLoop():
     timer_manager.add_timer("avoidStuck", 0.05)
     timer_manager.add_timer("avoidStuckCoolDown", 0.05)
     timer_manager.add_timer("gapCooldown", 0.05)
+    timer_manager.add_timer("pickVictimCooldown", 0.05)
     time.sleep(0.1)
 
 
@@ -1117,13 +1125,14 @@ def controlLoop():
     t0 = time.perf_counter()
     while not terminate.value:
         t1 = t0 + controlDelayMS * 0.001
+        t0Real = time.perf_counter()
 
         # Loop
         updateSensorAverages()
         LoPSwitchController()
         LOPstate.value = 1 if switchState == True else 0
 
-        if not pickingVictim:
+        if not pickingVictim.value:
             zoneStatusLoop = zoneStatus.value
         objectiveLoop = objective.value
 
@@ -1141,8 +1150,8 @@ def controlLoop():
                 DEFAULT_FORWARD_SPEED = 1850
             elif rampDetected.value and rampDown.value:
                 DEFAULT_FORWARD_SPEED = 1600
-                if camServoAngle != 45:
-                    cameraFree(45)
+                if camServoAngle != 55:
+                    cameraFree(55)
             else:
                 DEFAULT_FORWARD_SPEED = 1700
                 if camServoAngle != 35:
@@ -1159,6 +1168,9 @@ def controlLoop():
 
         # ----- EVACUATION ZONE ----- 
         elif objectiveLoop == "zone":
+            timeInEvacZone()
+            timeAfterDeposit()
+
             if needToDepositAlive(zoneStatusLoop):
                 zoneStatus.value = "depositGreen"
                 zoneStatusLoop = "depositGreen"
@@ -1236,7 +1248,7 @@ def controlLoop():
         # Evac Zone
         zoneStatusLoopDebug.value = zoneStatusLoop
         pickSequenceStatusDebug.value = pickSequenceStatus
-        pickingVictimDebug.value = pickingVictim
+        pickingVictimDebug.value = pickingVictim.value
     
 
         if objectiveLoop == "follow_line":
@@ -1275,7 +1287,7 @@ def controlLoop():
                 #f"LOP: {switchState} \t"
                 #f"Loop: {objective.value}\t"
                 f"var: {zoneStatus.value} {zoneStatusLoop} {pickSequenceStatus} "
-                f"pickVictim: {pickingVictim}"
+                f"pickVictim: {pickingVictim.value}"
                 #f"Commands: {commandWaitingList}"
             )
             counter += 1
@@ -1286,6 +1298,19 @@ def controlLoop():
 
         while (time.perf_counter() <= t1):
             time.sleep(0.0005)
-        t0 = t1
+
+        elapsed_time = time.perf_counter() - t0Real
+        if controlDelayMS * 0.001 - elapsed_time > 0:
+            time.sleep(controlDelayMS * 0.001 - elapsed_time)
+
+        loop_duration = time.perf_counter() - t0Real
+        if loop_duration > 0:
+            controlLoopFrequency.value = 1.0 / loop_duration
+        else:
+            controlLoopFrequency.value = 0  # Avoid division by zero
+
+        printDebug(f"Control Frequency: {controlLoopFrequency.value} Hz", DEBUG)
     
+        t0 = t1
+
     printConsoles(f"Shutting Down Robot Control Loop")
