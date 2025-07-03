@@ -620,7 +620,7 @@ def controlMotors(avoidStuck = False):
         """Send motor command only if values changed."""
         global oldM1, oldM2
         if m1 != oldM1 or m2 != oldM2:
-            printDebug(f"Sent Motor Control to Serial Process: M({int(m1)}, {int(m2)}) at {time.perf_counter()}", False)
+            printDebug(f"Sent Motor Control to Serial Process: M({int(m1)}, {int(m2)}) at {time.perf_counter()}", True)
             sendCommandNoConfirmation(f"M({int(m1)}, {int(m2)})")
             oldM1, oldM2 = m1, m2
     def canGamepadControlMotors():
@@ -787,7 +787,7 @@ def goToBall():
         resetBallArrays.value = True
         zoneStatus.value = "findVictims"
         pickSequenceStatus = "goingToBall"
-        timer_manager.set_timer("pickVictimCooldown", 3)
+        timer_manager.set_timer("pickVictimCooldown", 8)
 
         if pickVictimType == "A" and pickedUpAliveCount.value < 2:
             pickedUpAliveCount.value += 1
@@ -1007,7 +1007,10 @@ def gapController():
 
 def silverLineController():
     def readyToEnterZone():
-        return abs( 90 - abs(silverAngle.value)) < SILVER_ANGLE_THRESHOLD and abs(camera_x / 2 - silverCenterX.value) < camera_x * 0.15
+        if lineDetected.value:
+            return abs( 90 - abs(silverAngle.value)) < SILVER_ANGLE_THRESHOLD and abs(camera_x / 2 - silverCenterX.value) < camera_x * 0.15
+        else:
+            return True # Failsafe for line not detected
 
     silverLine = silverValue.value > 0.6
     if silverLine:
