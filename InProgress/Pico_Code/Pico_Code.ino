@@ -8,6 +8,8 @@
 #include "IMU.h"
 #include "ToF.h"
 
+#include "pico/multicore.h"  // Use of second core
+
 
 // --------------------------- Motor Vars ---------------------------
 
@@ -60,6 +62,11 @@ IMU myIMU;
 
 // --------------------------- TOF Vars ---------------------------
 ToF myToFs(3, 4, 5, 6, 7);  // Setup sensors by mux channels
+unsigned long tofT0;  // control sampling rate (period ini)
+unsigned long tofT1;  // control sampling rate (period end)
+long tofMeasurementSensorInterval = 50;  // 50ms in between sensors measurements (4Hz) 
+int currentToFSensor = 0;
+
 
 
 // --------------------------- LED Vars ---------------------------
@@ -79,7 +86,6 @@ bool ledState = true;
 unsigned long t0;  // control sampling rate (period ini)
 unsigned long t1;  // control sampling rate (period end)
 long timeInterval = 2.0;  // 2.5ms per loop = 400Hz
-
 
 
 // ----------------------------------------------------------------
@@ -132,7 +138,7 @@ void setup() {
   pinMode(robotLight, OUTPUT);
   digitalWrite(robotLight, HIGH);
 
-
+  tofT0 = millis();
   ledT0 = millis();
   t0 = millis();
 }
@@ -146,10 +152,22 @@ void setup() {
 String message = "";
 void loop() {
   t1 = t0 + timeInterval;
+  tofT1 = tofT0 + tofMeasurementSensorInterval;
 
 
   // Update Sensors
   myIMU.update10DOF();
+  if (millis() >= tofT1) {
+    myToFs.updateSingleToF(currentToFSensor);
+
+    // Move to next sensor
+    currentToFSensor++;
+    if (currentToFSensor >= 5) {
+        currentToFSensor = 0;  // wrap around
+    }
+
+    tofT0 = millis();
+  }
 
 
   // Read Serial Port
@@ -208,7 +226,6 @@ void loop() {
   else if (message.startsWith("ToFX")) { myToFs.updateToF5(); tofControlMessage(message); } // Print Specific ToF Data | ToF X Sensor
 
   else if (message == "ITData") {
-    myToFs.updateToF5();
     String allData = "D, ";
     allData += myIMU.getAllString();     // e.g., 9 IMU values + temp
     allData += ", ";
@@ -232,6 +249,7 @@ void loop() {
   while (millis() <= t1) {
     delay(0.025);
   }
+  delay(0.5);
   t0 = t1;
 }
 

@@ -10,6 +10,7 @@ public:
 
   void begin(TwoWire &wire);       // Initialize sensors (through mux)
   void updateToF5();                   // Update all distance values
+  void updateSingleToF(int idx);
 
   float getBackRight();
   float getFrontRight();
