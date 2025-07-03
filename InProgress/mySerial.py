@@ -179,56 +179,58 @@ def getSensorData(data = "All"):
 def parseSensorData(data):
     global waitingSensorData
     try:
-        # Stop at the first full line
-        line = data.strip().split('\n')[0].strip()
+        # Split data into lines and look for the first valid one
+        for line in data.strip().split('\n'):
+            line = line.strip()
 
-        if line.startswith("D,"):
-            parts = line[2:].split(",")  # Remove 'D,' and split
+            if line.startswith("D,"):
+                parts = line[2:].split(",")  # Remove 'D,' and split
 
-            if len(parts) != 15:
-                printDebug(f"Unexpected number of values in D-message: {len(parts)} in line: {line}", True)
-                return
+                if len(parts) != 15:
+                    printDebug(f"Unexpected number of values in D-message: {len(parts)} in line: {line}", True)
+                    return
 
-            # Assign to manager variables
-            Accel_X.value = float(parts[0])
-            Accel_Y.value = float(parts[1])
-            Accel_Z.value = float(parts[2])
+                Accel_X.value = float(parts[0])
+                Accel_Y.value = float(parts[1])
+                Accel_Z.value = float(parts[2])
 
-            Gyro_X.value = float(parts[3])
-            Gyro_Y.value = float(parts[4])
-            Gyro_Z.value = float(parts[5])
+                Gyro_X.value = float(parts[3])
+                Gyro_Y.value = float(parts[4])
+                Gyro_Z.value = float(parts[5])
 
-            Mag_X.value = float(parts[6])
-            Mag_Y.value = float(parts[7])
-            Mag_Z.value = float(parts[8])
+                Mag_X.value = float(parts[6])
+                Mag_Y.value = float(parts[7])
+                Mag_Z.value = float(parts[8])
 
-            Temp.value = float(parts[9])
+                Temp.value = float(parts[9])
 
-            Tof_1.value = float(parts[10])
-            Tof_2.value = float(parts[11])
-            Tof_3.value = float(parts[12])
-            Tof_4.value = float(parts[13])
-            Tof_5.value = float(parts[14])
+                Tof_1.value = float(parts[10])
+                Tof_2.value = float(parts[11])
+                Tof_3.value = float(parts[12])
+                Tof_4.value = float(parts[13])
+                Tof_5.value = float(parts[14])
 
-            newSensorData.value = True
+                newSensorData.value = True
+                return  # Done parsing
 
-        elif line.startswith("T5,"):
-            parts = line[3:].split(",")  # Remove 'T5,' and split
+            elif line.startswith("T5,"):
+                parts = line[3:].split(",")  # Remove 'T5,' and split
 
-            if len(parts) != 5:
-                printDebug(f"Unexpected number of values in T5-message: {len(parts)} in line: {line}", True)
-                return
+                if len(parts) != 5:
+                    printDebug(f"Unexpected number of values in T5-message: {len(parts)} in line: {line}", True)
+                    return
 
-            Tof_1.value = float(parts[0])
-            Tof_2.value = float(parts[1])
-            Tof_3.value = float(parts[2])
-            Tof_4.value = float(parts[3])
-            Tof_5.value = float(parts[4])
+                Tof_1.value = float(parts[0])
+                Tof_2.value = float(parts[1])
+                Tof_3.value = float(parts[2])
+                Tof_4.value = float(parts[3])
+                Tof_5.value = float(parts[4])
 
-            newSensorData.value = True
+                newSensorData.value = True
+                return  # Done parsing
 
-        else:
-            printDebug(f"Ignoring line (no 'D,' or 'T5,'): {line}", True)
+        # If we get here, no valid line was found
+        printDebug(f"Ignoring data (no 'D,' or 'T5,'): {data}", True)
 
     except Exception as e:
         printDebug(f"Error parsing sensor data: {e}", True)
@@ -300,7 +302,7 @@ def serialLoop():
         if serialDelayMS * 0.001 - elapsed_time > 0:
             time.sleep(serialDelayMS * 0.001 - elapsed_time)
         
-        printDebug(f"Serial Loop: {waitingResponse} | {len(commandWaitingListConfirmation)} | {commandWaitingListConfirmation} | {commandWithoutConfirmation.value} | sensor data: {waitingSensorData}", True)
+        printDebug(f"Serial Loop: {waitingResponse} | {len(commandWaitingListConfirmation)} | {commandWaitingListConfirmation} | {commandWithoutConfirmation.value} | sensor data: {waitingSensorData}", DEBUG)
         serialAliveIndicator.value = 0 if serialAliveIndicator.value == 1 else 1
         waitingResponseDebug.value = waitingResponse
         waitingSensorDataDebug.value = waitingSensorData
