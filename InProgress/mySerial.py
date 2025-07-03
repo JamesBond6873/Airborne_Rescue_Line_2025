@@ -12,7 +12,8 @@ print("Serial Interface: \t \t OK")
 
 waitingResponse = False # Flag to indicate if we are waiting for a response
 waitingSensorData = False # Flag to indicate if we are waiting for sensor data
-commandConfirmationAborted = False
+commandConfirmationAborted = False # Flag to indicate if we aborted sending a command with confirmation
+commandSensorDataAborted = False # Flag to indicate if we aborted sending a sensor data request
 commandWaitingListConfirmation = [] # List of commands to be sent to the RPi
 lastUnsentCommandWithoutConfirmation = None # Last command that was not sent
 
@@ -80,8 +81,8 @@ def readSerial(debug):
 
 
 # Sends serials and allows for use with no serial port (DEBUG = True)
-def sendSerial(message, confirmation = False):
-    global waitingResponse, commandConfirmationAborted
+def sendSerial(message, confirmation = False, dataRequest = False):
+    global waitingResponse, commandConfirmationAborted, waitingSensorData, commandSensorDataAborted
     if DEBUG == True:
         printDebug(f"F: Sent to Serial at {time.perf_counter()}: {message.strip()}", serialSoftDEBUG)
         return
@@ -97,6 +98,14 @@ def sendSerial(message, confirmation = False):
             printDebug(f" Did I catch a ball pick up? {message.strip()}", False)
             waitingResponse = False # We didn't send the command
             commandConfirmationAborted = True
+            return
+        elif dataRequest:
+            printDebug(f"Did Not Send data request because of serial cooldown: {message.strip()}", serialSoftDEBUG)
+            waitingSensorData = False # We didn't send the sensor data request command
+            commandSensorDataAborted = True # Perhaps try again
+            return
+        
+        printDebug(f"Did Not Send because of serial cooldown: {message.strip()}", serialSoftDEBUG)
 
 # Interpret Received Message
 def interpretMessage(message):
@@ -168,6 +177,7 @@ def getSensorData(data = "All"):
 
 
 def parseSensorData(data):
+    global waitingSensorData
     try:
         # Stop at the first full line
         line = data.strip().split('\n')[0].strip()
@@ -231,7 +241,7 @@ def parseSensorData(data):
 
 
 def serialLoop():
-    global ser, waitingResponse, waitingSensorData, commandWaitingListConfirmation, commandConfirmationAborted
+    global ser, waitingResponse, waitingSensorData, commandWaitingListConfirmation, commandConfirmationAborted, commandSensorDataAborted
     
     # Initialize serial port
     ser = initSerial(SERIAL_PORT, BAUD_RATE, 10, DEBUG)
@@ -272,7 +282,8 @@ def serialLoop():
 
 
         # Request sensor data if timer expired
-        if timer_manager.is_timer_expired("sensorRequest"):
+        if timer_manager.is_timer_expired("sensorRequest") or commandSensorDataAborted:
+            commandSensorDataAborted = False
             getSensorData()
             timer_manager.set_timer("sensorRequest", dataRequestDelayMS * 0.001)
             if objective.value == "zone":
