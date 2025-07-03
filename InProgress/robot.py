@@ -916,8 +916,8 @@ def zoneDeposit(type):
             printDebug(f"Finished Dropping {pickedUpDeadCount.value} Dead victims, Total Deposit {dumpedAliveCount.value + dumpedDeadCount.value}  ( {dumpedAliveCount.value} + {dumpedDeadCount.value} ) ", softDEBUG)
             pickedUpDeadCount.value = 0
             zoneStatus.value = "findVictims"
-            printDebug(f"Finished Evacuation - Leaving", softDEBUG)
-            printDebug(f"Finished the Evacuation Zone in {round(time.perf_counter() - zoneStartTime.value, 3)} s", softDEBUG)
+            printDebug(f"Finished Evacuation - Leaving", False) # Wrong Positioning
+            printDebug(f"Finished the Evacuation Zone in {round(time.perf_counter() - zoneStartTime.value, 3)} s", False) # Wrong Positioning
 
 
 def intersectionController():
