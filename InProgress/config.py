@@ -29,6 +29,7 @@ dataRequestDelayMS = 50 # 20 Hz
 intersectionMaxTime = 1.000 #s
 
 # Line Vars
+redLineStopTime = 9.0 # s
 default_crop=0.45
 turn_crop=0.75
 SILVER_ANGLE_THRESHOLD = 7.5

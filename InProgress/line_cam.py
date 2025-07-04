@@ -87,8 +87,8 @@ LinePointXArray = createEmptyTimeArray()
 
 imageSimilarityArray = createFilledArray(0, 1200)
 
-# Silver Line Array
-silverValueArray = createEmptyTimeArray()
+silverValueArray = createEmptyTimeArray() # Silver Line Array
+redValueArray = createEmptyTimeArray() # Red Line Array
 
 
 
@@ -1077,7 +1077,10 @@ def lineCamLoop():
 
             # -- RED STRIP -- Check for Red Line - Stop
             contoursRed, _ = cv2.findContours(redImage, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-            redDetected.value = checkContourSize(contoursRed)
+            redCurrentValue = 1 if checkContourSize(contoursRed) else 0 
+            
+            redValueArray = addNewTimeValue(redValueArray, redCurrentValue)
+            redValue.value = calculateAverageArray(redValueArray, 0.35)
 
 
             # -- Black Line --

@@ -1031,6 +1031,30 @@ def silverLineController():
         silverLineDetected.value = False
 
 
+def redLineController():
+    def endOfRunStop():
+        if timer_manager.is_timer_expired("redLineCooldown"):
+            return False
+        elif redDetected.value and not timer_manager.is_timer_expired("redLine"):
+            return True # Stopped for red line timer
+        elif redDetected.value and timer_manager.is_timer_expired("redLine"):
+            timer_manager.set_timer("redLineCooldown", 1.5)
+            return False # Stopped for red line timer
+        
+
+    if redValue.value > 0.5 and not redDetected.value:
+        redDetected.value = True
+        timer_manager.set_timer("redLine", redLineStopTime)
+        printDebug(f"Red Line Detected at {time.perf_counter()}, gonna wait {redLineStopTime}", softDEBUG)
+    elif redValue.value < 0.5 and redDetected.value:
+        redDetected.value = True
+    else: # not red
+        redDetected.value = False
+    
+    if endOfRunStop():
+        setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)
+
+
 def areWeStuck(): 
     return imageSimilarityAverage.value >= .95 and (timer_manager.is_timer_expired("avoidStuckCoolDown") or avoidingStuck) and not LOPstate.value and not computerOnlyDebug
 
@@ -1102,6 +1126,8 @@ def controlLoop():
     timer_manager.add_timer("avoidStuckCoolDown", 0.05)
     timer_manager.add_timer("gapCooldown", 0.05)
     timer_manager.add_timer("pickVictimCooldown", 0.05)
+    timer_manager.add_timer("redLine", 0.05)
+    timer_manager.add_timer("redLineCooldown", 0.05)
     time.sleep(0.1)
 
 
@@ -1165,6 +1191,7 @@ def controlLoop():
 
             gapController()
             silverLineController()
+            redLineController()
 
             controlMotors()
 
