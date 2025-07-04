@@ -957,7 +957,7 @@ def calc_silver_angle(silver_image):
 #############################################################################
 
 def lineCamLoop():
-    global cv2_img, blackImage, greenImage, redImage, x_last, y_last, ballCenterXArray, ballBottomYArray, ballWidthArray, ballTypeArray, ballExistsArray, silverValueArray
+    global cv2_img, blackImage, greenImage, redImage, x_last, y_last, ballCenterXArray, ballBottomYArray, ballWidthArray, ballTypeArray, ballExistsArray, silverValueArray, redValueArray
     global TurnDirectionArray, LineAngleNormalizedArray, LineAngleArray, BottomPointXArray, LinePointXArray, imageSimilarityArray
 
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/ball_zone_s/ball_detect_s_edgetpu.tflite', task='detect')
@@ -967,9 +967,10 @@ def lineCamLoop():
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.1/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect')
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.1/victim_ball_detection_full_integer_quant_with_metadata_edgetpu.tflite', task='detect')
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.1/victim_ball_detection.pt', task='detect')
-    modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.2/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect') # Used ultralytics 8.3.66 (nms not an argument)
+    #USEDmodelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.2/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect') # Used ultralytics 8.3.66 (nms not an argument)
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.3/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect') # Used format = edgetpu
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.4/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect') # Used format = edgetpu
+    modelVictim = YOLO('Ai/models/victim_ball_detection_v8/victim_ball_detection_v8_yolov8s_edgetpu.tflite', task='detect') # Used format = edgetpu
 
     #modelSilverLine = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/silver_zone_entry/silver_classify_s.onnx', task='classify')
     modelSilverLine = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/silver_strip/SilverStripDetection.onnx', task='classify')
@@ -1078,7 +1079,7 @@ def lineCamLoop():
             # -- RED STRIP -- Check for Red Line - Stop
             contoursRed, _ = cv2.findContours(redImage, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
             redCurrentValue = 1 if checkContourSize(contoursRed) else 0 
-            
+
             redValueArray = addNewTimeValue(redValueArray, redCurrentValue)
             redValue.value = calculateAverageArray(redValueArray, 0.35)
 
