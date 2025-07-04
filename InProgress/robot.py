@@ -47,18 +47,22 @@ camServoAngle = -1
 Accel_X_Array = createEmptyTimeArray()
 Accel_Y_Array = createEmptyTimeArray()
 Accel_Z_Array = createEmptyTimeArray()
+accelAverage_X = accelAverage_Y = accelAverage_Z = 0
 
 Gyro_X_Array = createEmptyTimeArray()
 Gyro_Y_Array = createEmptyTimeArray()
 Gyro_Z_Array = createEmptyTimeArray()
+gyroAverage_X = gyroAverage_Y = gyroAverage_Z = 0
 
 Temp_Array = createEmptyTimeArray()
+tempAverage = 0
 
 Tof_1_Array = createEmptyTimeArray()
 Tof_2_Array = createEmptyTimeArray()
 Tof_3_Array = createEmptyTimeArray()
 Tof_4_Array = createEmptyTimeArray()
 Tof_5_Array = createEmptyTimeArray()
+tofAverage_1 = tofAverage_2 = tofAverage_3 = tofAverage_4 = tofAverage_5 = 0
 
 
 timer_manager = TimerManager()
@@ -274,6 +278,7 @@ def sendCommandNoConfirmation(command):
 
 def updateSensorAverages():
     global Accel_X_Array, Accel_Y_Array, Accel_Z_Array, Gyro_X_Array, Gyro_Y_Array, Gyro_Z_Array, Temp_Array, Tof_1_Array, Tof_2_Array, Tof_3_Array, Tof_4_Array, Tof_5_Array
+    global accelAverage_X, accelAverage_Y, accelAverage_Z, gyroAverage_X, gyroAverage_Y, gyroAverage_Z, tempAverage, tofAverage_1, tofAverage_2, tofAverage_3, tofAverage_4, tofAverage_5
     if newSensorData.value:
         Accel_X_Array = addNewTimeValue(Accel_X_Array, Accel_X.value)
         Accel_Y_Array = addNewTimeValue(Accel_Y_Array, Accel_Y.value)
@@ -293,20 +298,34 @@ def updateSensorAverages():
     
         newSensorData.value = False
 
+        # update sensor variables
+        accelAverage_X = calculateAverageArray(Accel_X_Array, 0.25)
+        accelAverage_Y = calculateAverageArray(Accel_Y_Array, 0.25)
+        accelAverage_Z = calculateAverageArray(Accel_Z_Array, 0.25)
+        gyroAverage_X = calculateAverageArray(Gyro_X_Array, 0.25)
+        gyroAverage_Y = calculateAverageArray(Gyro_Y_Array, 0.25)
+        gyroAverage_Z = calculateAverageArray(Gyro_Z_Array, 0.25)
+        tempAverage = calculateAverageArray(Temp_Array, 0.25)
+        tofAverage_1 = calculateAverageArray(Tof_1_Array, 0.25)
+        tofAverage_2 = calculateAverageArray(Tof_2_Array, 0.25)
+        tofAverage_3 = calculateAverageArray(Tof_3_Array, 0.25)
+        tofAverage_4 = calculateAverageArray(Tof_4_Array, 0.25) 
+        tofAverage_5 = calculateAverageArray(Tof_5_Array, 0.25)
+
 
         # Sensor Data for Debug
-        AccelXArrayDebug.value = calculateAverageArray(Accel_X_Array, 0.25)
-        AccelYArrayDebug.value = calculateAverageArray(Accel_Y_Array, 0.25)
-        AccelZArrayDebug.value = calculateAverageArray(Accel_Z_Array, 0.25)
-        GyroXArrayDebug.value = calculateAverageArray(Gyro_X_Array, 0.25)
-        GyroYArrayDebug.value = calculateAverageArray(Gyro_Y_Array, 0.25)
-        GyroZArrayDebug.value = calculateAverageArray(Gyro_Z_Array, 0.25)
-        TempArrayDebug.value = calculateAverageArray(Temp_Array, 0.25)
-        Tof1ArrayDebug.value = calculateAverageArray(Tof_1_Array, 0.25)
-        Tof2ArrayDebug.value = calculateAverageArray(Tof_2_Array, 0.25)
-        Tof3ArrayDebug.value = calculateAverageArray(Tof_3_Array, 0.25)
-        Tof4ArrayDebug.value = calculateAverageArray(Tof_4_Array, 0.25) 
-        Tof5ArrayDebug.value = calculateAverageArray(Tof_5_Array, 0.25)
+        AccelXArrayDebug.value = accelAverage_X
+        AccelYArrayDebug.value = accelAverage_Y
+        AccelZArrayDebug.value = accelAverage_Z
+        GyroXArrayDebug.value = gyroAverage_X
+        GyroYArrayDebug.value = gyroAverage_Y
+        GyroZArrayDebug.value = gyroAverage_Z
+        TempArrayDebug.value = tempAverage
+        Tof1ArrayDebug.value = tofAverage_1
+        Tof2ArrayDebug.value = tofAverage_2
+        Tof3ArrayDebug.value = tofAverage_3
+        Tof4ArrayDebug.value = tofAverage_4
+        Tof5ArrayDebug.value = tofAverage_5
 
 
 def updateRampStateAccelOnly():
@@ -728,6 +747,26 @@ def readyToLeave(zoneStatusLoop):
         if dumpedAliveCount.value >= 2 and dumpedDeadCount.value >= 1 and not ballExists.value:
             printDebug(f"Ready to Leave Evacuation Zone - Exiting Procedure Start at {time.perf_counter()}", softDEBUG)
             return True
+
+
+def entryZone():
+    def wallCloserLeft():
+        if ( tofAverage_4 - tofAverage_2 ) / tofAverage_2 > 0.2:
+            return True
+        else:
+            return False
+    def wallCloserRight():
+        if ( tofAverage_2 - tofAverage_4 ) / tofAverage_4 > 0.2:
+            return True
+        else:
+            return False
+
+    if not timer_manager.is_timer_expired("zoneEntry"):
+        setManualMotorsSpeeds(1800, 1800)
+        controlMotors()
+    else: # timer expired
+        timer_manager.set_timer("stop", 2.5) # 2.5 seconds to signal that we entered
+        zoneStatus.value = "findVictims"
 
 
 def goToBall():
@@ -1224,12 +1263,7 @@ def controlLoop():
                 zoneStatus.value = "entry" # go to next Step
 
             elif zoneStatusLoop == "entry":
-                if not timer_manager.is_timer_expired("zoneEntry"):
-                    setManualMotorsSpeeds(1800, 1800)
-                    controlMotors()
-                else: # timer expired
-                    timer_manager.set_timer("stop", 2.5) # 2.5 seconds to signal that we entered
-                    zoneStatus.value = "findVictims"
+                entryZone()
             
             elif zoneStatusLoop == "findVictims":
                 setManualMotorsSpeeds(1230 if rotateTo == "left" else 1750, 1750 if rotateTo == "left" else 1230)
