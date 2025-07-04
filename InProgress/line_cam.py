@@ -29,6 +29,9 @@ raw_capture = None
 cv2_img = None
 
 # Color Configs
+black_min = np.array(black_min)
+black_max_normal_top = np.array(black_max_normal_top)
+black_max_normal_bottom = np.array(black_max_normal_bottom)
 green_min = np.array(green_min)
 green_max = np.array(green_max)
 red_min_1 = np.array(red_min_1)
@@ -1042,7 +1045,10 @@ def lineCamLoop():
             # Black Processing
             grayImage = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
             _, blackImage = cv2.threshold(grayImage, blackThreshold, 255, cv2.THRESH_BINARY_INV)
+            blackImage = cv2.inRange(cv2_img, black_min, black_max_normal_bottom)
+            blackImage[0:int(camera_y * black_top_threshold_percentage), 0:camera_x] = cv2.inRange(cv2_img, black_min, black_max_normal_top)[0:int(camera_y * black_top_threshold_percentage), 0:camera_x]
             
+            blackImage -= greenImage
             blackImage = ignoreHighFOVCorners(blackImage)
 
             # Noise Reduction
