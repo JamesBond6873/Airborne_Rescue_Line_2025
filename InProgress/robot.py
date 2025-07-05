@@ -39,6 +39,9 @@ M1 = M2 = 1520 # Left - Right
 oldM1 = oldM2 = M1
 error_x = errorAcc = lastError = 0
 avoidingStuck = False
+pitch = 0
+lastPitch = None
+lastPitchTime = None
 
 # Camera Servo Angle
 camServoAngle = -1
@@ -329,6 +332,7 @@ def updateSensorAverages():
 
 
 def updateRampStateAccelOnly():
+    global pitch
     # --- PARAMETERS ---
     PITCH_THRESHOLD = 18       # Minimum angle to consider ramp
     STICKY_TIME = 1.0          # Time to remember we were on a ramp
@@ -369,6 +373,37 @@ def updateRampStateAccelOnly():
     # --- Sticky ramp memory ---
     wasOnRamp.value = not timer_manager.is_timer_expired("wasOnRamp")
     
+
+def detectSeesaw():
+    global lastPitch, lastPitchTime
+
+    currentTime = time.perf_counter()
+
+    if lastPitch is None or lastPitchTime is None:
+        # First call, no previous data yet
+        lastPitch = pitch
+        lastPitchTime = currentTime
+        return False
+
+    deltaPitch = pitch - lastPitch
+    deltaTime = currentTime - lastPitchTime
+
+    # Update for next call
+    lastPitch = pitch
+    lastPitchTime = currentTime
+
+    if deltaTime <= 0:
+        # avoid divide-by-zero
+        return False
+
+    pitchRate = deltaPitch / deltaTime  # °/s
+    pitchRateDebug.value = pitchRate
+
+    if abs(pitchRate) > SEESAW_RATE_THRESHOLD:
+        return True
+    else:
+        return False
+
 
 # Pick Victim Function (takes "Alive" or "Dead")
 def pickVictim(type, step=0):
@@ -1212,6 +1247,7 @@ def controlLoop():
         # ----- LINE FOLLOWING ----- 
         if objectiveLoop == "follow_line":
             updateRampStateAccelOnly()
+            seesawDetected.value = detectSeesaw()
 
             # Update Because of Ramps DEFAULT_FORWARD_SPEED
             if rampDetected.value and rampUp.value:
@@ -1225,8 +1261,11 @@ def controlLoop():
                 if camServoAngle != 35:
                     cameraFree(35)
 
-            setMotorsSpeeds(lineCenterX.value)
+            if seesawDetected.value:
+                timer_manager.set_timer("backwards", 1.0)
+               
             intersectionController()
+            setMotorsSpeeds(lineCenterX.value)
 
             gapController()
             silverLineController()

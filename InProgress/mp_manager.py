@@ -73,6 +73,7 @@ lastCorrectionDirection = manager.Value('b', False)  # False = backward, True = 
 gapCorrectionState = manager.Value('i', 0)
 gapState = manager.Value("i", "Not_Started")
 
+seesawDetected = manager.Value("i", False)
 rampDetected = manager.Value("i", False)
 rampUp = manager.Value("i", False)
 rampDown = manager.Value("i", False)
@@ -151,6 +152,7 @@ pitchDebug = manager.Value("i", -1)
 silverValueDebug = manager.Value("i", -1)
 silverValueArrayDebug = manager.Value("i", -1)
 avoidingStuckDebug = manager.Value("i", False)
+pitchRateDebug = manager.Value("i", -1)
 
 # ARRAY FUNCTIONS
 def createEmptyTimeArray(length: int = 240):

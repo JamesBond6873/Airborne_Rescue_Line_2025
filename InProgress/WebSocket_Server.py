@@ -75,7 +75,7 @@ async def handler(websocket):
                 f"{waitingSensorDataDebug.value}",
                 f"{commandWaitingListLength.value}",
                 f"{commandWithoutConfirmation.value}",
-                f"",
+                f"{pitchRateDebug.value}",
                 f"{lineCenterX.value}",
                 f"{round(np.rad2deg(lineAngle.value),2)}",
                 f"{lineAngleNormalizedDebug.value}",
