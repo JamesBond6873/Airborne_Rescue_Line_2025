@@ -751,21 +751,21 @@ def readyToLeave(zoneStatusLoop):
 
 def entryZone():
     def wallCloserLeft():
-        if ( tofAverage_4 - tofAverage_2 ) / tofAverage_2 > 0.2:
-            return True
-        else:
-            return False
+        return ( tofAverage_4 - tofAverage_2 ) / tofAverage_2 < -0.2
     def wallCloserRight():
-        if ( tofAverage_2 - tofAverage_4 ) / tofAverage_4 > 0.2:
-            return True
-        else:
-            return False
+        return ( tofAverage_2 - tofAverage_4 ) / tofAverage_4 < -0.2
 
     if not timer_manager.is_timer_expired("zoneEntry"):
-        setManualMotorsSpeeds(1800, 1800)
+        if wallCloserLeft():
+            setManualMotorsSpeeds(1700, 1950)
+        elif wallCloserRight():
+            setManualMotorsSpeeds(1950, 1700)
+        else:
+            setManualMotorsSpeeds(1800, 1800)
         controlMotors()
+
     else: # timer expired
-        timer_manager.set_timer("stop", 2.5) # 2.5 seconds to signal that we entered
+        timer_manager.set_timer("stop", 2.0) # 2.0 seconds to signal that we entered
         zoneStatus.value = "findVictims"
 
 
