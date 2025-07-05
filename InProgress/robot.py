@@ -1116,17 +1116,17 @@ def redLineController():
             timer_manager.set_timer("redLineCooldown", 1.5)
             return False # Stopped for red line timer
         
-
-    if redValue.value > 0.5 and not redDetected.value:
-        redDetected.value = True
-        timer_manager.set_timer("redLine", redLineStopTime)
-        printDebug(f"Red Line Detected at {time.perf_counter()}, gonna wait {redLineStopTime}", softDEBUG)
-    elif redValue.value > 0.5 and redDetected.value:
-        redDetected.value = True
+    if not LOPstate.value:
+        if redValue.value > 0.5 and not redDetected.value:
+            redDetected.value = True
+            timer_manager.set_timer("redLine", redLineStopTime)
+            printDebug(f"Red Line Detected at {time.perf_counter()}, gonna wait {redLineStopTime}", softDEBUG)
+        elif redValue.value > 0.5 and redDetected.value:
+            redDetected.value = True
     else: # not red
         redDetected.value = False
     
-    if endOfRunStop():
+    if endOfRunStop() and not LOPstate.value:
         setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)
 
 
