@@ -36,7 +36,7 @@ SILVER_ANGLE_THRESHOLD = 7.5
 SILVER_CENTER_THRESHOLD = 0.15
 GAP_CORRECTION_TIMEOUT = 5 # s
 ANGLE_THRESHOLD = 10.0  # degrees
-SEESAW_RATE_THRESHOLD = 300 # degrees per second
+SEESAW_RATE_THRESHOLD = 85 # degrees per second - Requires calibration
 # Constants for gap correction state
 GAP_IDLE = 0
 GAP_CORRECTING = 1

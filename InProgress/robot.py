@@ -42,6 +42,7 @@ avoidingStuck = False
 pitch = 0
 lastPitch = None
 lastPitchTime = None
+pitchRateArray = createEmptyTimeArray()
 
 # Camera Servo Angle
 camServoAngle = -1
@@ -375,7 +376,7 @@ def updateRampStateAccelOnly():
     
 
 def detectSeesaw():
-    global lastPitch, lastPitchTime
+    global lastPitch, lastPitchTime, pitchRateArray
 
     currentTime = time.perf_counter()
 
@@ -397,10 +398,14 @@ def detectSeesaw():
         return False
 
     pitchRate = deltaPitch / deltaTime  # °/s
-    pitchRateDebug.value = pitchRate
+    pitchRateArray = addNewTimeValue(pitchRateArray, pitchRate)
+    pitchRateAverage = calculateAverageArray(pitchRateArray, 0.20)
+    pitchRateDebug.value = pitchRateAverage
 
-    if abs(pitchRate) > SEESAW_RATE_THRESHOLD and not LOPstate.value:
-        printDebug(f"Seesaw Detected at {time.perf_counter()}: {abs(pitchRate)}", True)
+    printDebug(f"Seesaw Rate: {pitchRateAverage} {pitchRate}", False)
+
+    if pitchRateAverage > SEESAW_RATE_THRESHOLD and not LOPstate.value:
+        printDebug(f"Seesaw Detected at {time.perf_counter()}: {pitchRateAverage}", softDEBUG)
         return True
     else:
         return False
@@ -610,14 +615,14 @@ def setMotorsSpeeds(guidanceFactor):
     if inGap and (gapState.value == "Finished"): 
         M1, M2 = DEFAULT_FORWARD_SPEED, DEFAULT_FORWARD_SPEED
 
+    elif not timer_manager.is_timer_expired('backwardsSlow'):
+        M1, M2 = 1200, 1200
+
     elif not timer_manager.is_timer_expired("uTurn"):
         M1, M2 = (1000, 2000) if rotateTo == "left" else (2000, 1000)
     
     elif not timer_manager.is_timer_expired('backwards'):
         M1, M2 = 1000, 1000
-
-    elif not timer_manager.is_timer_expired('backwardsSlow'):
-        M1, M2 = 1250, 1250
 
     elif -0.2 < timer_manager.get_remaining_time('uTurn') < 0:
         timer_manager.set_timer('backwards', 0.5)
@@ -1266,8 +1271,9 @@ def controlLoop():
                 if camServoAngle != 35:
                     cameraFree(35)
 
-            if seesawDetected.value:
-                timer_manager.set_timer("backwardsSlow", 0.5)
+            if seesawDetected.value and timer_manager.is_timer_expired("backwardsSlow"):
+                printDebug(f"Seesaw detected at {time.perf_counter()}, going back", softDEBUG)
+                timer_manager.set_timer("backwardsSlow", 1.5)
                
             intersectionController()
             setMotorsSpeeds(lineCenterX.value)
