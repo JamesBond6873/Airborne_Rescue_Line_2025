@@ -1108,9 +1108,9 @@ def silverLineController():
 
 def redLineController():
     def endOfRunStop():
-        if timer_manager.is_timer_expired("redLineCooldown"):
+        if not timer_manager.is_timer_expired("redLineCooldown"):
             return False
-        elif redDetected.value and not timer_manager.is_timer_expired("redLine"):
+        elif not timer_manager.is_timer_expired("redLine"):
             return True # Stopped for red line timer
         elif redDetected.value and timer_manager.is_timer_expired("redLine"):
             timer_manager.set_timer("redLineCooldown", 1.5)
@@ -1121,7 +1121,7 @@ def redLineController():
         redDetected.value = True
         timer_manager.set_timer("redLine", redLineStopTime)
         printDebug(f"Red Line Detected at {time.perf_counter()}, gonna wait {redLineStopTime}", softDEBUG)
-    elif redValue.value < 0.5 and redDetected.value:
+    elif redValue.value > 0.5 and redDetected.value:
         redDetected.value = True
     else: # not red
         redDetected.value = False
