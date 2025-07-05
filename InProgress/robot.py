@@ -399,7 +399,7 @@ def detectSeesaw():
     pitchRate = deltaPitch / deltaTime  # °/s
     pitchRateDebug.value = pitchRate
 
-    if abs(pitchRate) > SEESAW_RATE_THRESHOLD:
+    if abs(pitchRate) > SEESAW_RATE_THRESHOLD and not LOPstate.value:
         printDebug(f"Seesaw Detected at {time.perf_counter()}: {abs(pitchRate)}", True)
         return True
     else:
@@ -615,6 +615,9 @@ def setMotorsSpeeds(guidanceFactor):
     
     elif not timer_manager.is_timer_expired('backwards'):
         M1, M2 = 1000, 1000
+
+    elif not timer_manager.is_timer_expired('backwardsSlow'):
+        M1, M2 = 1250, 1250
 
     elif -0.2 < timer_manager.get_remaining_time('uTurn') < 0:
         timer_manager.set_timer('backwards', 0.5)
@@ -1187,6 +1190,7 @@ def controlLoop():
     timer_manager.add_timer("stop", 0.05)
     timer_manager.add_timer("uTurn", 0.05)
     timer_manager.add_timer("backwards", 0.05)
+    timer_manager.add_timer("backwardsSlow", 0.05)
     timer_manager.add_timer("noLine", 0.05)
     timer_manager.add_timer("zoneEntry", 0.05)
     timer_manager.add_timer("armCooldown", 0.05)
@@ -1263,7 +1267,7 @@ def controlLoop():
                     cameraFree(35)
 
             if seesawDetected.value:
-                timer_manager.set_timer("backwards", 1.0)
+                timer_manager.set_timer("backwardsSlow", 0.5)
                
             intersectionController()
             setMotorsSpeeds(lineCenterX.value)
