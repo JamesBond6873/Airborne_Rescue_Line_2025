@@ -400,6 +400,7 @@ def detectSeesaw():
     pitchRateDebug.value = pitchRate
 
     if abs(pitchRate) > SEESAW_RATE_THRESHOLD:
+        printDebug(f"Seesaw Detected at {time.perf_counter()}: {abs(pitchRate)}", True)
         return True
     else:
         return False

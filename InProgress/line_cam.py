@@ -1046,9 +1046,11 @@ def lineCamLoop():
             # Black Processing
             grayImage = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
             _, blackImage = cv2.threshold(grayImage, blackThreshold, 255, cv2.THRESH_BINARY_INV)
-            blackImage = cv2.inRange(cv2_img, black_min, black_max_normal_bottom)
+            #blackImage = cv2.inRange(cv2_img, black_min, black_max_normal_bottom)
             blackImage[0:int(camera_y * black_top_threshold_percentage), 0:camera_x] = cv2.inRange(cv2_img, black_min, black_max_normal_top)[0:int(camera_y * black_top_threshold_percentage), 0:camera_x]
-            
+            #_, blackImage[0:int(camera_y * black_top_threshold_percentage), 0:camera_x] = cv2.threshold(grayImage, blackThreshold+30, 255, cv2.THRESH_BINARY_INV)[0:int(camera_y * black_top_threshold_percentage), 0:camera_x]
+
+
             blackImage -= greenImage
             blackImage = ignoreHighFOVCorners(blackImage)
 

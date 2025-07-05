@@ -3,7 +3,7 @@
 print("Robot Configurations: \t \t OK")
 
 # Is it DEBUG?
-computerOnlyDebug = True # True for computer only, False for robot
+computerOnlyDebug = False # True for computer only, False for robot
 gamepadLoopRun = True # False for score runs
 DEBUG = False
 softDEBUG = True
@@ -47,7 +47,7 @@ GAP_TIMEOUT = 3
 blackThreshold = 55
 black_top_threshold_percentage = 0.4
 black_min = [0, 0, 0]
-black_max_normal_top = [82, 83, 84]
+black_max_normal_top = [82, 83, 30]
 black_max_normal_bottom = [180, 90, 50]
 #green_min = [50, 95, 40]    # 58, 95, 39 Night | 126, 94, 145 Day
 #green_max = [100, 255, 255] # 98, 255, 255 Night | 155, 130, 180 Day
