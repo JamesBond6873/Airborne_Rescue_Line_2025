@@ -833,8 +833,8 @@ def goToBall():
             pickingVictim.value = True
             resetBallArrays.value = True
             printDebug(f" ----- Starting {pickVictimType} Victim Catching ----- ", softDEBUG)
-            printDebug(f"Ball detection data: {ballExists.value} {ballCenterX.value} {ballBottomY.value} {ballWidth.value} {ballType.value}", DEBUG)
-            printDebug(f"Victim Catching - Reversing", DEBUG)
+            printDebug(f"Ball detection data: {ballExists.value} {ballCenterX.value} {ballBottomY.value} {ballWidth.value} {ballType.value}", pickVictimSoftDEBUG)
+            printDebug(f"Victim Catching - Reversing", pickVictimSoftDEBUG)
             timer_manager.set_timer("zoneReverse", 0.5)
 
     elif pickSequenceStatus == "startReverse":
@@ -843,7 +843,7 @@ def goToBall():
         if timer_manager.is_timer_expired("zoneReverse"):
             setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)  # Stop motors
             controlMotors()
-            printDebug(f"Victim Catching - Lowering Arm", False)
+            printDebug(f"Victim Catching - Lowering Arm", pickVictimSoftDEBUG)
             pickVictim(pickVictimType, step=1) # Lower Arm
             pickSequenceStatus = "loweringArm"
             timer_manager.set_timer("lowerArm", 2.0)
@@ -852,7 +852,7 @@ def goToBall():
         setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)
         controlMotors()
         if timer_manager.is_timer_expired("lowerArm"):
-            printDebug(f"Victim Catching - Moving Forward", False)
+            printDebug(f"Victim Catching - Moving Forward", pickVictimSoftDEBUG)
             pickSequenceStatus = "moveForward"
             timer_manager.set_timer("zoneForward", 0.8)
 
@@ -863,16 +863,26 @@ def goToBall():
             setManualMotorsSpeeds(1350, 1350)
             controlMotors()
             pickVictim(pickVictimType, step=2)
-            printDebug(f"Victim Catching - Picking Victim", False)
+            printDebug(f"Victim Catching - Picking Victim", pickVictimSoftDEBUG)
+            timer_manager.set_timer("waitingSuccessfulPick", 3)
+            pickSequenceStatus = "waitingForSuccessfulPick"
+
+    elif pickSequenceStatus == "waitingForSuccessfulPick":
+        setManualMotorsSpeeds(1350, 1350)  # Go backward slowly
+        controlMotors()
+        if timer_manager.is_timer_expired("waitingForSuccessfulPick"):
+            setManualMotorsSpeeds(1520, 1520)
+            controlMotors()
+            pickVictim(pickVictimType, step=2)
             pickSequenceStatus = "finished"
 
     elif pickSequenceStatus == "finished":
-        printDebug(f"Victim Catching - Finished", False)
+        printDebug(f"Victim Catching - Finished", pickVictimSoftDEBUG)
         pickingVictim.value = False
         resetBallArrays.value = True
         zoneStatus.value = "findVictims"
         pickSequenceStatus = "goingToBall"
-        timer_manager.set_timer("pickVictimCooldown", 8)
+        timer_manager.set_timer("pickVictimCooldown", 5)
 
         if pickVictimType == "A" and pickedUpAliveCount.value < 2:
             pickedUpAliveCount.value += 1
@@ -1211,6 +1221,7 @@ def controlLoop():
     timer_manager.add_timer("avoidStuck", 0.05)
     timer_manager.add_timer("avoidStuckCoolDown", 0.05)
     timer_manager.add_timer("gapCooldown", 0.05)
+    timer_manager.add_timer("waitingSuccessfulPick", 0.05)
     timer_manager.add_timer("pickVictimCooldown", 0.05)
     timer_manager.add_timer("redLine", 0.05)
     timer_manager.add_timer("redLineCooldown", 0.05)
@@ -1318,7 +1329,7 @@ def controlLoop():
                 entryZone()
             
             elif zoneStatusLoop == "findVictims":
-                setManualMotorsSpeeds(1230 if rotateTo == "left" else 1750, 1750 if rotateTo == "left" else 1230)
+                setManualMotorsSpeeds(1200 if rotateTo == "left" else 1750, 1750 if rotateTo == "left" else 1200)
                 controlMotors()
             
                 if ballExists.value:
