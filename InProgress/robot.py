@@ -105,6 +105,7 @@ def CLIinterpretCommand(mpMessage):
         printConsoles(f"  - PV <Alive|Dead> [step]")
         printConsoles(f"  - DV <Alive|Dead>")
         printConsoles(f"  - BC")
+        printConsoles(f"  - SaveFrame <0 or 1>")
     elif message == "vars":
         printConsoles(f"  - LOPOverride: {LOPOverride}")
         printConsoles(f"  - LOPVirtualState: {LOPVirtualState}")
@@ -232,7 +233,12 @@ def CLIinterpretCommand(mpMessage):
     elif message == "BC":
         closeBallStorage()
         printConsoles("Ball Storage closed.")
-
+    elif message == "SaveFrame":
+        try:
+            saveFrame.value = bool(int(message.split()[1]))
+            printConsoles(f"SaveFrame set to {saveFrame.value}")
+        except (ValueError, IndexError):
+            printConsoles("Invalid SaveFrame command. Use 'SaveFrame <0 or 1>'")
 
     # Reset command to none
     mpMessage.value = "none"
@@ -527,6 +533,8 @@ def LoPSwitchController():
 
             timer_manager.clear_all_timers()
 
+            saveFrame.value = False
+
             lopCounter.value += 1
             
     else:
@@ -539,6 +547,8 @@ def LoPSwitchController():
             printDebug(f"LoP Switch is now OFF at {time.perf_counter()}: {switchState}", softDEBUG)
             objective.value = "follow_line"
             zoneStatus.value = "notStarted"
+
+            saveFrame.value = True if silverDatasetCollectionMode else False
             
 
 # Calculate motor Speed difference from default
@@ -1116,6 +1126,7 @@ def silverLineController():
         elif silverLineDetected.value == True and not LOPstate.value:
             if readyToEnterZone():
                 print(f"Silver Line Ready to Enter Zone: {silverAngle.value} | {silverCenterX.value} | {M1} | {M2}")
+                return
                 objective.value = "zone"
                 zoneStatus.value = "begin"
                 silverValue.value = -2

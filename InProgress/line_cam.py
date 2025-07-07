@@ -141,8 +141,8 @@ def savecv2_img(folder, cv2_img):
     if saveFrame.value:
         # Create the "fotos" directory if it doesn't exist
 
-        #if not timer_manager.is_timer_expired("saveImageCoolDown"):
-        #    return
+        if not timer_manager.is_timer_expired("saveImageCoolDown"):
+            return
         
         folder_name = folder
         os.makedirs(folder_name, exist_ok=True)
@@ -157,8 +157,10 @@ def savecv2_img(folder, cv2_img):
         photoCounter += 1
         printDebug(f"Saved Image {photoCounter}: {file_path}", softDEBUG)
 
-        #timer_manager.set_timer("saveImageCoolDown", 10)
-        saveFrame.value = False
+        timer_manager.set_timer("saveImageCoolDown", 0.05)
+        
+        if not silverDatasetCollectionMode:
+            saveFrame.value = False
     
 
 def getCameraImage(camera):
@@ -824,7 +826,7 @@ def silverDetector(modelSilverLine, original_cv2_img):
         # Debug
         if silverValue.value > 0.5:
             cv2.circle(cv2_img, (10, camera_y - 10), 5, (255, 255, 255), -1, cv2.LINE_AA)
-            if not computerOnlyDebug:
+            if not computerOnlyDebug and not silverDatasetCollectionMode:
                 saveFrame.value = True
                 savecv2_img("Silver", original_cv2_img)
         silverValueDebug.value = rawSilverValue
@@ -967,7 +969,10 @@ def lineCamLoop():
         cv2_img = getCameraImage(camera)
         original_cv2_img = cv2_img.copy()
 
-        savecv2_img("VictimsDataSet", cv2_img)
+        if silverDatasetCollectionMode:
+            savecv2_img("Silver", cv2_img)
+        else:
+            savecv2_img("Original", cv2_img)
         resetBallArrayVars() # Reset ball arrays if needed
         resetEvacZoneArrayVars() # Reset evacuation zone corner arrays if needed
         resetImageSimilarityArrayVars() # Reset image similarity array if needed
