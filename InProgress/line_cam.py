@@ -849,19 +849,6 @@ def checkImageSimilarity():
 
     checkSimilarityCounter += 1
 
-"""
-def getGapAngle(box):
-    box = box[box[:, 1].argsort()]
-
-    vector = box[0] - box[1]
-    angle = np.arccos(np.dot(vector, [1, 0]) / (np.linalg.norm(vector) * np.linalg.norm([1, 0]))) * 180 / np.pi
-    angle = angle if box[0][0] < box[1][0] else -angle
-
-    if angle == 180:
-        angle = 0
-
-    return box[0], box[1], angle"""
-
 
 def getGapAngle(box):
     box = box[box[:, 1].argsort()]  # Sort by Y (top-bottom)
@@ -876,24 +863,6 @@ def getGapAngle(box):
     angle = 90 - angle  # Rotate to make 0º = vertical
 
     return box[0], box[1], angle
-
-"""
-def getSilverAngle(box):
-    box = box[box[:, 0].argsort()]
-
-    left_points = box[:2]
-    right_points = box[2:]
-
-    left_points = left_points[left_points[:, 1].argsort()]
-    right_points = right_points[right_points[:, 1].argsort()]
-
-    vector = left_points[0] - right_points[0]
-    angle = np.arccos(np.dot(vector, [1, 0]) / (np.linalg.norm(vector) * np.linalg.norm([1, 0]))) * 180 / np.pi
-    angle = -angle if left_points[0][1] < right_points[0][1] else angle
-    if angle == 180:
-        angle = 0
-
-    return left_points[0], right_points[0], angle"""
 
 
 def getSilverAngle(box):
@@ -915,41 +884,6 @@ def getSilverAngle(box):
     angle = 90 - angle  # Rotate to make 0º = vertical
 
     return left_points[0], right_points[0], angle
-
-
-def calc_silver_angle(silver_image):
-
-    silver_first_row = silver_image[0, :].copy()
-    white_pixel_index = np.where(silver_first_row == 255)[0]
-    if len(white_pixel_index) > 0:
-        first_white_pixel_index = white_pixel_index[0]
-        last_white_pixel_index = white_pixel_index[-1]
-
-        cv2.rectangle(silver_image, (first_white_pixel_index, 0), (last_white_pixel_index, camera_y), 0, -1)
-
-    silver_last_row = silver_image[-1, :].copy()
-    white_pixel_index = np.where(silver_last_row == 255)[0]
-    if len(white_pixel_index) > 0:
-        first_white_pixel_index = white_pixel_index[0]
-        last_white_pixel_index = white_pixel_index[-1]
-
-        cv2.rectangle(silver_image, (first_white_pixel_index, 0), (last_white_pixel_index, camera_y), 0, -1)
-
-    cv2.rectangle(silver_image, (0, 0), (20, camera_y), 0, -1)
-    cv2.rectangle(silver_image, (camera_x - 20, 0), (camera_x, camera_y), 0, -1)
-
-    contours_silver, _ = cv2.findContours(silver_image, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-
-    # save_image(silver_image)
-    if len(contours_silver) > 0:
-        largest_silver_contour = max(contours_silver, key=cv2.contourArea)
-        cv2.drawContours(cv2_img, [np.int0(cv2.boxPoints(cv2.minAreaRect(largest_silver_contour)))], 0, (255, 255, 0), 2)
-        p1, p2, angle = getSilverAngle(cv2.boxPoints(cv2.minAreaRect(largest_silver_contour)))
-        if p1[1] < camera_y * 0.95 and p2[1] < camera_y * 0.95:
-            silverAngle.value = angle
-            cv2.line(cv2_img, (int(p1[0]), int(p1[1])), (int(p2[0]), int(p2[1])), (0, 255, 0), 2)
-    else:
-        silverAngle.value = -181
 
 
 #############################################################################
@@ -1048,8 +982,7 @@ def lineCamLoop():
             _, blackImage = cv2.threshold(grayImage, blackThreshold, 255, cv2.THRESH_BINARY_INV)
             #blackImage = cv2.inRange(cv2_img, black_min, black_max_normal_bottom)
             blackImage[0:int(camera_y * black_top_threshold_percentage), 0:camera_x] = cv2.inRange(cv2_img, black_min, black_max_normal_top)[0:int(camera_y * black_top_threshold_percentage), 0:camera_x]
-            #_, blackImage[0:int(camera_y * black_top_threshold_percentage), 0:camera_x] = cv2.threshold(grayImage, blackThreshold+30, 255, cv2.THRESH_BINARY_INV)[0:int(camera_y * black_top_threshold_percentage), 0:camera_x]
-
+            
 
             blackImage -= greenImage
             blackImage = ignoreHighFOVCorners(blackImage)
@@ -1057,7 +990,7 @@ def lineCamLoop():
             # Noise Reduction
             blackImage = cv2.erode(blackImage, kernel, iterations=5)
             blackImage = cv2.dilate(blackImage, kernel, iterations=17) # Previous values: 12 | 16
-            blackImage = cv2.erode(blackImage, kernel, iterations=9)  # Previous values: 4 | 8"""
+            blackImage = cv2.erode(blackImage, kernel, iterations=9)  # Previous values: 4 | 8
 
             greenImage = cv2.erode(greenImage, kernel, iterations=1)
             greenImage = cv2.dilate(greenImage, kernel, iterations=11)
@@ -1119,8 +1052,7 @@ def lineCamLoop():
                 BottomPointXArray = addNewTimeValue(BottomPointXArray, bottomPoint[0])
                 LinePointXArray = addNewTimeValue(LinePointXArray, finalPoi[0])
 
-                #lineAngle.value = np.pi / 2 # Means ignore line angle when in this situation
-
+                """
                 p1, p2, angle = getGapAngle(cv2.boxPoints(cv2.minAreaRect(blackLine)))
                 if p1[1] < camera_y * 0.95 and p2[1] < camera_y * 0.95:
                     gapAngle.value = angle
@@ -1131,7 +1063,7 @@ def lineCamLoop():
                     gapCenterY.value = centerGapPoint[1]
 
                     cv2.line(cv2_img, (int(p1[0]), int(p1[1])), (int(p2[0]), int(p2[1])), (0, 255, 0), 2)
-                    cv2.circle(cv2_img, (int(centerGapPoint[0]), int(centerGapPoint[1])), 5, (0, 255, 0), 1, cv2.LINE_AA)
+                    cv2.circle(cv2_img, (int(centerGapPoint[0]), int(centerGapPoint[1])), 5, (0, 255, 0), 1, cv2.LINE_AA)"""
 
                 
                 if silverLineDetected.value:
@@ -1182,7 +1114,7 @@ def lineCamLoop():
             
             blackImage = ignoreHighFOVCorners(blackImage)
 
-            if zoneStatus.value in ["begin", "entry", "findVictims", "goToBall"] and not pickingVictim.value:
+            if zoneStatus.value in ["begin", "entry", "findVictims", "goToBall", "exit"] and not pickingVictim.value:
                 img_rgb = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
                 results = modelVictim.predict(img_rgb, imgsz=448, conf=0.3, iou=0.2, agnostic_nms=True, workers=4, verbose=False)  # verbose=True to enable debug info
                 #results = modelVictim.predict(img_rgb, save=True, save_txt=True, imgsz=448, conf=0.3, iou=0.2, agnostic_nms=True, workers=4, verbose=False)
