@@ -830,6 +830,11 @@ def silverDetector(modelSilverLine, original_cv2_img):
         silverValueDebug.value = rawSilverValue
         silverValueArrayDebug.value = calculateAverageArray(silverValueArray, 0.75) # Average Array
 
+        if rawSilverValue > 0.5:
+            saveFrame.value = True
+            savecv2_img("Silver", original_cv2_img)
+            printDebug(f"Simple Silver Line Detected at {time.perf_counter()}: {rawSilverValue}, AVG: {silverValueAverage}", True)
+
         return silverValueAverage
 
     doInferenceCounter += 1

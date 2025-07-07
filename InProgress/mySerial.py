@@ -320,4 +320,6 @@ def serialLoop():
         t0 = t1
 
     sendSerial(f"M({DEFAULT_STOPPED_SPEED}, {DEFAULT_STOPPED_SPEED})")
+    time.sleep(0.1)
+    sendSerial(f"L0")
     print(f"Shutting Down Serial Loop")

@@ -1116,6 +1116,7 @@ def silverLineController():
 
         elif silverLineDetected.value == True and not LOPstate.value:
             if readyToEnterZone():
+                print(f"Silver Line Ready to Enter Zone: {silverAngle.value} | {silverCenterX.value} | {M1} | {M2}")
                 objective.value = "zone"
                 zoneStatus.value = "begin"
                 silverValue.value = -2
@@ -1317,6 +1318,8 @@ def controlLoop():
                 timer_manager.set_timer("stop", 5.0) # 5 seconds to signal that we entered
                 timer_manager.set_timer("zoneEntry", 6.5) # 1.5 (5+1.5) seconds to entry the zone
 
+                setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)
+                controlMotors()
                 cameraDefault("Evacuation")
                 setLights(on=False)
 
