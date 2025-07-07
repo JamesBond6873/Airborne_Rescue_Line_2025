@@ -170,7 +170,7 @@ def getSensorData(data = "All"):
                 waitingSensorData = True
                 sendSerial(f"ToF5", dataRequest=True)
                 timer_manager.set_timer("sensorTimeout", 0.05)
-        elif objective.value == "zone":
+        elif objective.value == "zone" and zoneStatus.value in ["begin", "entry", "exit"]:
             waitingSensorData = True
             sendSerial(f"ToF5", dataRequest=True)
             timer_manager.set_timer("sensorTimeout", 0.05)
