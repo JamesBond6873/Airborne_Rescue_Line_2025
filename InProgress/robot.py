@@ -1125,14 +1125,15 @@ def silverLineController():
 
         elif silverLineDetected.value == True and not LOPstate.value:
             if readyToEnterZone():
-                print(f"Silver Line Ready to Enter Zone: {silverAngle.value} | {silverCenterX.value} | {M1} | {M2}")
-                return
+                printDebug(f"Silver Line Ready to Enter Zone: {silverAngle.value} | {silverCenterX.value} | {silverValue.value} | {M1} | {M2}", softDEBUG)
+                if silverDatasetCollectionMode:
+                    return # if we acquring silver data don't get in the Evac Zone
                 objective.value = "zone"
                 zoneStatus.value = "begin"
                 silverValue.value = -2
             else: # not ready to enter zone -  Go back to allign
                 setMotorSpeedsAngleYAxis(silverAngle.value, silverCenterX.value, forward=False)
-                print(f"Silver Line not Ready to Enter Zone: {silverAngle.value} | {silverCenterX.value} | {M1} | {M2}")
+                print(f"Silver Line not Ready to Enter Zone: {silverAngle.value} | {silverCenterX.value} | {silverValue.value} | {M1} | {M2}", softDEBUG)
     else:
         silverLineDetected.value = False
 
