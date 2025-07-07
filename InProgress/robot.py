@@ -795,15 +795,15 @@ def readyToLeave(zoneStatusLoop):
 
 def entryZone():
     def wallCloserLeft():
-        return ( tofAverage_4 - tofAverage_2 ) / tofAverage_2 < -0.2
+        return tofAverage_4 < tofAverage_2 and tofAverage_4 < 150 < tofAverage_2
     def wallCloserRight():
-        return ( tofAverage_2 - tofAverage_4 ) / tofAverage_4 < -0.2
+        return tofAverage_2 < tofAverage_4 and tofAverage_2 < 150 < tofAverage_4
 
     if not timer_manager.is_timer_expired("zoneEntry"):
         if wallCloserLeft():
-            setManualMotorsSpeeds(1700, 1950)
+            setManualMotorsSpeeds(1700, 1900)
         elif wallCloserRight():
-            setManualMotorsSpeeds(1950, 1700)
+            setManualMotorsSpeeds(1900, 1700)
         else:
             setManualMotorsSpeeds(1800, 1800)
         controlMotors()
