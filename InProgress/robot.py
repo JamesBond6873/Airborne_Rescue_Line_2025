@@ -803,9 +803,9 @@ def entryZone():
         wallCloserLeft = wallCloserLeftFunc()
         wallCloserRight = wallCloserRightFunc()
         if wallCloserLeft and not wallCloserRight:
-            setManualMotorsSpeeds(1900, 1700)
+            setManualMotorsSpeeds(1950, 1700)
         elif wallCloserRight and not wallCloserLeft:
-            setManualMotorsSpeeds(1700, 1900)
+            setManualMotorsSpeeds(1700, 1950)
         else:
             setManualMotorsSpeeds(1800, 1800)
         controlMotors()
@@ -864,7 +864,7 @@ def goToBall():
             controlMotors()
             pickVictim(pickVictimType, step=2)
             printDebug(f"Victim Catching - Picking Victim", pickVictimSoftDEBUG)
-            timer_manager.set_timer("waitingSuccessfulPick", 3)
+            timer_manager.set_timer("waitingForSuccessfulPick", 3.0)
             pickSequenceStatus = "waitingForSuccessfulPick"
 
     elif pickSequenceStatus == "waitingForSuccessfulPick":
@@ -873,7 +873,6 @@ def goToBall():
         if timer_manager.is_timer_expired("waitingForSuccessfulPick"):
             setManualMotorsSpeeds(1520, 1520)
             controlMotors()
-            pickVictim(pickVictimType, step=2)
             pickSequenceStatus = "finished"
 
     elif pickSequenceStatus == "finished":
@@ -1222,7 +1221,7 @@ def controlLoop():
     timer_manager.add_timer("avoidStuck", 0.05)
     timer_manager.add_timer("avoidStuckCoolDown", 0.05)
     timer_manager.add_timer("gapCooldown", 0.05)
-    timer_manager.add_timer("waitingSuccessfulPick", 0.05)
+    timer_manager.add_timer("waitingForSuccessfulPick", 0.05)
     timer_manager.add_timer("pickVictimCooldown", 0.05)
     timer_manager.add_timer("redLine", 0.05)
     timer_manager.add_timer("redLineCooldown", 0.05)
