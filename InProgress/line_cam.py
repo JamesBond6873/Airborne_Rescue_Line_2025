@@ -914,7 +914,8 @@ def lineCamLoop():
     modelVictim = YOLO('Ai/models/victim_ball_detection_v8/victim_ball_detection_v8_yolov8s_edgetpu.tflite', task='detect') # Used format = edgetpu
 
     #modelSilverLine = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/silver_zone_entry/silver_classify_s.onnx', task='classify')
-    modelSilverLine = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/silver_strip/SilverStripDetection.onnx', task='classify')
+    #modelSilverLine = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/silver_strip/SilverStripDetection.onnx', task='classify')
+    modelSilverLine = YOLO('Ai/models/silver_zone_entry_v2/silver_classify_s.onnx', task='classify')
     
     camera = None # PlaceHolder for Debugging
     if not cameraDebugMode:
