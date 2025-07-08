@@ -917,7 +917,7 @@ def zoneDeposit(type):
         global dropSequenceStatus, wiggleStage
 
         if cornerHeight.value == 0: # No corner detected
-            setManualMotorsSpeeds(1230 if rotateTo == "left" else 1750, 1750 if rotateTo == "left" else 1230)
+            setManualMotorsSpeeds(1200 if rotateTo == "left" else 1750, 1750 if rotateTo == "left" else 1200)
             controlMotors()
         else: # Corner detected
             setMotorsSpeeds(cornerCenter.value)
@@ -1181,7 +1181,7 @@ def exitEvacZone():
         openingDetected = checkForOpening()
 
         if openingDetected == "side":
-            printDebug(f"Opening detected on {openingDetected} - {followingSide if openingDetected == 'side' else ""} - Exiting at {time.perf_counter()}", softDEBUG)
+            printDebug(f"Opening detected on {openingDetected} - {followingSide if openingDetected == 'side' else ''} - Exiting at {time.perf_counter()}", softDEBUG)
             leftSpeed, rightSpeed = 1000 if followingSide == "left" else 2000, 2000 if followingSide == "left" else 1000
             exitSequenceStatus = "turnToExit"
             timer_manager.set_timer("rotatingToExit", 0.8)

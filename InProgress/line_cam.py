@@ -989,10 +989,8 @@ def lineCamLoop():
         cv2_img = getCameraImage(camera)
         original_cv2_img = cv2_img.copy()
 
-        if silverDatasetCollectionMode:
-            savecv2_img("Silver", cv2_img)
-        else:
-            savecv2_img("Original", cv2_img)
+        savecv2_img("Silver", cv2_img)
+
         resetBallArrayVars() # Reset ball arrays if needed
         resetEvacZoneArrayVars() # Reset evacuation zone corner arrays if needed
         resetImageSimilarityArrayVars() # Reset image similarity array if needed
