@@ -1133,7 +1133,7 @@ def exitEvacZone():
     cameraPositioningAndLighting()
     foundUnexpectedExit = validateExit()
 
-    printDebug(f"{time.perf_counter()}: {tofAverage_1} {tofAverage_2} {tofAverage_3} {tofAverage_4} {tofAverage_5} {followingSide} {exitSequenceStatus} {foundUnexpectedExit} {openingAhead}", softDEBUG)
+    printDebug(f"{time.perf_counter()}: {int(tofAverage_1)} {int(tofAverage_2)} {int(tofAverage_3)} {int(tofAverage_4)} {int(tofAverage_5)} {followingSide} {exitSequenceStatus} {foundUnexpectedExit} {openingAhead}", softDEBUG)
 
     if foundUnexpectedExit == "exit" and exitSequenceStatus != "validatingExit":
         printDebug(f"Unexpected exit detected - Exiting at {time.perf_counter()}", softDEBUG)
