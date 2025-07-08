@@ -3,7 +3,8 @@
 print("Robot Configurations: \t \t OK")
 
 # Is it DEBUG?
-silverDatasetCollectionMode = True
+silverDatasetCollectionMode = False
+victimDatasetCollectionMode = False
 computerOnlyDebug = False # True for computer only, False for robot
 gamepadLoopRun = True # False for score runs
 DEBUG = False

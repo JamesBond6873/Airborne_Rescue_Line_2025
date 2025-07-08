@@ -1346,7 +1346,7 @@ def controlLoop():
                 setManualMotorsSpeeds(1200 if rotateTo == "left" else 1750, 1750 if rotateTo == "left" else 1200)
                 controlMotors()
             
-                if ballExists.value:
+                if ballExists.value and not victimDatasetCollectionMode:
                     zoneStatus.value = "goToBall"
 
             elif zoneStatusLoop == "goToBall":

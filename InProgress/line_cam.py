@@ -157,7 +157,7 @@ def savecv2_img(folder, cv2_img):
         photoCounter += 1
         printDebug(f"Saved Image {photoCounter}: {file_path}", softDEBUG)
 
-        timer_manager.set_timer("saveImageCoolDown", 0.05)
+        timer_manager.set_timer("saveImageCoolDown", 0.1)
         
         if not silverDatasetCollectionMode:
             saveFrame.value = False
