@@ -927,10 +927,10 @@ def lineCamLoop():
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.1/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect')
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.1/victim_ball_detection_full_integer_quant_with_metadata_edgetpu.tflite', task='detect')
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.1/victim_ball_detection.pt', task='detect')
-    #USEDmodelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.2/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect') # Used ultralytics 8.3.66 (nms not an argument)
+    modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.2/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect') # Used ultralytics 8.3.66 (nms not an argument)
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.3/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect') # Used format = edgetpu
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.4/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect') # Used format = edgetpu
-    modelVictim = YOLO('Ai/models/victim_ball_detection_v8/victim_ball_detection_v8_yolov8s_edgetpu.tflite', task='detect') # Used format = edgetpu
+    #modelVictim = YOLO('Ai/models/victim_ball_detection_v8/victim_ball_detection_v8_yolov8s_edgetpu.tflite', task='detect') # Used format = edgetpu
 
     #modelSilverLine = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/silver_zone_entry/silver_classify_s.onnx', task='classify')
     #modelSilverLine = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/silver_strip/SilverStripDetection.onnx', task='classify')

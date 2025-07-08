@@ -1133,6 +1133,8 @@ def exitEvacZone():
     cameraPositioningAndLighting()
     foundUnexpectedExit = validateExit()
 
+    printDebug(f"{time.perf_counter()}: {tofAverage_1} {tofAverage_2} {tofAverage_3} {tofAverage_4} {tofAverage_5} {followingSide} {exitSequenceStatus} {foundUnexpectedExit} {openingAhead}", softDEBUG)
+
     if foundUnexpectedExit == "exit" and exitSequenceStatus != "validatingExit":
         printDebug(f"Unexpected exit detected - Exiting at {time.perf_counter()}", softDEBUG)
         setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)
@@ -1171,7 +1173,7 @@ def exitEvacZone():
     elif exitSequenceStatus == "rotateToWall":
         setManualMotorsSpeeds(2000 if followingSide == "left" else 1000, 1000 if followingSide == "left" else 2000)
         controlMotors()
-        if timer_manager.is_timer_expired("do90") or (abs(tofAverage_2 - tofAverage_1) < OPENING_THRESHOLD_SIDE if followingSide == "left" else abs(tofAverage_5 - tofAverage_4) < OPENING_THRESHOLD_SIDE):
+        if timer_manager.is_timer_expired("do90") or (abs(tofAverage_2 - tofAverage_1) < PARALLEL_TOF_THRESHOLD if followingSide == "left" else abs(tofAverage_5 - tofAverage_4) < PARALLEL_TOF_THRESHOLD):
             printDebug(f"Aligned with wall - Navigating to exit at {time.perf_counter()}", softDEBUG)
             exitSequenceStatus = "navigateCloseToWall"
 
@@ -1223,7 +1225,7 @@ def exitEvacZone():
     elif exitSequenceStatus == "turnCorner":
         setManualMotorsSpeeds(1900 if followingSide == "left" else 1100, 1100 if followingSide == "left" else 1900)
         controlMotors()
-        parallelToWall = abs(tofAverage_2 - tofAverage_1) < OPENING_THRESHOLD_SIDE if followingSide == "left" else abs(tofAverage_5 - tofAverage_4) < OPENING_THRESHOLD_SIDE
+        parallelToWall = abs(tofAverage_2 - tofAverage_1) < PARALLEL_TOF_THRESHOLD if followingSide == "left" else abs(tofAverage_5 - tofAverage_4) < PARALLEL_TOF_THRESHOLD
         if parallelToWall or timer_manager.is_timer_expired("turnCornerTimeout"):
             if timer_manager.is_timer_expired("turnCornerTimeout"):
                 printDebug(f"Turn Corner Timeout - Going back to align at {time.perf_counter()}", softDEBUG)
