@@ -805,6 +805,25 @@ def getRedContours(red_image):
     return contoursRed
 
 
+def checkContourSize(contours, contour_color="red", size=15000):
+    if contour_color == "red":
+        color = (0, 255, 0)
+    elif contour_color == "green":
+        color = (0, 0, 255)
+    else:
+        color = (20, 20, 20)
+
+    for contour in contours:
+        contour_size = cv2.contourArea(contour)
+
+        if contour_size > size:
+            x, y, w, h = cv2.boundingRect(contour)
+            cv2.rectangle(cv2_img, (x, y), (x + w, y + h), color, 2)
+            return True
+
+    return False
+
+
 def obstacleController():
     pass
 
@@ -1191,6 +1210,19 @@ def lineCamLoop():
             elif zoneStatus.value == "depositRed":
                 contoursRed = getRedContours(redImage)
                 updateCornerDetection(contoursRed, (0, 255, 0))
+
+            if zoneStatus.value == "exit":
+                contoursBlack, _ = cv2.findContours(blackImage, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+                contoursGreen = getGreenContours(greenImage)
+                contoursRed = getRedContours(redImage)
+
+                zoneFoundBlack.value = checkContourSize(contoursBlack, contour_color="black", size=16500)
+                zoneFoundGreen.value = checkContourSize(contoursGreen, contour_color="green", size=9000)
+                zoneFoundRed.value = checkContourSize(contoursRed, contour_color="red", size=9000)
+
+                # -- SILVER Line --
+                silverValue.value = silverDetector(modelSilverLine, original_cv2_img)
+
 
 
         cv2.imwrite("/home/raspberrypi/Airborne_Rescue_Line_2025/Latest_Frames/latest_frame_cv2.jpg", cv2_img)

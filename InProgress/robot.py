@@ -1069,21 +1069,7 @@ def exitEvacZone():
             return False
     
     def shouldDoEvac45Turn():
-        # Tunable thresholds
-        MIN_CORNER_HEIGHT = 5    # px — ensures we're seeing a real corner
-        MAX_CORNER_CENTER_OFFSET = 50  # px — ensures we're roughly centered
-
-        # Read current line camera state
-        height = cornerHeight.value
-        center = cornerCenter.value
-
-        centered = abs(center - camera_x / 2) < MAX_CORNER_CENTER_OFFSET
-        tall_enough = height >= MIN_CORNER_HEIGHT
-
-        if centered and tall_enough:
-            return True
-        else:
-            return False
+        return zoneFoundGreen.value or zoneFoundRed.value
 
     def checkForOpening():
         # Following side
@@ -1135,7 +1121,7 @@ def exitEvacZone():
 
         silverLineDetected.value = silverValue.value > 0.6
 
-        if not silverLineDetected.value and lineDetected.value and lineWidth.value > camera_x * 0.75:
+        if not silverLineDetected.value and lineDetected.value and zoneFoundBlack.value:
             return "exit"
         elif silverLineDetected.value:
             return "entrance"
@@ -1294,6 +1280,7 @@ def exitEvacZone():
         setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)
         controlMotors()
         printDebug(f"We have finished exiting — Exiting at {time.perf_counter()}", softDEBUG)
+        timer_manager.set_timer("finishedEvacWait", 5)
         zoneStatusLoop = "finishEvacuation"
         exitSequenceStatus = "goToWall"
 
@@ -1516,6 +1503,7 @@ def controlLoop():
     timer_manager.add_timer("entranceTurn", 0.05)
     timer_manager.add_timer("validatingExit", 0.05)
     timer_manager.add_timer("forwardAfterEntranceDuration", 0.05)
+    timer_manager.set_timer("finishedEvacWait", 0.05)
     timer_manager.add_timer("redLine", 0.05)
     timer_manager.add_timer("redLineCooldown", 0.05)
     time.sleep(0.1)
@@ -1643,7 +1631,13 @@ def controlLoop():
                 exitEvacZone()
 
             elif zoneStatusLoop == "finishEvacuation":
+                setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)
+                controlMotors()
                 printDebug(f"Finishing Evacuation at {time.perf_counter()}", softDEBUG)
+                if timer_manager.is_timer_expired("finishedEvacWait"):
+                    cameraDefault("Line")
+                    setLights(on=True)
+                    objective.value = "follow_line"
                 
 
         CLIinterpretCommand(CLIcommandToExecute)

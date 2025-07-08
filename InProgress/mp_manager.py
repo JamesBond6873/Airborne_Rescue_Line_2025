@@ -95,10 +95,10 @@ dumpedAliveCount = manager.Value("i", 0)
 dumpedDeadCount = manager.Value("i", 0)
 cornerCenter = manager.Value("i", -181)
 cornerHeight = manager.Value("i", 0)
+zoneFoundBlack = manager.Value("i", False)
 zoneFoundGreen = manager.Value("i", False)
 zoneFoundRed = manager.Value("i", False)
 lastDepositTime = manager.Value("i", -1)
-
 
 imageSimilarityAverage = manager.Value("i", -1)
 stuckDetected = manager.Value("i", False)
