@@ -1378,9 +1378,16 @@ def gapController():
 def silverLineController():
     def readyToEnterZone():
         if lineDetected.value:
-            return abs( 90 - abs(silverAngle.value)) < SILVER_ANGLE_THRESHOLD and abs(camera_x / 2 - silverCenterX.value) < camera_x * 0.15
+            oriented = abs( 90 - abs(silverAngle.value)) < SILVER_ANGLE_THRESHOLD and abs(camera_x / 2 - silverCenterX.value) < camera_x * 0.15
+            close = silverCenterY.value >= camera_y * 0.6
+            if oriented and close:
+                return "ready"
+            elif not oriented and close:
+                return "not_ready_go_back"
+            elif not oriented and close:
+                return "not_ready_go_forward"
         else:
-            return True # Failsafe for line not detected
+            return "ready" # Failsafe for line not detected
 
     silverLine = silverValue.value > 0.6
     if silverLine:
@@ -1390,16 +1397,20 @@ def silverLineController():
             silverLineDetected.value = True
 
         elif silverLineDetected.value == True and not LOPstate.value:
-            if readyToEnterZone():
+            stateToEnterZone = readyToEnterZone()
+            if stateToEnterZone == "ready":
                 printDebug(f"Silver Line Ready to Enter Zone: {silverAngle.value} | {silverCenterX.value} | {silverValue.value} | {M1} | {M2}", softDEBUG)
                 if silverDatasetCollectionMode:
                     return # if we acquring silver data don't get in the Evac Zone
                 objective.value = "zone"
                 zoneStatus.value = "begin"
                 silverValue.value = -2
-            else: # not ready to enter zone -  Go back to allign
+            elif stateToEnterZone == "not_ready_go_back": # not ready to enter zone -  Go back to allign
                 setMotorSpeedsAngleYAxis(silverAngle.value, silverCenterX.value, forward=False)
-                print(f"Silver Line not Ready to Enter Zone: {silverAngle.value} | {silverCenterX.value} | {silverValue.value} | {M1} | {M2}", softDEBUG)
+                print(f"Silver Line not Ready to Enter Zone (back): {silverAngle.value} | {silverCenterX.value} | {silverValue.value} | {M1} | {M2}", softDEBUG)
+            else:
+                setMotorSpeedsAngleYAxis(silverAngle.value, silverCenterX.value, forward=True)
+                print(f"Silver Line not Ready to Enter Zone (forward): {silverAngle.value} | {silverCenterX.value} | {silverValue.value} | {M1} | {M2}", softDEBUG)
     else:
         silverLineDetected.value = False
 
