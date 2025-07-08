@@ -14,6 +14,10 @@ LOPOverride = False # If True, LOP state will be updated virtually
 LOPVirtualState = True
 MotorOverride = False # If True, the robot will not move
 
+# Camera Angle variables
+CAMERA_LINE_ANGLE = 30
+CAMERA_EVAC_ZONE_ANGLE = 70
+
 # Serial Port Vars
 SERIAL_PORT = '/dev/ttyACM0'
 BAUD_RATE = 115200
@@ -39,6 +43,10 @@ SILVER_CENTER_THRESHOLD = 0.10
 GAP_CORRECTION_TIMEOUT = 5 # s
 ANGLE_THRESHOLD = 10.0  # degrees
 SEESAW_RATE_THRESHOLD = 85 # degrees per second - Requires calibration
+ROBOT_CLOSE_TO_WALL_DISTANCE = 100 # mm
+PARALLEL_TOF_THRESHOLD = 30 # mm
+OPENING_THRESHOLD_SIDE = 300  # mm
+OPENING_THRESHOLD_FRONT = 1000  # mm
 # Constants for gap correction state
 GAP_IDLE = 0
 GAP_CORRECTING = 1
@@ -92,3 +100,5 @@ KP = 1.5 #1.50
 KD = 2.0 #2.05
 KI = 0.0
 KP_THETA = 140 # 407 = 1280/3.1415
+Kp_distance = 2.5 # Kp for exiting the evac zone
+Kp_angle = 1 # Kp for exiting the evac zone angle to the wall

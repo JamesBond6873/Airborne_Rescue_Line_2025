@@ -57,6 +57,7 @@ lineCenterX = manager.Value("i", 224)
 lineAngle = manager.Value("i", 0.)
 line_angle_y = manager.Value("i", -1)
 lineDetected = manager.Value("i", False)
+lineWidth = manager.Value("i", -1)
 turnReason = manager.Value("i", 0)
 redValue = manager.Value("i", 0) # 0 = Line, 1 = Red
 redDetected = manager.Value("i", False)
