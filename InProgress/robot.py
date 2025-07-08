@@ -1073,9 +1073,9 @@ def exitEvacZone():
 
     def checkForOpening():
         # Following side
-        if followingSide == "left":
+        if followingSide == "right":
             sideOpen = tofAverage_2 > OPENING_THRESHOLD_SIDE and tofAverage_1 > OPENING_THRESHOLD_SIDE
-        else:  # "right"
+        else:  # "left"
             sideOpen = tofAverage_4 > OPENING_THRESHOLD_SIDE and tofAverage_5 > OPENING_THRESHOLD_SIDE
 
         # Front
@@ -1139,7 +1139,7 @@ def exitEvacZone():
         printDebug(f"Unexpected exit detected - Exiting at {time.perf_counter()}", softDEBUG)
         setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)
         controlMotors()
-        timer_manager.set_timer("validatingExit", 5)
+        timer_manager.set_timer("validatingExit", 1.5)
         exitSequenceStatus = "validatingExit"
     elif foundUnexpectedExit == "entrance" and exitSequenceStatus != "validatingExit":
         printDebug(f"Unexpected entrance detected - Turning 90 Degrees {time.perf_counter()}", softDEBUG)
@@ -1174,9 +1174,9 @@ def exitEvacZone():
         setManualMotorsSpeeds(2000 if followingSide == "left" else 1000, 1000 if followingSide == "left" else 2000)
         controlMotors()
         allignedToWall = (abs(tofAverage_2 - tofAverage_1) < PARALLEL_TOF_THRESHOLD if followingSide == "left" else abs(tofAverage_5 - tofAverage_4) < PARALLEL_TOF_THRESHOLD)
-        closeToWall = (tofAverage_2 + tofAverage_3) / 2 < 150 if followingSide == "left" else (tofAverage_5 + tofAverage_4) / 2 < 150
+        closeToWall = (tofAverage_2 + tofAverage_1) / 2 < 150 if followingSide == "left" else (tofAverage_5 + tofAverage_4) / 2 < 150
         if timer_manager.is_timer_expired("do90") or (allignedToWall and closeToWall):
-            printDebug(f"Aligned with wall - Navigating to exit at {time.perf_counter()}", softDEBUG)
+            printDebug(f"Aligned with wall - Navigating to exit at {time.perf_counter()} | conditons: {timer_manager.is_timer_expired('do90')} | {allignedToWall} | {closeToWall}", softDEBUG)
             exitSequenceStatus = "navigateCloseToWall"
 
     elif exitSequenceStatus == "navigateCloseToWall":
@@ -1228,7 +1228,7 @@ def exitEvacZone():
         setManualMotorsSpeeds(1900 if followingSide == "left" else 1100, 1100 if followingSide == "left" else 1900)
         controlMotors()
         parallelToWall = abs(tofAverage_2 - tofAverage_1) < PARALLEL_TOF_THRESHOLD if followingSide == "left" else abs(tofAverage_5 - tofAverage_4) < PARALLEL_TOF_THRESHOLD
-        closeToWall = (tofAverage_2 + tofAverage_3) / 2 < 150 if followingSide == "left" else (tofAverage_5 + tofAverage_4) / 2 < 150
+        closeToWall = (tofAverage_2 + tofAverage_1) / 2 < 150 if followingSide == "left" else (tofAverage_5 + tofAverage_4) / 2 < 150
         if (parallelToWall and closeToWall) or timer_manager.is_timer_expired("turnCornerTimeout"):
             if timer_manager.is_timer_expired("turnCornerTimeout"):
                 printDebug(f"Turn Corner Timeout - Going back to align at {time.perf_counter()}", softDEBUG)
@@ -1276,6 +1276,8 @@ def exitEvacZone():
             else: 
                 printDebug(f"Entrance detected (exit not validated) — Rotating Back to orientation {time.perf_counter()}", softDEBUG)
                 foundUnexpectedExit = False
+                setManualMotorsSpeeds(2000 if followingSide == "left" else 1000, 1000 if followingSide == "left" else 2000)
+                controlMotors()
                 cameraDefault("Evacuation")
                 setLights(on=False)
                 timer_manager.set_timer("entranceTurn", 0.4)
@@ -1399,7 +1401,7 @@ def silverLineController():
         elif silverLineDetected.value == True and not LOPstate.value:
             stateToEnterZone = readyToEnterZone()
             if stateToEnterZone == "ready":
-                printDebug(f"Silver Line Ready to Enter Zone: {silverAngle.value} | {silverCenterX.value} | {silverValue.value} | {M1} | {M2}", softDEBUG)
+                printDebug(f"Silver Line Ready to Enter Zone: {silverAngle.value} | {silverCenterX.value} | {silverCenterY.value} | {silverValue.value} | Line Detected: {lineDetected.value} | {M1} | {M2}", softDEBUG)
                 if silverDatasetCollectionMode:
                     return # if we acquring silver data don't get in the Evac Zone
                 objective.value = "zone"
@@ -1407,10 +1409,10 @@ def silverLineController():
                 silverValue.value = -2
             elif stateToEnterZone == "not_ready_go_back": # not ready to enter zone -  Go back to allign
                 setMotorSpeedsAngleYAxis(silverAngle.value, silverCenterX.value, forward=False)
-                print(f"Silver Line not Ready to Enter Zone (back): {silverAngle.value} | {silverCenterX.value} | {silverValue.value} | {M1} | {M2}", softDEBUG)
+                printDebug(f"Silver Line not Ready to Enter Zone (back): {silverAngle.value} | {silverCenterX.value} | {silverCenterY.value} | {silverValue.value} | Line Detected: {lineDetected.value} | {M1} | {M2}", softDEBUG)
             else:
-                setMotorSpeedsAngleYAxis(silverAngle.value, silverCenterX.value, forward=True)
-                print(f"Silver Line not Ready to Enter Zone (forward): {silverAngle.value} | {silverCenterX.value} | {silverValue.value} | {M1} | {M2}", softDEBUG)
+                #setMotorSpeedsAngleYAxis(silverAngle.value, silverCenterX.value, forward=True) Just follow line - don't overwrite motor data
+                printDebug(f"Silver Line not Ready to Enter Zone (forward): {silverAngle.value} | {silverCenterX.value} | {silverCenterY.value} | {silverValue.value} | Line Detected: {lineDetected.value} | {M1} | {M2}", softDEBUG)
     else:
         silverLineDetected.value = False
 

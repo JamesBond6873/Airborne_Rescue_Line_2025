@@ -854,7 +854,7 @@ def silverDetector(modelSilverLine, original_cv2_img):
         if rawSilverValue > 0.5 and not silverDatasetCollectionMode:
             saveFrame.value = True
             savecv2_img("Silver", original_cv2_img)
-            printDebug(f"Simple Silver Line Detected at {time.perf_counter()}: {rawSilverValue}, AVG: {silverValueAverage}", True)
+            printDebug(f"Simple Silver Line Detected at {time.perf_counter()}: {rawSilverValue}, AVG: {silverValueAverage}", False)
 
         return silverValueAverage
 
