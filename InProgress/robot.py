@@ -1092,26 +1092,31 @@ def exitEvacZone():
         TARGET_DISTANCE = 150  # mm
 
         if followingSide == "left":
-            d_front = tofAverage_2
-            d_back = tofAverage_1
-        elif followingSide == "right":
             d_front = tofAverage_4
             d_back = tofAverage_5
+        elif followingSide == "right":
+            d_front = tofAverage_2
+            d_back = tofAverage_1
 
         # Failsafe: if front sees very far (exit) but back still sees wall, follow back
         if d_front > OPENING_THRESHOLD_SIDE and d_back < OPENING_THRESHOLD_SIDE:
             d_front = d_back
 
+        # Referential -> negative correction is away from the wall and positive correction is towards the wall 
+
         averageDistance = (d_front + d_back) / 2
         errorDistance = TARGET_DISTANCE - averageDistance
 
-        # Positive if front is further than back => robot angled away from wall
-        errorAngle = d_front - d_back
+        # Negative if front is further than back => robot angled away from wall - Means faster on left because forward -- correction = bigger value
+        errorAngle = -( d_front - d_back)
 
         correction = Kp_distance * errorDistance + Kp_angle * errorAngle
 
-        left_speed = DEFAULT_FORWARD_SPEED - correction if followingSide == "left" else DEFAULT_FORWARD_SPEED + correction
-        right_speed = DEFAULT_FORWARD_SPEED + correction if followingSide == "left" else DEFAULT_FORWARD_SPEED - correction
+        left_speed = DEFAULT_FORWARD_SPEED - correction if followingSide == "right" else DEFAULT_FORWARD_SPEED + correction
+        right_speed = DEFAULT_FORWARD_SPEED + correction if followingSide == "right" else DEFAULT_FORWARD_SPEED - correction
+
+        left_speed = max(MIN_GENERAL_SPEED, min(MAX_DEFAULT_SPEED, left_speed))
+        right_speed = max(MIN_GENERAL_SPEED, min(MAX_DEFAULT_SPEED, right_speed))
 
         return left_speed, right_speed
        
@@ -1180,9 +1185,9 @@ def exitEvacZone():
             exitSequenceStatus = "navigateCloseToWall"
 
     elif exitSequenceStatus == "navigateCloseToWall":
-        neededRotation = rotationNeeded()
-        needed45DegreeRotation = shouldDoEvac45Turn()
-        openingDetected = checkForOpening()
+        neededRotation = rotationNeeded() # True/False -> turn corner (wall ahead)
+        needed45DegreeRotation = shouldDoEvac45Turn() # True/False -> turn 45
+        openingDetected = checkForOpening() # "side" or "front" or "none"
 
         if openingDetected == "side":
             printDebug(f"Opening detected on {openingDetected} - {followingSide if openingDetected == 'side' else ''} - Exiting at {time.perf_counter()}", softDEBUG)

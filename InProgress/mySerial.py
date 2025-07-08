@@ -142,7 +142,7 @@ def updateCommandWithoutConfirmation():
             sendSerial(commandWithoutConfirmation.value)
             lastUnsentCommandWithoutConfirmation = None  # Clear, it was sent
         else:
-            printDebug(f"Check Error Why the heck are we sending this command when waiting response? {commandWithoutConfirmation.value}", serialSoftDEBUG)
+            printDebug(f"Check Error Why the heck are we sending this command when waiting response? {commandWithoutConfirmation.value}. Confirmation: {waitingResponse} Sensor Data: {waitingSensorData}", serialSoftDEBUG)
             lastUnsentCommandWithoutConfirmation = commandWithoutConfirmation.value
         commandWithoutConfirmation.value = "none"
 

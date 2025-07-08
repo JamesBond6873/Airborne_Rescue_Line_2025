@@ -101,5 +101,5 @@ KP = 1.5 #1.50
 KD = 2.0 #2.05
 KI = 0.0
 KP_THETA = 140 # 407 = 1280/3.1415
-Kp_distance = 2.5 # Kp for exiting the evac zone
-Kp_angle = 1 # Kp for exiting the evac zone angle to the wall
+Kp_distance = 1 # Kp for exiting the evac zone
+Kp_angle = 1.2 # Kp for exiting the evac zone angle to the wall
