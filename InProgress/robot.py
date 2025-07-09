@@ -1216,7 +1216,7 @@ def exitEvacZone():
 
         neededRotation = rotationNeeded()
 
-        if neededRotation:
+        if neededRotation or timer_manager.is_timer_expired("evacForwardTimeout"):
             printDebug(f"Corner detected in evacForward - transitioning to turnCorner at {time.perf_counter()}", softDEBUG)
             exitSequenceStatus = "turnCorner"
             timer_manager.set_timer("turnCornerTimeout", 0.6)
@@ -1247,6 +1247,7 @@ def exitEvacZone():
         if timer_manager.is_timer_expired("turnEvac45Timeout"):
             printDebug(f"Finished 45° evac turn - Going forward at {time.perf_counter()}", softDEBUG)
             exitSequenceStatus = "evacForward"
+            timer_manager.set_timer("evacForwardTimeout", 0.6)
 
     elif exitSequenceStatus == "turnEntrance":
         setManualMotorsSpeeds(2000 if followingSide == "left" else 1000, 1000 if followingSide == "left" else 2000)
@@ -1520,6 +1521,7 @@ def controlLoop():
     timer_manager.add_timer("waitingForSuccessfulPick", 0.05)
     timer_manager.add_timer("pickVictimCooldown", 0.05)
     timer_manager.add_timer("do90", 0.05)
+    timer_manager.add_timer("evacForwardTimeout", 0.05)
     timer_manager.add_timer("turnCornerTimeout", 0.05)
     timer_manager.add_timer("turnEvac45Timeout", 0.05)
     timer_manager.add_timer("rotatingToExit", 0.05)
