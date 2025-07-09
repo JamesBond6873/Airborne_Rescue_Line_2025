@@ -168,44 +168,52 @@ void ArmGrip::moveUp() {
   _LeftArmServo.setAngle(_upPosLA);
 }
 
-void ArmGrip::pickAlive() {
+void ArmGrip::pickAlive(int step) {
   //Serial.println("");
   //Serial.println("Picking Up Alive Victim \t");
 
-  // Pick Ball in the Middle
-  closeHand();
-  delay(200);
+  if (step == 1) {
+    // Pick Ball in the Middle
+    closeHand();
+    delay(200);
 
-  // Take Ball to the dead Side
-  moveAlive();
-  delay(200);
+    // Take Ball to the dead Side
+    moveAlive();
+    delay(200);
+  }
 
-  // Go Up to the Drop Zone
-  moveUp();
-  delay(200);
+  else if (step == 2) {
+    // Go Up to the Drop Zone
+    moveUp();
+    delay(200);
 
-  // Release the Ball
-  openHand();
+    // Release the Ball
+    openHand();
+  }
 }
 
-void ArmGrip::pickDead() {
+void ArmGrip::pickDead(int step) {
   //Serial.println("");
   //Serial.println("Picking Up Dead Victim \t");
 
-  // Pick Ball in the Middle
-  closeHand();
-  delay(200);
+  if (step == 1) {
+    // Pick Ball in the Middle
+    closeHand();
+    delay(200);
 
-  // Take Ball to the dead Side
-  moveDead();
-  delay(200);
+    // Take Ball to the dead Side
+    moveDead();
+    delay(200);
+  }
 
-  // Go Up to the Drop Zone
-  moveUp();
-  delay(200);
+  else if (step == 2) {
+    // Go Up to the Drop Zone
+    moveUp();
+    delay(200);
 
-  // Release the Ball
-  openHand();
+    // Release the Ball
+    openHand();
+  }
 }
 
 void ArmGrip::defaultPosition() {

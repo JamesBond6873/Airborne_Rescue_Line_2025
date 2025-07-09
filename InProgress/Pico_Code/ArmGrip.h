@@ -19,8 +19,8 @@ public:
   void moveDead();
   void moveDown();
   void moveUp();
-  void pickAlive();
-  void pickDead();
+  void pickAlive(int step);
+  void pickDead(int step);
   void defaultPosition();
   void freeAllServos();
   void freeXServo(int servoChannel);

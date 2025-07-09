@@ -191,8 +191,8 @@ void loop() {
     Serial.print("Ok\n");
   }
 
-  else if (message == "PA") { Grip.pickAlive(); Serial.print("Ok\n"); }  // Pick Alive Victim Sequence Command | Pick Alive
-  else if (message == "PD") { Grip.pickDead(); Serial.print("Ok\n"); }  // Pick Dead Victim Sequence Command | Pick Dead
+  else if (message == "PA") { Grip.pickAlive(1); ControlMotor("M(1520, 1520)"); Grip.pickAlive(2); Serial.print("Ok\n"); }  // Pick Alive Victim Sequence Command | Pick Alive
+  else if (message == "PD") { Grip.pickDead(1); ControlMotor("M(1520, 1520)"); Grip.pickDead(2); Serial.print("Ok\n"); }  // Pick Dead Victim Sequence Command | Pick Dead
 
   else if (message == "CL") { camServo.lineFollowing(); Serial.print("Ok\n"); }  // Point Camera Down for Line Following Command | Camera Line
   else if (message == "CE") { camServo.EvacuationZone(); Serial.print("Ok\n"); }  // Point Camera Forward for Evactuation Zone Victim Rescue Command | Camera Evacuation
