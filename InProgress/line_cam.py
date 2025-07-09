@@ -253,12 +253,13 @@ def checkContourSize(contours, contour_color="red", size=20000):
     elif contour_color == "green":
         color = (0, 0, 255) # Red
     else:
-        color = (255, 0, 0)
+        color = (20, 20, 20)
 
     for contour in contours:
         contour_size = cv2.contourArea(contour)
 
         if contour_size > size:
+            printDebug(f"Found Big Contour Size {contour_color}; {contour_size}", False)
             x, y, w, h = cv2.boundingRect(contour)
             cv2.rectangle(cv2_img, (x, y), (x + w, y + h), color, 2)
             return True
@@ -805,25 +806,6 @@ def getRedContours(red_image):
     return contoursRed
 
 
-def checkContourSize(contours, contour_color="red", size=15000):
-    if contour_color == "red":
-        color = (0, 255, 0)
-    elif contour_color == "green":
-        color = (0, 0, 255)
-    else:
-        color = (20, 20, 20)
-
-    for contour in contours:
-        contour_size = cv2.contourArea(contour)
-
-        if contour_size > size:
-            x, y, w, h = cv2.boundingRect(contour)
-            cv2.rectangle(cv2_img, (x, y), (x + w, y + h), color, 2)
-            return True
-
-    return False
-
-
 def obstacleController():
     pass
 
@@ -1216,8 +1198,8 @@ def lineCamLoop():
                 contoursRed = getRedContours(redImage)
 
                 zoneFoundBlack.value = checkContourSize(contoursBlack, contour_color="black", size=16500)
-                zoneFoundGreen.value = checkContourSize(contoursGreen, contour_color="green", size=9000)
-                zoneFoundRed.value = checkContourSize(contoursRed, contour_color="red", size=9000)
+                zoneFoundGreen.value = checkContourSize(contoursGreen, contour_color="green", size=12000)
+                zoneFoundRed.value = checkContourSize(contoursRed, contour_color="red", size=12000)
 
                 # -- SILVER Line --
                 silverValue.value = silverDetector(modelSilverLine, original_cv2_img)
