@@ -137,6 +137,8 @@ void setup() {
 
   pinMode(robotLight, OUTPUT);
   digitalWrite(robotLight, HIGH);
+  delay(1000);
+  digitalWrite(robotLight, LOW);
 
   tofT0 = millis();
   ledT0 = millis();
