@@ -253,12 +253,13 @@ def checkContourSize(contours, contour_color="red", size=20000):
     elif contour_color == "green":
         color = (0, 0, 255) # Red
     else:
-        color = (255, 0, 0)
+        color = (20, 20, 20)
 
     for contour in contours:
         contour_size = cv2.contourArea(contour)
 
         if contour_size > size:
+            printDebug(f"Found Big Contour Size {contour_color}; {contour_size}", False)
             x, y, w, h = cv2.boundingRect(contour)
             cv2.rectangle(cv2_img, (x, y), (x + w, y + h), color, 2)
             return True
@@ -805,25 +806,6 @@ def getRedContours(red_image):
     return contoursRed
 
 
-def checkContourSize(contours, contour_color="red", size=15000):
-    if contour_color == "red":
-        color = (0, 255, 0)
-    elif contour_color == "green":
-        color = (0, 0, 255)
-    else:
-        color = (20, 20, 20)
-
-    for contour in contours:
-        contour_size = cv2.contourArea(contour)
-
-        if contour_size > size:
-            x, y, w, h = cv2.boundingRect(contour)
-            cv2.rectangle(cv2_img, (x, y), (x + w, y + h), color, 2)
-            return True
-
-    return False
-
-
 def obstacleController():
     pass
 
@@ -927,10 +909,11 @@ def lineCamLoop():
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.1/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect')
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.1/victim_ball_detection_full_integer_quant_with_metadata_edgetpu.tflite', task='detect')
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.1/victim_ball_detection.pt', task='detect')
-    modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.2/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect') # Used ultralytics 8.3.66 (nms not an argument)
+    #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.2/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect') # Used ultralytics 8.3.66 (nms not an argument)
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.3/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect') # Used format = edgetpu
     #modelVictim = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/victim_ball_detection_v7.4/victim_ball_detection_full_integer_quant_edgetpu.tflite', task='detect') # Used format = edgetpu
     #modelVictim = YOLO('Ai/models/victim_ball_detection_v8/victim_ball_detection_v8_yolov8s_edgetpu.tflite', task='detect') # Used format = edgetpu
+    modelVictim = YOLO('Ai/models/victim_ball_detection_v9/victim_ball_detection_v9_edgetpu.tflite', task='detect') # Used format = edgetpu
 
     #modelSilverLine = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/silver_zone_entry/silver_classify_s.onnx', task='classify')
     #modelSilverLine = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/silver_strip/SilverStripDetection.onnx', task='classify')
@@ -1215,8 +1198,8 @@ def lineCamLoop():
                 contoursRed = getRedContours(redImage)
 
                 zoneFoundBlack.value = checkContourSize(contoursBlack, contour_color="black", size=16500)
-                zoneFoundGreen.value = checkContourSize(contoursGreen, contour_color="green", size=9000)
-                zoneFoundRed.value = checkContourSize(contoursRed, contour_color="red", size=9000)
+                zoneFoundGreen.value = checkContourSize(contoursGreen, contour_color="green", size=12000)
+                zoneFoundRed.value = checkContourSize(contoursRed, contour_color="red", size=12000)
 
                 # -- SILVER Line --
                 silverValue.value = silverDetector(modelSilverLine, original_cv2_img)
