@@ -917,7 +917,8 @@ def lineCamLoop():
 
     #modelSilverLine = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/silver_zone_entry/silver_classify_s.onnx', task='classify')
     #modelSilverLine = YOLO('/home/raspberrypi/Airborne_Rescue_Line_2025/Ai/models/silver_strip/SilverStripDetection.onnx', task='classify')
-    modelSilverLine = YOLO('Ai/models/silver_zone_entry_v2/silver_classify_s.onnx', task='classify')
+    #modelSilverLine = YOLO('Ai/models/silver_zone_entry_v2/silver_classify_s.onnx', task='classify')
+    modelSilverLine = YOLO('Ai/models/silver_strip_v4/SilverStripDetection.onnx', task='classify')
     
     camera = None # PlaceHolder for Debugging
     if not cameraDebugMode:
