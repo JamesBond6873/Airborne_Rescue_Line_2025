@@ -5,11 +5,11 @@ print("Robot Configurations: \t \t OK")
 # Is it DEBUG?
 silverDatasetCollectionMode = False
 victimDatasetCollectionMode = False
-computerOnlyDebug = True # True for computer only, False for robot
+computerOnlyDebug = False # True for computer only, False for robot
 gamepadLoopRun = True # False for score runs
 DEBUG = False
 softDEBUG = True
-serialSoftDEBUG = False #True
+serialSoftDEBUG = True #True
 pickVictimSoftDEBUG = True
 LOPOverride = False # If True, LOP state will be updated virtually
 LOPVirtualState = True
@@ -39,7 +39,7 @@ intersectionMaxTime = 1.000 #s
 redLineStopTime = 9.0 # s
 default_crop=0.45
 turn_crop=0.75
-SILVER_ANGLE_THRESHOLD = 20
+SILVER_ANGLE_THRESHOLD = 90
 SILVER_CENTER_THRESHOLD = 0.20
 SILVER_CLOSE_THRESHOLD = 0.40
 GAP_CORRECTION_TIMEOUT = 5 # s

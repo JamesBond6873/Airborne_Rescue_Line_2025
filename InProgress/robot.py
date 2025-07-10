@@ -838,9 +838,9 @@ def entryZone():
         wallCloserLeft = wallCloserLeftFunc()
         wallCloserRight = wallCloserRightFunc()
         if wallCloserLeft and not wallCloserRight:
-            setManualMotorsSpeeds(1950, 1700)
+            setManualMotorsSpeeds(2000, 1650)
         elif wallCloserRight and not wallCloserLeft:
-            setManualMotorsSpeeds(1700, 1950)
+            setManualMotorsSpeeds(1650, 2000)
         else:
             setManualMotorsSpeeds(1800, 1800)
         controlMotors()
@@ -855,7 +855,9 @@ def goToBall():
 
     if not ballExists.value or not timer_manager.is_timer_expired("pickVictimCooldown"): # No ball or in cooldown
         zoneStatus.value = "findVictims"
-
+        printDebug(f"Check why: Ball not found or in cooldown at {time.perf_counter()}: {ballExists.value} {timer_manager.is_timer_expired('pickVictimCooldown')}", False)
+        return
+        
     if pickSequenceStatus == "goingToBall":
         setMotorsSpeeds(ballCenterX.value)
         controlMotors()
@@ -916,7 +918,7 @@ def goToBall():
         resetBallArrays.value = True
         zoneStatus.value = "findVictims"
         pickSequenceStatus = "goingToBall"
-        timer_manager.set_timer("pickVictimCooldown", 5)
+        timer_manager.set_timer("pickVictimCooldown", 1.0)
 
         if pickVictimType == "A" and pickedUpAliveCount.value < 2:
             pickedUpAliveCount.value += 1
@@ -1444,7 +1446,7 @@ def silverLineController():
 
             if stateToEnterZone == "ready":
                 printDebug(f"Silver Line Ready to Enter Zone: {silverAngle.value} | {silverCenterX.value} | {silverCenterY.value} | {silverValue.value} | Line Detected: {lineDetected.value} | {M1} | {M2}", softDEBUG)
-                if silverDatasetCollectionMode or True:
+                if silverDatasetCollectionMode:
                     return # if we acquring silver data don't get in the Evac Zone
                 objective.value = "zone"
                 zoneStatus.value = "begin"
