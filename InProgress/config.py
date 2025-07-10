@@ -46,7 +46,7 @@ GAP_CORRECTION_TIMEOUT = 5 # s
 ANGLE_THRESHOLD = 10.0  # degrees
 SEESAW_RATE_THRESHOLD = 85 # degrees per second - Requires calibration
 ROBOT_CLOSE_TO_WALL_DISTANCE = 100 # mm
-PARALLEL_TOF_THRESHOLD = 30 # mm
+PARALLEL_TOF_THRESHOLD = 65 # mm
 OPENING_THRESHOLD_SIDE = 300  # mm
 OPENING_THRESHOLD_FRONT = 1000  # mm
 # Constants for gap correction state

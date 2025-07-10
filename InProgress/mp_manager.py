@@ -19,6 +19,8 @@ commandWithConfirmation = manager.Value("i", "none")
 commandWithoutConfirmation = manager.Value("i", "none")
 commandWaitingListLength = manager.Value("i", -1)
 
+cameraServoAngle = manager.value("i", -1)
+
 gamepadM1 = manager.Value("i", 1520)
 gamepadM2 = manager.Value("i", 1520)
 commandToExecute = manager.Value("i", "none") #"none",""

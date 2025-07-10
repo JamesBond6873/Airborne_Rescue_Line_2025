@@ -462,11 +462,13 @@ def cameraDefault(position):
         printDebug(f"Set Camera to Line Following Mode", softDEBUG)
         sendCommandListWithConfirmation(["CL", "SF,4,F"])
         camServoAngle = CAMERA_LINE_ANGLE
+        cameraServoAngle.value = CAMERA_LINE_ANGLE
 
     elif position == "Evacuation":
         printDebug(f"Set Camera to Evacaution Zone Mode", softDEBUG)
         sendCommandListWithConfirmation(["CE", "SF,4,F"])
-        camServoAngle = CAM_EVAC_ZONE_ANGLE = 70
+        camServoAngle = CAMERA_EVAC_ZONE_ANGLE
+        cameraServoAngle.value = CAMERA_EVAC_ZONE_ANGLE
 
 
 def cameraFree(position):
@@ -477,6 +479,7 @@ def cameraFree(position):
     command = "SC,4," + str(position)
     sendCommandListWithConfirmation([str(command), "SF,4,F"])
     camServoAngle = position
+    cameraServoAngle.value = position
 
 
 def setLights(on = True):
@@ -1192,7 +1195,7 @@ def exitEvacZone():
 
         if tofAverage_3 < 150: # close to front wall
             exitSequenceStatus = "rotateToWall"
-            timer_manager.set_timer("do90", 1.2)
+            timer_manager.set_timer("do90", 1.1)
             printDebug(f"Close to front wall - Rotating so wall is close to {followingSide} at {time.perf_counter()}", softDEBUG)
 
     elif exitSequenceStatus == "rotateToWall":
@@ -1266,6 +1269,8 @@ def exitEvacZone():
         controlMotors()
         if timer_manager.is_timer_expired("turnEvac45Timeout"):
             printDebug(f"Finished 45° evac turn - Going forward at {time.perf_counter()}", softDEBUG)
+            setManualMotorsSpeeds(1700, 1700)
+            controlMotors()
             exitSequenceStatus = "evacForward"
             timer_manager.set_timer("evacForwardTimeout", 0.6)
 

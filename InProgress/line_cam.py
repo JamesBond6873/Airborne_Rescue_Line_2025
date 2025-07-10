@@ -1130,7 +1130,7 @@ def lineCamLoop():
             
             blackImage = ignoreHighFOVCorners(blackImage)
 
-            if zoneStatus.value in ["begin", "entry", "findVictims", "goToBall", "exit"] and not pickingVictim.value:
+            if zoneStatus.value in ["begin", "entry", "findVictims", "goToBall", "exit"] and not pickingVictim.value and not cameraServoAngle.value == CAMERA_LINE_ANGLE:
                 img_rgb = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
                 try:
                     results = modelVictim.predict(img_rgb, imgsz=448, conf=0.3, iou=0.2, agnostic_nms=True, workers=4, verbose=False)
