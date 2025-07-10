@@ -22,7 +22,7 @@ print("Line Camera: \t \t \t OK")
 # Debug Features
 cameraDebugMode = computerOnlyDebug
 #debugImageFolder = "DataSet/FullRunTest"
-debugImageFolder = "DataSet/SilverLineTest"
+debugImageFolder = "DataSet/SilverLineTest2"
 debugImagePaths = sorted(glob(os.path.join(debugImageFolder, "*.jpg")))
 currentFakeImageIndex = 0
 raw_capture = None
@@ -874,7 +874,39 @@ def getGapAngle(box):
     return box[0], box[1], angle
 
 
-def getSilverAngle(box):
+def getSilverAngleAndContact(contourBlack):
+    rect = cv2.minAreaRect(contourBlack)
+    box = cv2.boxPoints(rect)
+    box = np.int0(box)
+
+    # Sort box to identify left/right top points
+    box = box[box[:, 0].argsort()]  # Sort by x
+    left_points = box[:2]
+    right_points = box[2:]
+
+    left_points = left_points[left_points[:, 1].argsort()]    # Sort left by y
+    right_points = right_points[right_points[:, 1].argsort()]  # Sort right by y
+
+    # Vector from right-top to left-top
+    vector = left_points[0] - right_points[0]
+    norm = np.linalg.norm(vector)
+    if norm == 0:
+        return 0  # Avoid divide-by-zero crash
+
+    angle = np.arccos(np.dot(vector, [1, 0]) / norm) * 180 / np.pi
+    angle = -angle if left_points[0][1] < right_points[0][1] else angle
+
+    # Rotate to make 0º = vertical
+    angle = 90 - angle
+
+    contactPoint = tuple(left_points[0])  # top-left as contact point
+    return angle
+
+
+
+def getSilverAngle(contourBlack):
+    box = cv2.boxPoints(cv2.minAreaRect(contourBlack))
+
     box = box[box[:, 0].argsort()]  # Sort by X (left-right)
 
     left_points = box[:2]
@@ -890,9 +922,145 @@ def getSilverAngle(box):
     if angle == 180:
         angle = 0
 
-    angle = 90 - angle  # Rotate to make 0º = vertical
+    angle = angle - 90  # Rotate to make 0º = vertical
 
     return left_points[0], right_points[0], angle
+
+
+def getSilverAngleOG(box):
+    box = box[box[:, 0].argsort()]  # Sort by X (left-right)
+
+    left_points = box[:2]
+    right_points = box[2:]
+
+    left_points = left_points[left_points[:, 1].argsort()]
+    right_points = right_points[right_points[:, 1].argsort()]
+
+    vector = left_points[0] - right_points[0]
+    angle = np.arccos(np.dot(vector, [1, 0]) / (np.linalg.norm(vector))) * 180 / np.pi
+
+    angle = -angle if left_points[0][1] < right_points[0][1] else angle
+    if angle == 180:
+        angle = 0
+
+    # Normalize angle to [-90, 90]
+    if angle > 90:
+        angle -= 180
+    elif angle < -90:
+        angle += 180
+
+    return left_points[0], right_points[0], angle
+
+
+def computeMoments(contour):
+    # Compute cv2_img moments for the largest contour
+
+    theta = np.pi / 2
+
+    try:
+        finalContour = cv2.cvtColor(contour, cv2.COLOR_BGR2GRAY)
+    except:
+        finalContour = contour
+
+    M = cv2.moments(finalContour)
+    if M["m00"] != 0:
+        # Centroid (First Moment)
+        cx = int(M["m10"] / M["m00"])
+        cy = int(M["m01"] / M["m00"])
+
+        # Calculate orientation using central moments
+        mu20 = M["mu20"] / M["m00"]
+        mu02 = M["mu02"] / M["m00"]
+        mu11 = M["mu11"] / M["m00"]
+
+        theta = 0.5 * np.arctan2(2 * mu11, mu20 - mu02)  # Principal axis angle
+
+        if theta < 0:
+            printDebug(f"theta og: {round(theta,2)} {round(np.rad2deg(theta),2)}, new {round(np.pi + theta,2)} {round(np.rad2deg(np.pi + theta),2)}", DEBUG)
+            theta = np.pi + theta
+
+        # Define line endpoints along the principal axis
+        length = 100  # Adjust for visualization
+        x1 = int(cx + length * np.cos(theta))
+        y1 = int(cy + length * np.sin(theta))
+        x2 = int(cx - length * np.cos(theta))
+        y2 = int(cy - length * np.sin(theta))
+
+        cv2.circle(cv2_img, (cx, cy), 5, (0, 255, 255), -1)
+        cv2.line(cv2_img, (x1, y1), (x2, y2), (255, 0, 0), 2)
+
+    return theta
+
+
+def getSilverAngleAndContact2(contour):
+    theta = computeMoments(contour)  # In radians
+    theta = theta - np.pi / 2  # Rotate to make 0º = vertical
+    angle_deg = np.degrees(theta)
+
+    return angle_deg
+
+
+def getSilverAngle2(contourBlack):
+    rect = cv2.minAreaRect(contourBlack)
+    (center_x, center_y), (w, h), angle = rect
+
+    if w > h:
+        w, h = h, w
+        angle += 90
+
+
+    # Normalize angle to [-90, 90]
+    if angle > 90:
+        angle -= 180
+    elif angle < -90:
+        angle += 180
+
+
+    return angle, (center_x, center_y)
+
+
+def getSilverAngle3(box):
+    # box: output of cv2.boxPoints(cv2.minAreaRect(contour))
+
+    # Sort the points in consistent order
+    box = box[np.argsort(box[:, 0])]  # sort by X
+
+    # After sorting by X, the first two are left, last two are right
+    left_points = box[:2]
+    right_points = box[2:]
+
+    # Sort left and right points by Y
+    left_points = left_points[np.argsort(left_points[:, 1])]
+    right_points = right_points[np.argsort(right_points[:, 1])]
+
+    # Create a list of the 4 points in top-left, bottom-left, bottom-right, top-right order
+    ordered = np.array([left_points[0], left_points[1], right_points[1], right_points[0]])
+
+    # Compute lengths of sides
+    side_vectors = [
+        ordered[1] - ordered[0],  # left vertical side
+        ordered[2] - ordered[1],  # bottom horizontal side
+        ordered[3] - ordered[2],  # right vertical side
+        ordered[0] - ordered[3],  # top horizontal side
+    ]
+    side_lengths = [np.linalg.norm(v) for v in side_vectors]
+
+    # Find the smallest side
+    min_index = np.argmin(side_lengths)
+    min_vector = side_vectors[min_index]
+    p1 = ordered[min_index]
+    p2 = ordered[(min_index + 1) % 4]
+
+    # Compute angle of this smallest side w.r.t. horizontal axis
+    angle = np.degrees(np.arctan2(min_vector[1], min_vector[0]))
+
+    # Normalize angle to [-90, 90]
+    if angle > 90:
+        angle -= 180
+    elif angle < -90:
+        angle += 180
+
+    return p1, p2, angle
 
 
 #############################################################################
@@ -1078,9 +1246,8 @@ def lineCamLoop():
                     cv2.line(cv2_img, (int(p1[0]), int(p1[1])), (int(p2[0]), int(p2[1])), (0, 255, 0), 2)
                     cv2.circle(cv2_img, (int(centerGapPoint[0]), int(centerGapPoint[1])), 5, (0, 255, 0), 1, cv2.LINE_AA)"""
 
-                
                 if silverLineDetected.value:
-                    p1, p2, angle = getSilverAngle(cv2.boxPoints(cv2.minAreaRect(blackLine)))
+                    p1, p2, angle = getSilverAngleOG(cv2.boxPoints(cv2.minAreaRect(blackLine)))
 
                     # The silver line is perpendicular to the black line
                     silverAngle.value = angle
@@ -1092,6 +1259,28 @@ def lineCamLoop():
 
                     cv2.line(cv2_img, (int(p1[0]), int(p1[1])), (int(p2[0]), int(p2[1])), (255, 0, 255), 2)  # Magenta line for silver
                     cv2.circle(cv2_img, (int(centerSilverPoint[0]), int(centerSilverPoint[1])), 5, (255, 0, 255), 1, cv2.LINE_AA)
+
+
+                elif silverLineDetected.value:
+                    p1, p2, angle = getSilverAngle(blackLine)
+
+                    contactPoint = poi[0] # choose top point of interest as contact point
+
+                    silverAngle.value = angle
+                    silverCenterX.value = contactPoint[0]
+                    silverCenterY.value = contactPoint[1]
+
+                    # Visualize
+                    cv2.circle(cv2_img, contactPoint, 5, (255, 0, 255), -1)
+
+                    # Draw a centered line showing the silver angle
+                    length = 80  # Longer line (total = 2 * length)
+                    dir_vec = np.array([np.cos(np.radians(angle)), np.sin(np.radians(angle))])
+                    p1 = (int(contactPoint[0] - length * dir_vec[0]), int(contactPoint[1] - length * dir_vec[1]))
+                    p2 = (int(contactPoint[0] + length * dir_vec[0]), int(contactPoint[1] + length * dir_vec[1]))
+                    cv2.line(cv2_img, p1, p2, (255, 0, 255), 2)
+
+                    printDebug(f"Silver Angle: {angle} | Contact Point: {contactPoint}", False)
 
 
                 # Update Image

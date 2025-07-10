@@ -615,6 +615,24 @@ def calculateMotorSpeeds(motorSpeed):
     return m1Speed, m2Speed
 
 
+def calculateMotorSpeedsBackward(motorSpeed):
+    global M1, M2
+    m1Speed = DEFAULT_BACKWARD_SPEED - motorSpeed
+    m2Speed = DEFAULT_BACKWARD_SPEED + motorSpeed
+
+    # Ensure values are within ESC_MIN and ESC_MAX
+    m1Speed = max(MIN_GENERAL_SPEED, min(MAX_DEFAULT_SPEED, m1Speed))
+    m2Speed = max(MIN_GENERAL_SPEED, min(MAX_DEFAULT_SPEED, m2Speed))
+
+    # Adjust for dead zone (avoid 1450-1550)
+    if 1450 <= m1Speed <= 1550:
+        m1Speed = DEFAULT_STOPPED_SPEED + ESC_DEADZONE if m1Speed > DEFAULT_STOPPED_SPEED else DEFAULT_STOPPED_SPEED - ESC_DEADZONE
+    if 1450 <= m2Speed <= 1550:
+        m2Speed = DEFAULT_STOPPED_SPEED + ESC_DEADZONE if m2Speed > DEFAULT_STOPPED_SPEED else DEFAULT_STOPPED_SPEED - ESC_DEADZONE
+
+    return m1Speed, m2Speed
+
+
 # Update Motor Vars accordingly
 def setMotorsSpeeds(guidanceFactor):
     global M1, M2, M1info, M2info, motorSpeedDiference
@@ -1385,17 +1403,33 @@ def gapController():
 
 def silverLineController():
     def readyToEnterZone():
+        oriented = abs(silverAngle.value) < SILVER_ANGLE_THRESHOLD
+        centered = abs(camera_x / 2 - silverCenterX.value) < camera_x * SILVER_CENTER_THRESHOLD
+        close = silverCenterY.value >= camera_y * SILVER_CLOSE_THRESHOLD
+
         if lineDetected.value:
-            oriented = abs( 90 - abs(silverAngle.value)) < SILVER_ANGLE_THRESHOLD and abs(camera_x / 2 - silverCenterX.value) < camera_x * 0.15
-            close = silverCenterY.value >= camera_y * 0.6
-            if oriented and close:
+            if timer_manager.is_timer_expired('silverTimeout'):
                 return "ready"
-            elif not oriented and close:
-                return "not_ready_go_back"
-            elif not oriented and close:
-                return "not_ready_go_forward"
+            elif oriented and centered and close:
+                return "ready"
+            elif not oriented and centered and close:
+                return "rotate_align"
+            elif not oriented and not centered and close:
+                return "go_back_center"
+            elif oriented and not centered and close:
+                return "go_back_center"
+            else:
+                return "follow_line"
         else:
-            return "ready" # Failsafe for line not detected
+            return "follow_line"
+    def setMotorsSpeedsBackward(guidanceFactor):
+        global M1, M2, M1info, M2info, motorSpeedDiference
+
+        motorSpeedDiference = PID(guidanceFactor)
+        motorSpeedDiferenceDebug.value = motorSpeedDiference
+        M1, M2 = calculateMotorSpeedsBackward(motorSpeedDiference)
+
+        M1info, M2info = M1, M2
 
     silverLine = silverValue.value > 0.6
     if silverLine:
@@ -1403,22 +1437,29 @@ def silverLineController():
         
         if silverLineDetected.value == False and not LOPstate.value: # First Time detection
             silverLineDetected.value = True
+            timer_manager.set_timer('silverTimeout', 7.5)
 
         elif silverLineDetected.value == True and not LOPstate.value:
             stateToEnterZone = readyToEnterZone()
+
             if stateToEnterZone == "ready":
                 printDebug(f"Silver Line Ready to Enter Zone: {silverAngle.value} | {silverCenterX.value} | {silverCenterY.value} | {silverValue.value} | Line Detected: {lineDetected.value} | {M1} | {M2}", softDEBUG)
-                if silverDatasetCollectionMode:
+                if silverDatasetCollectionMode or True:
                     return # if we acquring silver data don't get in the Evac Zone
                 objective.value = "zone"
                 zoneStatus.value = "begin"
                 silverValue.value = -2
-            elif stateToEnterZone == "not_ready_go_back": # not ready to enter zone -  Go back to allign
-                setMotorSpeedsAngleYAxis(silverAngle.value, silverCenterX.value, forward=False)
-                printDebug(f"Silver Line not Ready to Enter Zone (back): {silverAngle.value} | {silverCenterX.value} | {silverCenterY.value} | {silverValue.value} | Line Detected: {lineDetected.value} | {M1} | {M2}", softDEBUG)
-            else:
-                #setMotorSpeedsAngleYAxis(silverAngle.value, silverCenterX.value, forward=True) Just follow line - don't overwrite motor data
-                printDebug(f"Silver Line not Ready to Enter Zone (forward): {silverAngle.value} | {silverCenterX.value} | {silverCenterY.value} | {silverValue.value} | Line Detected: {lineDetected.value} | {M1} | {M2}", softDEBUG)
+            elif stateToEnterZone == "rotate_align":
+                # Rotate in place to correct angle
+                turnLeft = silverAngle.value < 0
+                setManualMotorsSpeeds(1200, 1750) if turnLeft else setManualMotorsSpeeds(1750, 1200)
+                printDebug(f"Silver Line not Ready - Rotating to Align: {silverAngle.value} | {silverCenterX.value} | {silverCenterY.value} | {silverValue.value} | Line Detected: {lineDetected.value} | {M1} | {M2}", softDEBUG)
+            elif stateToEnterZone == "go_back_center":
+                setMotorsSpeedsBackward(lineCenterX.value)
+                printDebug(f"Silver Line not Ready - Going back to center: {silverAngle.value} | {silverCenterX.value} | {silverCenterY.value} | {silverValue.value} | Line Detected: {lineDetected.value} | {M1} | {M2}", softDEBUG)   
+            elif stateToEnterZone == "follow_line":
+                printDebug(f"Silver Line not Ready - Not Close {stateToEnterZone}: {silverAngle.value} | {silverCenterX.value} | {silverCenterY.value} | {silverValue.value} | Line Detected: {lineDetected.value} | {M1} | {M2}", softDEBUG)
+            
     else:
         silverLineDetected.value = False
 
