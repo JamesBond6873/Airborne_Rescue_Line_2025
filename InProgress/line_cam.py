@@ -1133,6 +1133,7 @@ def lineCamLoop():
                     results = modelVictim.predict(img_rgb, imgsz=448, conf=0.3, iou=0.2, agnostic_nms=True, workers=4, verbose=False)
                 except ValueError as e:
                     print(f"[lineCamLoop] EdgeTPU error: {e}")
+                    modelVictim = YOLO('Ai/models/victim_ball_detection_v9/victim_ball_detection_v9_edgetpu.tflite', task='detect')
                     results = None
                     continue
                 #results = modelVictim.predict(img_rgb, imgsz=448, conf=0.3, iou=0.2, agnostic_nms=True, workers=4, verbose=False)  # verbose=True to enable debug info
