@@ -21,8 +21,8 @@ print("Line Camera: \t \t \t OK")
 
 # Debug Features
 cameraDebugMode = computerOnlyDebug
-debugImageFolder = "DataSet/FullRunTest"
-#debugImageFolder = "DataSet/SilverLineTest"
+#debugImageFolder = "DataSet/FullRunTest"
+debugImageFolder = "DataSet/SilverLineTest"
 debugImagePaths = sorted(glob(os.path.join(debugImageFolder, "*.jpg")))
 currentFakeImageIndex = 0
 raw_capture = None
@@ -152,10 +152,11 @@ def savecv2_img(folder, cv2_img):
         file_path = os.path.join(folder_name, f"cv2_img_{timestamp}.jpg")
         
         # Save the cv2_img using OpenCV
-        cv2.imwrite(file_path, cv2_img)
+        if not computerOnlyDebug:
+            cv2.imwrite(file_path, cv2_img)
 
-        photoCounter += 1
-        printDebug(f"Saved Image {photoCounter}: {file_path}", softDEBUG)
+            photoCounter += 1
+            printDebug(f"Saved Image {photoCounter}: {file_path}", softDEBUG)
 
         timer_manager.set_timer("saveImageCoolDown", 0.1)
         
@@ -1128,7 +1129,13 @@ def lineCamLoop():
 
             if zoneStatus.value in ["begin", "entry", "findVictims", "goToBall", "exit"] and not pickingVictim.value:
                 img_rgb = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
-                results = modelVictim.predict(img_rgb, imgsz=448, conf=0.3, iou=0.2, agnostic_nms=True, workers=4, verbose=False)  # verbose=True to enable debug info
+                try:
+                    results = modelVictim.predict(img_rgb, imgsz=448, conf=0.3, iou=0.2, agnostic_nms=True, workers=4, verbose=False)
+                except ValueError as e:
+                    print(f"[lineCamLoop] EdgeTPU error: {e}")
+                    results = None
+                    continue
+                #results = modelVictim.predict(img_rgb, imgsz=448, conf=0.3, iou=0.2, agnostic_nms=True, workers=4, verbose=False)  # verbose=True to enable debug info
                 #results = modelVictim.predict(img_rgb, save=True, save_txt=True, imgsz=448, conf=0.3, iou=0.2, agnostic_nms=True, workers=4, verbose=False)
                 
                 result = results[0].numpy()

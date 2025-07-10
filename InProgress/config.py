@@ -5,11 +5,11 @@ print("Robot Configurations: \t \t OK")
 # Is it DEBUG?
 silverDatasetCollectionMode = False
 victimDatasetCollectionMode = False
-computerOnlyDebug = False # True for computer only, False for robot
+computerOnlyDebug = True # True for computer only, False for robot
 gamepadLoopRun = True # False for score runs
 DEBUG = False
 softDEBUG = True
-serialSoftDEBUG = True #True
+serialSoftDEBUG = False #True
 pickVictimSoftDEBUG = True
 LOPOverride = False # If True, LOP state will be updated virtually
 LOPVirtualState = True
