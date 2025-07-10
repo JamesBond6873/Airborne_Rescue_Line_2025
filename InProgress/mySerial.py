@@ -161,19 +161,19 @@ def getSensorData(data = "All"):
             if data == "All":
                 waitingSensorData = True
                 sendSerial(f"ITData", dataRequest=True)
-                timer_manager.set_timer("sensorTimeout", 0.05)
+                timer_manager.set_timer("sensorTimeout", 0.035)
             elif data == "IMU":
                 waitingSensorData = True
                 sendSerial(f"IMU10", dataRequest=True)
-                timer_manager.set_timer("sensorTimeout", 0.05)
+                timer_manager.set_timer("sensorTimeout", 0.035)
             elif data == "TOF":
                 waitingSensorData = True
                 sendSerial(f"ToF5", dataRequest=True)
-                timer_manager.set_timer("sensorTimeout", 0.05)
+                timer_manager.set_timer("sensorTimeout", 0.035)
         elif objective.value == "zone" and zoneStatus.value in ["begin", "entry", "exit"]:
             waitingSensorData = True
             sendSerial(f"ToF5", dataRequest=True)
-            timer_manager.set_timer("sensorTimeout", 0.05)
+            timer_manager.set_timer("sensorTimeout", 0.035)
 
 
 def parseSensorData(data):
@@ -250,7 +250,7 @@ def serialLoop():
     
     timer_manager.add_timer("serialCooldownbetweenCommands", 0.05)
     timer_manager.add_timer("sensorRequest", 0.025)
-    timer_manager.add_timer("sensorTimeout", 0.05)
+    timer_manager.add_timer("sensorTimeout", 0.035)
     time.sleep(0.05)
 
     t0 = time.perf_counter()
@@ -290,9 +290,9 @@ def serialLoop():
             timer_manager.set_timer("sensorRequest", dataRequestDelayMS * 0.001)
             if objective.value == "zone":
                 timer_manager.set_timer("sensorRequest", 2 * dataRequestDelayMS * 0.001)
-        """if waitingSensorData and timer_manager.is_timer_expired("sensorTimeout"):
+        if waitingSensorData and timer_manager.is_timer_expired("sensorTimeout"):
             printDebug(f"Sensor data timeout at {time.perf_counter()}. Resetting waitingSensorData.", True)
-            waitingSensorData = False """
+            waitingSensorData = False
 
 
         while (time.perf_counter() <= t1):
