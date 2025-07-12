@@ -513,7 +513,7 @@ def isSwitchOn():
 
 # Controller for LoP
 def LoPSwitchController():
-    global switchState, rotateTo
+    global switchState, rotateTo, pickSequenceStatus
     
     if LOPOverride: # LOP Override == True
         switchState = LOPVirtualState
@@ -531,6 +531,7 @@ def LoPSwitchController():
 
             objective.value = "follow_line"
             zoneStatus.value = "notStarted"
+            pickSequenceStatus = "goingToBall"
             silverLineDetected.value = False
             pickedUpAliveCount.value = 0
             pickedUpDeadCount.value = 0
@@ -858,8 +859,7 @@ def goToBall():
 
     if not ballExists.value or not timer_manager.is_timer_expired("pickVictimCooldown"): # No ball or in cooldown
         zoneStatus.value = "findVictims"
-        printDebug(f"Check why: Ball not found or in cooldown at {time.perf_counter()}: {ballExists.value} {timer_manager.is_timer_expired('pickVictimCooldown')}", False)
-        return
+        printDebug(f"Check why: Ball not found or in cooldown at {time.perf_counter()}: {not ballExists.value} {not timer_manager.is_timer_expired('pickVictimCooldown')}", True)
         
     if pickSequenceStatus == "goingToBall":
         setMotorsSpeeds(ballCenterX.value)
@@ -874,10 +874,11 @@ def goToBall():
             resetBallArrays.value = True
             printDebug(f" ----- Starting {pickVictimType} Victim Catching ----- ", softDEBUG)
             printDebug(f"Ball detection data: {ballExists.value} {ballCenterX.value} {ballBottomY.value} {ballWidth.value} {ballType.value}", pickVictimSoftDEBUG)
-            printDebug(f"Victim Catching - Reversing", pickVictimSoftDEBUG)
+            printDebug(f"Victim Catching - Reversing: {pickSequenceStatus}", pickVictimSoftDEBUG)
             timer_manager.set_timer("zoneReverse", 0.5)
 
     elif pickSequenceStatus == "startReverse":
+        print(f"here 1")
         setManualMotorsSpeeds(1000, 1000)  # Go backward
         controlMotors()
         if timer_manager.is_timer_expired("zoneReverse"):
@@ -1453,6 +1454,7 @@ def silverLineController():
                 printDebug(f"Silver Line Ready to Enter Zone: {silverAngle.value} | {silverCenterX.value} | {silverCenterY.value} | {silverValue.value} | Line Detected: {lineDetected.value} | {M1} | {M2}", softDEBUG)
                 if silverDatasetCollectionMode:
                     return # if we acquring silver data don't get in the Evac Zone
+                setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)
                 objective.value = "zone"
                 zoneStatus.value = "begin"
                 silverValue.value = -2
