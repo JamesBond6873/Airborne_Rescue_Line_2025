@@ -171,6 +171,7 @@ def getSensorData(data = "All"):
                 sendSerial(f"ToF5", dataRequest=True)
                 timer_manager.set_timer("sensorTimeout", 0.035)
         elif objective.value == "zone" and zoneStatus.value in ["begin", "entry", "exit"]:
+        #elif objective.value == "zone" and zoneStatus.value in ["begin", "entry", "findVictims", "goToBall", "depositRed", "depositGreen", "exit"]:
             waitingSensorData = True
             sendSerial(f"ToF5", dataRequest=True)
             timer_manager.set_timer("sensorTimeout", 0.035)
@@ -284,15 +285,17 @@ def serialLoop():
 
 
         # Request sensor data if timer expired
-        if timer_manager.is_timer_expired("sensorRequest") or commandSensorDataAborted:
+        if waitingSensorData and timer_manager.is_timer_expired("sensorTimeout"):
+            printDebug(f"Sensor data timeout at {time.perf_counter()}. Resetting waitingSensorData.", True)
+            waitingSensorData = False
+        elif timer_manager.is_timer_expired("sensorRequest") or commandSensorDataAborted:
             commandSensorDataAborted = False
             getSensorData()
             timer_manager.set_timer("sensorRequest", dataRequestDelayMS * 0.001)
             if objective.value == "zone":
                 timer_manager.set_timer("sensorRequest", 2 * dataRequestDelayMS * 0.001)
-        if waitingSensorData and timer_manager.is_timer_expired("sensorTimeout"):
-            printDebug(f"Sensor data timeout at {time.perf_counter()}. Resetting waitingSensorData.", True)
-            waitingSensorData = False
+                if zoneStatus.value == "exit":
+                    timer_manager.set_timer("sensorRequest", 0.5 * dataRequestDelayMS * 0.001)     
 
 
         while (time.perf_counter() <= t1):

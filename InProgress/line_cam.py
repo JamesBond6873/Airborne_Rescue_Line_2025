@@ -260,7 +260,7 @@ def checkContourSize(contours, contour_color="red", size=20000):
         contour_size = cv2.contourArea(contour)
 
         if contour_size > size:
-            printDebug(f"Found Big Contour Size {contour_color}; {contour_size}", False)
+            printDebug(f"Found Big Contour Size {contour_color}; {contour_size}", True)
             x, y, w, h = cv2.boundingRect(contour)
             cv2.rectangle(cv2_img, (x, y), (x + w, y + h), color, 2)
             return True
@@ -1130,7 +1130,8 @@ def lineCamLoop():
             
             blackImage = ignoreHighFOVCorners(blackImage)
 
-            if zoneStatus.value in ["begin", "entry", "findVictims", "goToBall", "exit"] and not pickingVictim.value and not cameraServoAngle.value == CAMERA_LINE_ANGLE:
+            #if zoneStatus.value in ["begin", "entry", "findVictims", "goToBall", "exit"] and not pickingVictim.value and not cameraServoAngle.value == CAMERA_LINE_ANGLE:
+            if zoneStatus.value in ["begin", "entry", "findVictims", "goToBall"] and not pickingVictim.value and not cameraServoAngle.value == CAMERA_LINE_ANGLE:
                 img_rgb = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
                 try:
                     results = modelVictim.predict(img_rgb, imgsz=448, conf=0.3, iou=0.2, agnostic_nms=True, workers=4, verbose=False)
@@ -1210,8 +1211,8 @@ def lineCamLoop():
                 contoursRed = getRedContours(redImage)
 
                 zoneFoundBlack.value = checkContourSize(contoursBlack, contour_color="black", size=16500)
-                zoneFoundGreen.value = checkContourSize(contoursGreen, contour_color="green", size=12000)
-                zoneFoundRed.value = checkContourSize(contoursRed, contour_color="red", size=12000)
+                zoneFoundGreen.value = checkContourSize(contoursGreen, contour_color="green", size=15000)
+                zoneFoundRed.value = checkContourSize(contoursRed, contour_color="red", size=15000)
 
                 # -- SILVER Line --
                 silverValue.value = silverDetector(modelSilverLine, original_cv2_img)

@@ -22,6 +22,7 @@ lastLineDetected = True  # Assume robot starts detecting a line
 gapCorrectionStartTime = 0
 
 pickSequenceStatus = "goingToBall" #goingToBall, startReverse, lowerArm, moveForward, pickVictim
+findVictimStatusLoop = "rotating"
 pickVictimType = "none"
 dumpedAliveVictims = False
 dumpedDeadVictims = False
@@ -169,7 +170,7 @@ def CLIinterpretCommand(mpMessage):
             zoneCode = zoneCode.strip()
 
             allowedZoneStatuses = [
-                "notStarted", "begin", "entry", "findVictims",
+                "notStarted", "begin", "entry", "findVictimsSetup", "findVictims",
                 "goToBall", "depositRed", "depositGreen", "exit"
             ]
 
@@ -311,6 +312,8 @@ def updateSensorAverages():
         Tof_4_Array = addNewTimeValue(Tof_4_Array, Tof_4.value)
         Tof_5_Array = addNewTimeValue(Tof_5_Array, Tof_5.value)
     
+        #print(f"{Tof_1.value}, {Tof_2.value}, {Tof_3.value}, {Tof_4.value}, {Tof_5.value}")
+
         newSensorData.value = False
 
         # update sensor variables
@@ -852,14 +855,14 @@ def entryZone():
 
     else: # timer expired
         timer_manager.set_timer("stop", 2.0) # 2.0 seconds to signal that we entered
-        zoneStatus.value = "findVictims"
+        zoneStatus.value = "findVictimsSetup"
 
 
 def goToBall():
     global pickSequenceStatus, pickVictimType
 
-    if not ballExists.value or not timer_manager.is_timer_expired("pickVictimCooldown"): # No ball or in cooldown
-        zoneStatus.value = "findVictims"
+    if (not ballExists.value or not timer_manager.is_timer_expired("pickVictimCooldown")) and not pickingVictim.value: # No ball or in cooldown
+        zoneStatus.value = "findVictimsSetup"
         printDebug(f"Check why: Ball not found or in cooldown at {time.perf_counter()}: {not ballExists.value} {not timer_manager.is_timer_expired('pickVictimCooldown')}", True)
         
     if pickSequenceStatus == "goingToBall":
@@ -921,7 +924,7 @@ def goToBall():
         printDebug(f"Victim Catching - Finished", pickVictimSoftDEBUG)
         pickingVictim.value = False
         resetBallArrays.value = True
-        zoneStatus.value = "findVictims"
+        zoneStatus.value = "findVictimsSetup"
         pickSequenceStatus = "goingToBall"
         timer_manager.set_timer("pickVictimCooldown", 1.0)
 
@@ -1044,14 +1047,14 @@ def zoneDeposit(type):
             dumpedAliveCount.value += pickedUpAliveCount.value
             printDebug(f"Finished Dropping {pickedUpAliveCount.value} Alive victims, Total Deposit {dumpedAliveCount.value + dumpedDeadCount.value}  ( {dumpedAliveCount.value} + {dumpedDeadCount.value} )", softDEBUG)
             pickedUpAliveCount.value = 0
-            zoneStatus.value = "findVictims"
+            zoneStatus.value = "findVictimsSetup"
             
         elif type == "D":
             #dumpedDeadVictims = True
             dumpedDeadCount.value += pickedUpDeadCount.value
             printDebug(f"Finished Dropping {pickedUpDeadCount.value} Dead victims, Total Deposit {dumpedAliveCount.value + dumpedDeadCount.value}  ( {dumpedAliveCount.value} + {dumpedDeadCount.value} ) ", softDEBUG)
             pickedUpDeadCount.value = 0
-            zoneStatus.value = "findVictims"
+            zoneStatus.value = "findVictimsSetup"
             printDebug(f"Finished Evacuation - Leaving", False) # Wrong Positioning
             printDebug(f"Finished the Evacuation Zone in {round(time.perf_counter() - zoneStartTime.value, 3)} s", False) # Wrong Positioning
 
@@ -1072,6 +1075,8 @@ def exitEvacZone():
             printDebug(f"No exit ahead — clearing openingAhead at {time.perf_counter()}", softDEBUG)
 
     def cameraPositioningAndLighting():
+        if exitSequenceStatus == "pause":
+            return
         if exitSequenceStatus in ["turnToExit", "validatingExit"] or (openingAhead and exitSequenceStatus == "navigateCloseToWall"):
             cameraTargetAngle = CAMERA_LINE_ANGLE
         else:
@@ -1151,7 +1156,7 @@ def exitEvacZone():
 
         silverLineDetected.value = silverValue.value > 0.6
 
-        if not silverLineDetected.value and lineDetected.value and zoneFoundBlack.value:
+        if not silverLineDetected.value and lineDetected.value and zoneFoundBlack.value and tofAverage_3 > 250:
             return "exit"
         elif silverLineDetected.value:
             return "entrance"
@@ -1234,7 +1239,7 @@ def exitEvacZone():
             nextSequenceStatus = "turnEvac45"
             exitSequenceStatus = "pause"
             timer_manager.set_timer("exitPause", 1.0)
-            timer_manager.set_timer("turnEvac45Timeout", 1.4) # originally 0.4
+            timer_manager.set_timer("turnEvac45Timeout", 1.2) # originally 0.4
             #timer_manager.set_timer("turnEvac45Timeout", 0.4)
         elif not neededRotation and not needed45DegreeRotation: # Go forward
             leftSpeed, rightSpeed = navigateCloseToWallTOF()
@@ -1257,13 +1262,14 @@ def exitEvacZone():
 
         neededRotation = rotationNeeded()
 
-        if neededRotation or timer_manager.is_timer_expired("evacForwardTimeout"):
+        #if neededRotation or timer_manager.is_timer_expired("evacForwardTimeout"):
+        if neededRotation:
             printDebug(f"Corner detected in evacForward - transitioning to turnCorner at {time.perf_counter()}", softDEBUG)
             #exitSequenceStatus = "turnCorner"
             nextSequenceStatus = "turnCorner"
             exitSequenceStatus = "pause"
             timer_manager.set_timer("exitPause", 1.0)
-            timer_manager.set_timer("turnCornerTimeout", 1.6) # originally 0.6
+            timer_manager.set_timer("turnCornerTimeout", 1.2) # originally 0.6
             #timer_manager.set_timer("turnCornerTimeout", 0.6)
 
     elif exitSequenceStatus == "forwardAfterEntrance":
@@ -1303,7 +1309,7 @@ def exitEvacZone():
             nextSequenceStatus = "evacForward"
             exitSequenceStatus = "pause"
             timer_manager.set_timer("exitPause", 1.0)
-            timer_manager.set_timer("evacForwardTimeout", 1.6) # originally 0.6
+            timer_manager.set_timer("evacForwardTimeout", 2.0) # originally 0.6
             #timer_manager.set_timer("evacForwardTimeout", 0.6)
 
     elif exitSequenceStatus == "turnEntrance":
@@ -1375,7 +1381,8 @@ def exitEvacZone():
         if timer_manager.is_timer_expired("exitPause"):
             exitSequenceStatus = nextSequenceStatus
             nextSequenceStatus = "none"
-        
+
+
 def intersectionController():
     global lastTurn
     if turnDirection.value != lastTurn:
@@ -1580,7 +1587,7 @@ def avoidStuck():
 
 def controlLoop():
     global switchState, M1, M2, M1info, M2info, oldM1, oldM2, motorSpeedDiference, error_theta, error_x, errorAcc, lastError, inGap
-    global pickSequenceStatus, pickVictimType, DEFAULT_FORWARD_SPEED
+    global pickSequenceStatus, pickVictimType, DEFAULT_FORWARD_SPEED, findVictimStatusLoop
 
     sendCommandListWithConfirmation(["GR","BC", "SF,5,F", "CL", "SF,4,F", "AU", "PA", "SF,0,F", "SF,1,F", "SF,2,F", "SF,3,F", "LX,200", "RGB,255,255,255"])
 
@@ -1632,6 +1639,8 @@ def controlLoop():
     timer_manager.add_timer("forwardAfterEntranceDuration", 0.05)
     timer_manager.set_timer("finishedEvacWait", 0.05)
     timer_manager.add_timer("exitPause", 0.05)
+    timer_manager.add_timer("noBallSeen", 0.05)
+    timer_manager.add_timer("goForwardToFindBall", 0.05)
     timer_manager.add_timer("redLine", 0.05)
     timer_manager.add_timer("redLineCooldown", 0.05)
     time.sleep(0.1)
@@ -1739,9 +1748,25 @@ def controlLoop():
             elif zoneStatusLoop == "entry":
                 entryZone()
             
+            elif zoneStatusLoop == "findVictimsSetup":
+                zoneStatus.value = "findVictims"
+                findVictimStatusLoop = "rotating"
+                timer_manager.set_timer("noBallSeen", 10.0)
+
             elif zoneStatusLoop == "findVictims":
-                setManualMotorsSpeeds(1200 if rotateTo == "left" else 1750, 1750 if rotateTo == "left" else 1200)
-                controlMotors()
+                if findVictimStatusLoop == "rotating":
+                    setManualMotorsSpeeds(1200 if rotateTo == "left" else 1750, 1750 if rotateTo == "left" else 1200)
+                    controlMotors()
+                    if timer_manager.is_timer_expired("noBallSeen"):
+                        findVictimStatusLoop = "goingForward"
+                        timer_manager.set_timer("goForwardToFindBall", 1)
+                
+                elif findVictimStatusLoop == "goingForward":
+                    setManualMotorsSpeeds(DEFAULT_FORWARD_SPEED, DEFAULT_FORWARD_SPEED)
+                    controlMotors()
+                    if timer_manager.is_timer_expired("goForwardToFindBall") or tofAverage_3 < 175:
+                        findVictimStatusLoop = "rotating"
+                        timer_manager.set_timer("noBallSeen", 10.0)
             
                 if ballExists.value and not victimDatasetCollectionMode:
                     zoneStatus.value = "goToBall"
