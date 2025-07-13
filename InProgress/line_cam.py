@@ -936,7 +936,7 @@ def lineCamLoop():
         camera.set_controls({
             #"AfMode": controls.AfModeEnum.Manual,
             #"LensPosition": 6.5,
-            #"FrameDurationLimits": (1000000 // 50, 1000000 // 50),
+            "FrameDurationLimits": (1000000 // 50, 1000000 // 50),
             #"AnalogueGain": 3.0,  # Fix gain (default 1.0)
             #"ExposureTime": 10000  # Set exposure in microseconds (adjust as needed)
         })

@@ -799,8 +799,8 @@ def needToDepositDead(zoneStatusLoop):
     if zoneStatusLoop == "depositRed":
         return True
     
-    # Drop the Silver Balls first
-    if pickedUpAliveCount.value > 0:
+    # Drop the Silver Balls first, even if we still don't have them
+    if pickedUpAliveCount.value > 0 or dumpedAliveCount.value < 2:
         return False
     
     # Best Case Scenario: Already dropped 2 Silver
@@ -1627,25 +1627,28 @@ def silverLineController():
 
 def redLineController():
     def endOfRunStop():
-        if not timer_manager.is_timer_expired("redLineCooldown"):
+        if not timer_manager.is_timer_expired("redLine"):
+            return True
+        elif not timer_manager.is_timer_expired("redLineCooldown"):
             return False
-        elif not timer_manager.is_timer_expired("redLine"):
-            return True # Stopped for red line timer
-        elif redDetected.value and timer_manager.is_timer_expired("redLine"):
-            timer_manager.set_timer("redLineCooldown", 1.5)
-            return False # Stopped for red line timer
+        else:
+            return False
         
     if not LOPstate.value:
         if redValue.value > 0.5 and not redDetected.value:
             redDetected.value = True
             timer_manager.set_timer("redLine", redLineStopTime)
+            timer_manager.set_timer("redLineCooldown", redLineStopTime + 1.5)
             printDebug(f"Red Line Detected at {time.perf_counter()}, gonna wait {redLineStopTime}", softDEBUG)
         elif redValue.value > 0.5 and redDetected.value:
             redDetected.value = True
+        else:
+            redDetected.value = False
     else: # not red
         redDetected.value = False
     
     if endOfRunStop() and not LOPstate.value:
+        printDebug(f"Red is detected at {time.perf_counter()}. | {endOfRunStop()} | {not LOPstate.value} | {redDetected.value} | {redValue.value} | {not timer_manager.is_timer_expired('redLine')} | {not timer_manager.is_timer_expired('redLineCooldown')}", DEBUG)
         setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)
 
 

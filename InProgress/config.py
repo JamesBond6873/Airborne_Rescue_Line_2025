@@ -98,7 +98,7 @@ defaultSpeed = 1850
 
 # Motor Vars
 speedFactor = 0
-KP = 1.5 #1.50
+KP = 1.8 #1.50
 KD = 2.0 #2.05
 KI = 0.0
 KP_THETA = 140 # 407 = 1280/3.1415
