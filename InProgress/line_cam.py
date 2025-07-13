@@ -313,6 +313,46 @@ def getLineAndCrop(contours_blk):
     return blackline, blackLineCrop
 
 
+def getLineAndCropOnGap(contours_blk):
+    global x_last, y_last
+
+    # Store candidates as (index, top_y, x_mean, y_mean)
+    candidates = np.zeros((len(contours_blk), 4), dtype=np.float32)
+
+    for i, contour in enumerate(contours_blk):
+        box = cv2.boxPoints(cv2.minAreaRect(contour))
+        box = box[box[:, 1].argsort()]  # sort ascending y (top to bottom)
+
+        top_y = np.clip(box[0][1], 0, camera_y)
+        bottom_y = np.clip(box[3][1], 0, camera_y)
+
+        box = box[box[:, 0].argsort()]
+        x_mean = (np.clip(box[0][0], 0, camera_x) + np.clip(box[3][0], 0, camera_x)) / 2
+        y_mean = (top_y + bottom_y) / 2
+
+        candidates[i] = i, top_y, x_mean, y_mean
+
+    # Prefer the contour with the smallest top_y (highest in the image)
+    candidates = candidates[candidates[:, 1].argsort()]  # sort by top_y ascending
+
+    chosen = candidates[0]
+    idx, _, x_mean, y_mean = chosen
+
+    # Update x_last and y_last so the robot keeps heading forward
+    x_last = x_mean
+    y_last = y_mean
+
+    blackline = contours_blk[int(idx)]
+    blackLineCrop = blackline[np.where(blackline[:, 0, 1] > camera_y * lineCropPercentage.value)]
+
+    # Debug drawing
+    cv2.drawContours(cv2_img, blackline, -1, (0, 255, 255), 2)           # cyan contour
+    cv2.drawContours(cv2_img, blackLineCrop, -1, (0, 128, 255), 2)       # orange-ish cropped
+    cv2.circle(cv2_img, (int(x_last), int(y_last)), 3, (0, 0, 255), -1)  # red dot
+
+    return blackline, blackLineCrop
+
+
 def calculatePointsOfInterest(blackLine, blackLineCrop, last_bottom_point, averageLinePointX):
     max_gap = 1
     max_line_width = camera_x * .3
@@ -1042,7 +1082,11 @@ def lineCamLoop():
             
             if len(contoursBlack) > 0:
                 # Calculate Black Line (cropped and not) + Points of Interest
-                blackLine, blackLineCrop = getLineAndCrop(contoursBlack)
+                if gapCorrectionActive.value and False: # Temporary fix
+                    blackLine, blackLineCrop = getLineAndCropOnGap(contoursBlack)
+                else:
+                    blackLine, blackLineCrop = getLineAndCrop(contoursBlack)
+
                 lineDetected.value = True
                 poiCropped, poi, isCrop, maxBlackTop, bottomPoint = calculatePointsOfInterest(blackLine, blackLineCrop, lastBottomPoint_x, lastLinePoint[0])
 
@@ -1061,6 +1105,7 @@ def lineCamLoop():
                 lineAngleNormalizedDebug.value = averageLineAngleNormalized
                 lineAngle.value = lineAngle2  # Or raw angle if you prefer
                 lineCenterX.value = finalPoi[0]
+                lineBottomY.value = bottomPoint[1]
                 isCropped.value = isCrop
 
                 # Update time arrays

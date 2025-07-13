@@ -32,6 +32,7 @@ exitSequenceStatus = "goToWall" #rotateToWall, navigateCloseToWall, turnCornerTi
 nextSequenceStatus = "none"
 openingAhead = False
 foundUnexpectedExit = False
+gapSequenceStatus = "cameraUp" # cameraUp, followLine, cameraDown, done
 
 # Loop Vars
 pendingCommandsConfirmation = []
@@ -481,9 +482,10 @@ def cameraFree(position):
         printDebug(f"Invalid Camera Free Position: {position}", softDEBUG)
         return
     command = "SC,4," + str(position)
-    sendCommandListWithConfirmation([str(command), "SF,4,F"])
-    camServoAngle = position
-    cameraServoAngle.value = position
+    if position != camServoAngle:
+        sendCommandListWithConfirmation([str(command), "SF,4,F"])
+        camServoAngle = position
+        cameraServoAngle.value = position
 
 
 def setLights(on = True):
@@ -532,6 +534,7 @@ def LoPSwitchController():
             controlMotors()
             cameraDefault("Line")
             setLights(on=True)
+            #pickVictim("A", step=2)
 
             objective.value = "follow_line"
             zoneStatus.value = "notStarted"
@@ -560,6 +563,7 @@ def LoPSwitchController():
             printDebug(f"LoP Switch is now OFF at {time.perf_counter()}: {switchState}", softDEBUG)
             objective.value = "follow_line"
             zoneStatus.value = "notStarted"
+            lastLopTime.value = time.perf_counter()
 
             saveFrame.value = True if silverDatasetCollectionMode else False
             
@@ -758,6 +762,11 @@ def timeAfterDeposit() -> float:
     return time.perf_counter() - lastDepositTime.value
 
 
+def timeAfterLOP() -> float:
+    timeAfterLOP.value = time.perf_counter() - lastLopTime.value
+    return time.perf_counter() - lastLopTime.value
+
+
 # Decide which ball needs to be picked up
 def decideVictimType():
     if ballType.value == "silver ball":
@@ -834,7 +843,7 @@ def readyToLeave(zoneStatusLoop):
         return False
 
 
-    elif zoneStatusLoop == "findVictims" and timeAfterDeposit() >= 7.5:
+    elif zoneStatusLoop == "findVictims" and timeAfterDeposit() >= 7.5 and timeAfterLOP() >= 15.0:
         if dumpedAliveCount.value >= 2 and dumpedDeadCount.value >= 1 and not ballExists.value:
             printDebug(f"Ready to Leave Evacuation Zone - Exiting Procedure Start at {time.perf_counter()}", softDEBUG)
             return True
@@ -873,7 +882,7 @@ def goToBall():
         setMotorsSpeeds(ballCenterX.value)
         controlMotors()
 
-        if ballBottomY.value >= camera_y * 0.95:
+        if ballBottomY.value >= camera_y * 0.85:
             pickSequenceStatus = "startReverse"
             
             pickVictimType = decideVictimType()
@@ -883,7 +892,7 @@ def goToBall():
             printDebug(f" ----- Starting {pickVictimType} Victim Catching ----- ", softDEBUG)
             printDebug(f"Ball detection data: {ballExists.value} {ballCenterX.value} {ballBottomY.value} {ballWidth.value} {ballType.value}", pickVictimSoftDEBUG)
             printDebug(f"Victim Catching - Reversing: {pickSequenceStatus}", pickVictimSoftDEBUG)
-            timer_manager.set_timer("zoneReverse", 0.5)
+            timer_manager.set_timer("zoneReverse", 0.4)
 
     elif pickSequenceStatus == "startReverse":
         setManualMotorsSpeeds(1000, 1000)  # Go backward
@@ -902,7 +911,7 @@ def goToBall():
         if timer_manager.is_timer_expired("lowerArm"):
             printDebug(f"Victim Catching - Moving Forward", pickVictimSoftDEBUG)
             pickSequenceStatus = "moveForward"
-            timer_manager.set_timer("zoneForward", 0.8)
+            timer_manager.set_timer("zoneForward", 1.0)
 
     elif pickSequenceStatus == "moveForward":
         setManualMotorsSpeeds(1800, 1800)  # Go forward slowly
@@ -1172,6 +1181,7 @@ def exitEvacZone():
         followingSide = "left"
     elif followingSide == "left" and (tofAverage_4 == -1 or tofAverage_5 == -1):
         followingSide = "right"
+    followingSide = "right" # temporary fix
     updateOpeningAhead()
     cameraPositioningAndLighting()
     foundUnexpectedExit = validateExit()
@@ -1541,24 +1551,45 @@ def gapCorrectionController(inGap, gapAngle, gapCenterX):
 
 
 def gapController():
-    global inGap, lastLineDetected
+    global inGap, lastLineDetected, gapSequenceStatus
 
     #gapCorrectionController(inGap, gapAngle.value, gapCenterX.value)
 
     if not lineDetected.value: # No line detected
         if lastLineDetected: # Just lost the line (last state was true)
-            timer_manager.set_timer("noLine", 0.60) # Start a timer 600ms after last seeing it
-        elif timer_manager.is_timer_expired("noLine"): # Timer expired
+            timer_manager.set_timer("noLine", 0.60) # Start a timer 600ms after last seeing it  # FIX
+        elif timer_manager.is_timer_expired("noLine") and not LOPstate.value and not inGap: # Timer expired
             inGap = True # Confirm gap
+            gapCorrectionActive.value = True
+            printDebug(f"InGap detected at {time.perf_counter()} - Adjusting Camera", softDEBUG)
+            gapSequenceStatus = "cameraUp"
+            timer_manager.set_timer("gapCameraUp", 0.5)
 
     else:  # Line detected
         inGap = False  # Here to reset flag
+        gapCorrectionActive.value = False
         timer_manager.set_timer("noLine", 0)  # Force timer expiration
 
     lastLineDetected = lineDetected.value  # Update previous state
 
     if inGap:
         setManualMotorsSpeeds(DEFAULT_FORWARD_SPEED, DEFAULT_FORWARD_SPEED)
+
+    """    
+    if inGap and timer_manager.is_timer_expired("uTurn"):
+        if gapSequenceStatus == "cameraUp":
+            setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)
+            cameraFree(45)
+            timer_manager.set_timer("gapMovement", 1.0)
+            if timer_manager.is_timer_expired("gapCameraUp") or lineDetected.value:
+                gapSequenceStatus = "followLine"
+        elif gapSequenceStatus == "followLine":
+            if lineBottomY.value > camera_y * 0.55:
+                cameraFree(35)
+                timer_manager.set_timer("gapMovement", 0.0)
+    else:
+        return"""
+
 
 
 def silverLineController():
@@ -1742,6 +1773,8 @@ def controlLoop():
     timer_manager.add_timer("slightBackwardsMovementPreTurn", 0.05)
     timer_manager.add_timer("redLine", 0.05)
     timer_manager.add_timer("redLineCooldown", 0.05)
+    timer_manager.add_timer("gapCameraUp", 0.05)
+    timer_manager.add_timer("gapMovement", 0.05)
     time.sleep(0.1)
 
 
@@ -1764,6 +1797,7 @@ def controlLoop():
     printConsoles(f"")
 
     counter = 0
+    lastLopTime.value = time.perf_counter()
     runStartTime.value = time.perf_counter()
     t0 = time.perf_counter()
     while not terminate.value:
@@ -1798,7 +1832,7 @@ def controlLoop():
                     cameraFree(55)
             else:
                 DEFAULT_FORWARD_SPEED = 1700
-                if camServoAngle != 35:
+                if camServoAngle != 35 and timer_manager.is_timer_expired("gapMovement"):
                     cameraFree(35)
 
             if seesawDetected.value and timer_manager.is_timer_expired("backwardsSlow"):
