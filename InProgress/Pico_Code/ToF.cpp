@@ -31,7 +31,7 @@ void ToF::begin(TwoWire &wire) {
       Serial.print("Failed to init ToF sensor on channel ");
       Serial.println(_channels[i]);
     } else {
-      _sensors[i].setTimeout(5);
+      _sensors[i].setTimeout(10);
       _sensors[i].setMeasurementTimingBudget(20000); // Minimum is 20000...
       _sensors[i].startContinuous();
       Serial.print("ToF sensor on channel ");
@@ -47,7 +47,7 @@ void ToF::updateToF5() {
     tcaSelect(_channels[i], _wire);  // switch to the correct channel
 
     uint16_t dist = _sensors[i].readRangeContinuousMillimeters();
-    if (_sensors[i].timeoutOccurred()) {
+    if (_sensors[i].timeoutOccurred() && i != 5 && false) { // DO not overwrite timeouts
       _distances[i] = -1;
     } else {
       _distances[i] = dist;
