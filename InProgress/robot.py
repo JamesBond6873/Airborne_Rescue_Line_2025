@@ -817,7 +817,11 @@ def needToDepositDead(zoneStatusLoop):
 
 def readyToLeave(zoneStatusLoop):
     global exitSequenceStatus
-    if zoneStatusLoop == "exit":
+
+    if zoneStatusLoop == "finishEvacuation":
+        return False
+
+    elif zoneStatusLoop == "exit":
         if ballExists.value:
             zoneStatus.value = "goToBall"
             exitSequenceStatus = "goToWall" # Reset Var
@@ -882,7 +886,6 @@ def goToBall():
             timer_manager.set_timer("zoneReverse", 0.5)
 
     elif pickSequenceStatus == "startReverse":
-        print(f"here 1")
         setManualMotorsSpeeds(1000, 1000)  # Go backward
         controlMotors()
         if timer_manager.is_timer_expired("zoneReverse"):
@@ -1006,7 +1009,7 @@ def zoneDeposit(type):
             controlMotors()
             printDebug(f"Victim Dropping - doing 180", softDEBUG)
             dropSequenceStatus = "do180"
-            timer_manager.set_timer("do180", 1.5)
+            timer_manager.set_timer("do180", 1.4)
     elif dropSequenceStatus == "do180":
         setManualMotorsSpeeds(1000 if rotateTo == "left" else 2000, 2000 if rotateTo == "left" else 1000)
         controlMotors()
@@ -1119,7 +1122,7 @@ def exitEvacZone():
             return "none"
         
     def navigateCloseToWallTOF():
-        TARGET_DISTANCE = 150  # mm
+        TARGET_DISTANCE = 100  # mm
 
         if followingSide == "left":
             d_front = tofAverage_4
@@ -1156,7 +1159,8 @@ def exitEvacZone():
 
         silverLineDetected.value = silverValue.value > 0.6
 
-        if not silverLineDetected.value and lineDetected.value and zoneFoundBlack.value and tofAverage_3 > 250:
+        #if not silverLineDetected.value and lineDetected.value and zoneFoundBlack.value and tofAverage_3 > 250:
+        if not silverLineDetected.value and zoneFoundBlack.value and (tofAverage_3 > 250 or tofAverage_3 == -1):
             return "exit"
         elif silverLineDetected.value:
             return "entrance"
@@ -1164,18 +1168,23 @@ def exitEvacZone():
             return "nothing"
     
     followingSide = rotateTo # Variable that defines which side we are following close to the robot
+    if followingSide == "right" and (tofAverage_1 == -1 or tofAverage_2 == -1):
+        followingSide = "left"
+    elif followingSide == "left" and (tofAverage_4 == -1 or tofAverage_5 == -1):
+        followingSide = "right"
     updateOpeningAhead()
     cameraPositioningAndLighting()
     foundUnexpectedExit = validateExit()
 
     printDebug(f"{time.perf_counter()}: {int(tofAverage_1)} {int(tofAverage_2)} {int(tofAverage_3)} {int(tofAverage_4)} {int(tofAverage_5)} {followingSide} {exitSequenceStatus} {foundUnexpectedExit} {openingAhead}", softDEBUG)
 
-    if foundUnexpectedExit == "exit" and exitSequenceStatus != "validatingExit":
+    if foundUnexpectedExit == "exit" and not exitSequenceStatus in ["validatingExit", "pause", "turnEntrance", "turnToExit", "goToWall", "slightBackwards", "slightBackwardsPreTurn"]:
         printDebug(f"Unexpected exit detected - Exiting at {time.perf_counter()}", softDEBUG)
         setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)
         controlMotors()
         timer_manager.set_timer("validatingExit", 1.5)
-        exitSequenceStatus = "validatingExit"
+        nextSequenceStatus = "validatingExit"
+        exitSequenceStatus = "pause"
     elif foundUnexpectedExit == "entrance" and exitSequenceStatus != "validatingExit":
         printDebug(f"Unexpected entrance detected - Turning 90 Degrees {time.perf_counter()}", softDEBUG)
         setManualMotorsSpeeds(2000 if followingSide == "left" else 1000, 1000 if followingSide == "left" else 2000)
@@ -1183,8 +1192,10 @@ def exitEvacZone():
         cameraDefault("Evacuation")
         setLights(on=False)
         openingAhead = False
-        timer_manager.set_timer("entranceTurn", 5)
-        exitSequenceStatus = "turnEntrance"
+        nextSequenceStatus = "turnEntrance"
+        exitSequenceStatus = "pause"
+        timer_manager.set_timer("exitPause", 1.0)
+        timer_manager.set_timer("turnEntrance", 1.5)
 
 
     if exitSequenceStatus == "goToWall":
@@ -1224,14 +1235,30 @@ def exitEvacZone():
         needed45DegreeRotation = shouldDoEvac45Turn() # True/False -> turn 45
         openingDetected = checkForOpening() # "side" or "front" or "none"
 
+        if followingSide == "right":
+            if tofAverage_2 > OPENING_THRESHOLD_SIDE and tofAverage_1 < OPENING_THRESHOLD_SIDE:
+                printDebug(f"Opening was detected - Going forward to investigate at {time.perf_counter()}", softDEBUG)
+                nextSequenceStatus = "forwardPreTurn"
+                exitSequenceStatus = "pause"
+                timer_manager.set_timer("exitPause", 1.0)
+                timer_manager.set_timer("forwardPreTurn", 1.5) # originally 0.5
+
         if openingDetected == "side":
             printDebug(f"Opening detected on {openingDetected} - {followingSide if openingDetected == 'side' else ''} - Exiting at {time.perf_counter()}", softDEBUG)
-            leftSpeed, rightSpeed = 1000 if followingSide == "left" else 2000, 2000 if followingSide == "left" else 1000
-            #exitSequenceStatus = "turnToExit"
-            nextSequenceStatus = "turnToExit"
-            exitSequenceStatus = "pause"
-            timer_manager.set_timer("exitPause", 1.0)
-            timer_manager.set_timer("rotatingToExit", 1.8) # originally 0.8
+            if tofAverage_3 < 150:
+                leftSpeed, rightSpeed = 1000, 1000
+                printDebug(f"Opening Detected but we are close to the wall to turn already - Going back to slightly backwards at {time.perf_counter()}", softDEBUG)
+                nextSequenceStatus = "slightBackwards"
+                exitSequenceStatus = "pause"
+                timer_manager.set_timer("exitPause", 1.0)
+                timer_manager.set_timer("slightBackwardsMovement", 1.2) # originally 0.2
+            else:
+                leftSpeed, rightSpeed = 1000 if followingSide == "left" else 2000, 2000 if followingSide == "left" else 1000
+                #exitSequenceStatus = "turnToExit"
+                nextSequenceStatus = "turnToExit"
+                exitSequenceStatus = "pause"
+                timer_manager.set_timer("exitPause", 1.0)
+                timer_manager.set_timer("rotatingToExit", 1.8) # originally 0.8
         elif needed45DegreeRotation:
             printDebug(f"Evac point detected during exit - Rotating 45 degrees at {time.perf_counter()}", softDEBUG)
             leftSpeed, rightSpeed = 2000 if followingSide == "left" else 1000, 1000 if followingSide == "left" else 2000
@@ -1245,15 +1272,72 @@ def exitEvacZone():
             leftSpeed, rightSpeed = navigateCloseToWallTOF()
         else:
             printDebug(f"Corner Detected - Turning to {'right' if followingSide == 'left' else 'left'} at {time.perf_counter()}", softDEBUG)
-            leftSpeed, rightSpeed = 2000 if followingSide == "left" else 1000, 1000 if followingSide == "left" else 2000
+            if tofAverage_3 < 150: # close to front wall
+                leftSpeed, rightSpeed = 1250, 1250
+                printDebug(f"Close to front wall - Going back before Turning Corner at {time.perf_counter()}", softDEBUG)
+                nextSequenceStatus = "slightBackwardsPreTurn"
+                exitSequenceStatus = "pause"
+                timer_manager.set_timer("exitPause", 1.0)
+                timer_manager.set_timer("slightBackwardsMovementPreTurn", 1.1) # originally 0.2
+            else:
+                leftSpeed, rightSpeed = 2000 if followingSide == "left" else 1000, 1000 if followingSide == "left" else 2000
+                nextSequenceStatus = "turnCorner"
+                exitSequenceStatus = "pause"
+                timer_manager.set_timer("exitPause", 1.0)
+                timer_manager.set_timer("turnCornerTimeout", 1.5) # originally 1.0
+                #timer_manager.set_timer("turnCornerTimeout", 1.0)
+                #exitSequenceStatus = "turnCorner"
+        setManualMotorsSpeeds(leftSpeed, rightSpeed)
+        controlMotors()
+
+    elif exitSequenceStatus == "forwardPreTurn": # Before Turn Exit
+        setManualMotorsSpeeds(1700, 1700)
+        controlMotors()
+        openingDetected = checkForOpening() # "side" or "front" or "none"
+        if openingDetected == "side":
+            printDebug(f"Opening detected on {openingDetected} - {followingSide if openingDetected == 'side' else ''} - Exiting at {time.perf_counter()}", softDEBUG)
+            if tofAverage_3 < 150:
+                leftSpeed, rightSpeed = 1000, 1000
+                printDebug(f"Opening Detected but we are close to the wall to turn already - Going back to slightly backwards at {time.perf_counter()}", softDEBUG)
+                nextSequenceStatus = "slightBackwards"
+                exitSequenceStatus = "pause"
+                timer_manager.set_timer("exitPause", 1.0)
+                timer_manager.set_timer("slightBackwardsMovement", 1.2) # originally 0.2
+            else:
+                leftSpeed, rightSpeed = 1000 if followingSide == "left" else 2000, 2000 if followingSide == "left" else 1000
+                printDebug(f"Opening detected on {openingDetected} - {followingSide if openingDetected == 'side' else ''} - Exiting at {time.perf_counter()}", softDEBUG)
+                #exitSequenceStatus = "turnToExit"
+                nextSequenceStatus = "turnToExit"
+                exitSequenceStatus = "pause"
+                timer_manager.set_timer("exitPause", 1.0)
+                timer_manager.set_timer("rotatingToExit", 1.8) # originally 0.8
+
+        if timer_manager.is_timer_expired("forwardPreTurn") or tofAverage_3 < 100:
+            printDebug(f"Finished Forwarding - back to navigating to exit at {time.perf_counter()}", softDEBUG)
+            nextSequenceStatus = "navigateCloseToWall"
+            exitSequenceStatus = "pause"
+            timer_manager.set_timer("exitPause", 1.0)
+
+    elif exitSequenceStatus == "slightBackwards": # Before Turn Exit
+        setManualMotorsSpeeds(1250, 1250)
+        controlMotors()
+        if timer_manager.is_timer_expired("slightBackwardsMovement"):
+            printDebug(f"Finished slightly backwards - Going to turn to exit at {time.perf_counter()}", softDEBUG)
+            nextSequenceStatus = "turnToExit"
+            exitSequenceStatus = "pause"
+            timer_manager.set_timer("exitPause", 1.0)
+            timer_manager.set_timer("rotatingToExit", 1.8) # originally 0.8
+
+    elif exitSequenceStatus == "slightBackwardsPreTurn": # Before Turn Corner
+        setManualMotorsSpeeds(1250, 1250)
+        controlMotors()
+        if timer_manager.is_timer_expired("slightBackwardsMovementPreTurn"):
+            printDebug(f"Finished slightly backwards - Going to turn corner at {time.perf_counter()}", softDEBUG)
             nextSequenceStatus = "turnCorner"
             exitSequenceStatus = "pause"
             timer_manager.set_timer("exitPause", 1.0)
-            timer_manager.set_timer("turnCornerTimeout", 2.0) # originally 1.0
+            timer_manager.set_timer("turnCornerTimeout", 1.5) # originally 1.0
             #timer_manager.set_timer("turnCornerTimeout", 1.0)
-            #exitSequenceStatus = "turnCorner"
-        setManualMotorsSpeeds(leftSpeed, rightSpeed)
-        controlMotors()
 
     elif exitSequenceStatus == "evacForward": # Drive forward after 45 degree turn
         leftSpeed, rightSpeed = 1700, 1700
@@ -1263,7 +1347,7 @@ def exitEvacZone():
         neededRotation = rotationNeeded()
 
         #if neededRotation or timer_manager.is_timer_expired("evacForwardTimeout"):
-        if neededRotation:
+        if neededRotation or tofAverage_3 < 150:
             printDebug(f"Corner detected in evacForward - transitioning to turnCorner at {time.perf_counter()}", softDEBUG)
             #exitSequenceStatus = "turnCorner"
             nextSequenceStatus = "turnCorner"
@@ -1275,7 +1359,13 @@ def exitEvacZone():
     elif exitSequenceStatus == "forwardAfterEntrance":
         setManualMotorsSpeeds(1700, 1700)
         controlMotors()
-        if timer_manager.is_timer_expired("forwardAfterEntranceDuration"):
+        if tofAverage_3 < 150:
+            nextSequenceStatus = "turnCorner"
+            exitSequenceStatus = "pause"
+            timer_manager.set_timer("exitPause", 1.0)
+            timer_manager.set_timer("turnCornerTimeout", 1.5) # originally 0.6
+
+        elif timer_manager.is_timer_expired("forwardAfterEntranceDuration"):
             printDebug(f"Finished forwarding after entrance - back to navigating to exit at {time.perf_counter()}", softDEBUG)
             #exitSequenceStatus = "navigateCloseToWall"
             openingAhead = False
@@ -1284,7 +1374,7 @@ def exitEvacZone():
             timer_manager.set_timer("exitPause", 1.0)
 
     elif exitSequenceStatus == "turnCorner":
-        setManualMotorsSpeeds(1900 if followingSide == "left" else 1100, 1100 if followingSide == "left" else 1900)
+        setManualMotorsSpeeds(2000 if followingSide == "left" else 1000, 1000 if followingSide == "left" else 2000)
         controlMotors()
         parallelToWall = abs(tofAverage_2 - tofAverage_1) < PARALLEL_TOF_THRESHOLD if followingSide == "right" else abs(tofAverage_5 - tofAverage_4) < PARALLEL_TOF_THRESHOLD
         closeToWall = (tofAverage_2 + tofAverage_1) / 2 < 150 if followingSide == "right" else (tofAverage_5 + tofAverage_4) / 2 < 150
@@ -1339,7 +1429,7 @@ def exitEvacZone():
             nextSequenceStatus = "validatingExit"
             exitSequenceStatus = "pause"
             timer_manager.set_timer("exitPause", 1.0)
-            timer_manager.set_timer("validatingExit", 6.0) # originally 5.0
+            timer_manager.set_timer("validatingExit", 4.0) # originally 5.0
             #timer_manager.set_timer("validatingExit", 5.0)
 
     elif exitSequenceStatus == "validatingExit":
@@ -1354,25 +1444,28 @@ def exitEvacZone():
                 exitSequenceStatus = "pause"
                 timer_manager.set_timer("exitPause", 1.0)
             else: 
-                printDebug(f"Entrance detected (exit not validated) — Rotating Back to orientation {time.perf_counter()}", softDEBUG)
+                printDebug(f"Entrance detected (exit not validated) {foundExit} — Rotating Back to orientation {time.perf_counter()}", softDEBUG)
                 foundUnexpectedExit = False
                 setManualMotorsSpeeds(2000 if followingSide == "left" else 1000, 1000 if followingSide == "left" else 2000)
                 controlMotors()
-                cameraDefault("Evacuation")
+                #cameraDefault("Evacuation")
                 setLights(on=False)
                 #exitSequenceStatus = "turnEntrance"
                 nextSequenceStatus = "turnEntrance"
                 exitSequenceStatus = "pause"
-                timer_manager.set_timer("exitPause", 1.4) # originally 0.4
-                #timer_manager.set_timer("entranceTurn", 0.4)
+                timer_manager.set_timer("exitPause", 1.0) 
+                timer_manager.set_timer("entranceTurn", 1.8) # originally 0.5
 
     elif exitSequenceStatus == "finished":
         setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)
         controlMotors()
         printDebug(f"We have finished exiting — Exiting at {time.perf_counter()}", softDEBUG)
-        timer_manager.set_timer("finishedEvacWait", 5)
+        timer_manager.set_timer("finishedEvacWait", 5.0)
         zoneStatusLoop = "finishEvacuation"
+        zoneStatus.value = "finishEvacuation"
         exitSequenceStatus = "goToWall"
+        cameraDefault("Line")
+        setLights(on=True)
 
     elif exitSequenceStatus == "pause":
         setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)
@@ -1568,7 +1661,7 @@ def avoidStuck():
         avoidingStuck = True
         avoidingStuckDebug.value = True
 
-    elif timer_manager.is_timer_expired("avoidStuck") and avoidingStuck:
+    elif timer_manager.is_timer_expired("avoidStuck") and avoidingStuck and not zoneStatus.value == "exit":
         printDebug(f"Finished Avoiding Stuck", True)
         avoidingStuck = False
         avoidingStuckDebug.value = False
@@ -1577,6 +1670,7 @@ def avoidStuck():
         timer_manager.set_timer("avoidStuckCoolDown", 4)
 
     else:
+        return
         setManualMotorsSpeeds(1000, 1000)
         controlMotors(avoidStuck = True)
 
@@ -1637,10 +1731,12 @@ def controlLoop():
     timer_manager.add_timer("entranceTurn", 0.05)
     timer_manager.add_timer("validatingExit", 0.05)
     timer_manager.add_timer("forwardAfterEntranceDuration", 0.05)
-    timer_manager.set_timer("finishedEvacWait", 0.05)
+    timer_manager.add_timer("finishedEvacWait", 0.05)
     timer_manager.add_timer("exitPause", 0.05)
     timer_manager.add_timer("noBallSeen", 0.05)
     timer_manager.add_timer("goForwardToFindBall", 0.05)
+    timer_manager.add_timer("slightBackwardsMovement", 0.05)
+    timer_manager.add_timer("slightBackwardsMovementPreTurn", 0.05)
     timer_manager.add_timer("redLine", 0.05)
     timer_manager.add_timer("redLineCooldown", 0.05)
     time.sleep(0.1)
@@ -1786,7 +1882,7 @@ def controlLoop():
             elif zoneStatusLoop == "finishEvacuation":
                 setManualMotorsSpeeds(DEFAULT_STOPPED_SPEED, DEFAULT_STOPPED_SPEED)
                 controlMotors()
-                printDebug(f"Finishing Evacuation at {time.perf_counter()}", softDEBUG)
+                printDebug(f"Finishing Evacuation at {time.perf_counter()} and still waiting for {timer_manager.get_remaining_time('finishedEvacWait')}", softDEBUG)
                 if timer_manager.is_timer_expired("finishedEvacWait"):
                     cameraDefault("Line")
                     setLights(on=True)

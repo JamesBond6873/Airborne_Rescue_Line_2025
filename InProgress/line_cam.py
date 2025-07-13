@@ -1211,8 +1211,8 @@ def lineCamLoop():
                 contoursRed = getRedContours(redImage)
 
                 zoneFoundBlack.value = checkContourSize(contoursBlack, contour_color="black", size=16500)
-                zoneFoundGreen.value = checkContourSize(contoursGreen, contour_color="green", size=15000)
-                zoneFoundRed.value = checkContourSize(contoursRed, contour_color="red", size=15000)
+                zoneFoundGreen.value = checkContourSize(contoursGreen, contour_color="green", size=30000)
+                zoneFoundRed.value = checkContourSize(contoursRed, contour_color="red", size=30000)
 
                 # -- SILVER Line --
                 silverValue.value = silverDetector(modelSilverLine, original_cv2_img)
