@@ -11,11 +11,19 @@ def pick_color(event, x, y, flags, param):
         print(f"Clicked pixel at ({x},{y}): HSV={pixel}")
 
         lower = np.array([0, 0, 0], dtype=np.uint8)
+        lower = np.array([
+            min(pixel[0] - 15, 179),
+            min(pixel[1] - 15, 255),
+            min(pixel[2] - 40, 255)
+        ], dtype=np.uint8)
         upper = np.array([
             min(pixel[0] + 15, 179),
             min(pixel[1] + 15, 255),
             min(pixel[2] + 40, 255)
         ], dtype=np.uint8)
+
+        lower = np.array([15, 100, 15], dtype=np.uint8)
+        upper = np.array([95,255,115], dtype=np.uint8)
 
         print("lower:", lower, "upper:", upper)
 
@@ -28,6 +36,7 @@ def main():
     global image_hsv
 
     image_src = cv2.imread("C:/Users/Francisco/Projects/RoboCup Junior Rescue Line/2025/SoftwareRepo/SwTest/Image (122).jpg")
+    image_src = cv2.imread("C:\\Users\\Francisco\\Projects\\RoboCup Junior Rescue Line\\2025\\Frames\\Evacuation Point Images\\latest_frame_original.jpg")
     if image_src is None:
         print("the image read is None............")
         return
