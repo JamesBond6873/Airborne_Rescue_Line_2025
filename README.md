@@ -83,7 +83,7 @@
   - <code>RobotCode_Field_Version</code>: Contains the latest version of the code used in the official Field Runs
   - <code>RobotCode_TC_Version</code>: Contains the version used during the Technical Challenge run
   - <code>Ai</code>: Contains the versions of the YoloV8 Small Models used for victim and silver strip detections
-  - <code>documents</code>:
+  - <code>Documents</code>:
       - <code>Final Rubrics</code>: Contains our final three evaluated documents: Team Description Paper, Technical Poster and  Presentation Video (compressed)
       - <code>Rules</code>: Contains all official competition rulebooks (Rescue Line, Technical Challenge, SuperTeams), as well as the corresponding rubrics and templates for the documents
       - <code>scores</code>:  Contains the final scores from the RoboCup Junior World Championship 2025, in Salvador, Brazil
