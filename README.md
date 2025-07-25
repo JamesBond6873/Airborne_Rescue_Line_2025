@@ -46,7 +46,7 @@
 <br/>
 
 <p align="center">
-  As required by the competition <a href="https://junior.robocup.org/wp-content/uploads/2024/04/RCJRescueLine2024-final-1.pdf">rules</a>, in addition to this GitHub Repository, we created detailed documentation of the robot and our development process in the form of a <a href="documents/documentation/Engineering Journal.pdf">Technical Description Paper</a>, a <a href="documents/documentation/Team Description Paper.pdf">Technical Poster</a>, and a <a href="documents/documentation/Poster.pdf">Presentation Video</a>.
+  As required by the competition <a href="https://github.com/JamesBond6873/Airborne_Rescue_Line_2025/blob/main/Documents/Rules/000_RoboCup_Junior_Rescue_Line_Rules_2025.pdf">rules</a>, in addition to this GitHub Repository, we created detailed documentation of the robot and our development process in the form of a <a href="https://github.com/JamesBond6873/Airborne_Rescue_Line_2025/blob/main/Documents/Final%20Rubrics/00_Airborne_TDP_RoboCup_Rescue_Line_2025.pdf">Technical Description Paper</a>, a <a href="https://github.com/JamesBond6873/Airborne_Rescue_Line_2025/blob/main/Documents/Final%20Rubrics/01_Airborne_Poster_RoboCup_Rescue_Line_2025.pdf">Technical Poster</a>, and a <a href="https://github.com/JamesBond6873/Airborne_Rescue_Line_2025/blob/main/Documents/Final%20Rubrics/02_Airborne_Video_RoboCup_Rescue_Line_2025_Compressed.mp4">Presentation Video</a>.
 </p>
 
 
