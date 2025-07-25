@@ -72,15 +72,22 @@
 - D24V50F5 Step Down
 - D36V28F5 Step Down
 
+<br/>
 
 ## 🧠 Repository Structure
 
-Text
+<p align="justify"> 
+  This repository contains all the files developed and used throughout our RoboCup Junior Rescue Line project.
+</p>
 
-Text
+  - <code>RobotCode_Field_Version</code>: Contains the latest version of the code used in the official Field Runs
+  - <code>RobotCode_TC_Version</code>: Contains the version used during the Technical Challenge run
+  - <code>documents</code>:
+      - <code>Final Rubrics</code>: Contains our final three evaluated documents: Team Description Paper, Technical Poster and  Presentation Video (compressed)
+      - <code>Rules</code>: Contains all official competition rulebooks (Rescue Line, Technical Challenge, SuperTeams), as well as the corresponding rubrics and templates for the documents
+      - <code>scores</code>:  Contains the final scores from the RoboCup Junior World Championship 2025, in Salvador, Brazil
 
-Text
-
+<br/>
 
 # 🔗 Useful Links
 
