@@ -92,12 +92,15 @@
 
 # 🔗 Useful Links
 
-- [Official Rescue Line Rules](https://junior.robocup.org/rcj-rescue-line/)
-- [Airborne Team Instagram](https://instagram.com/yourteam)
-- [Documentation PDF](docs/Airborne_RescueRobot_2025.pdf)
+- [Airborne Photo/Video Album](https://drive.google.com/drive/folders/1JC7H4FIJUuHvwdzJ9MUNMwsvkezMXKDg?usp=drive_link)
+- [Technical Description Paper](https://drive.google.com/file/d/1SsVflj773ZcgajpcdkzmWjwUXBWZYv1-/view?usp=drive_link)
+- [Technical Poster](https://drive.google.com/file/d/1fPJXqmR9CHxOLH45z3VVppOXiR5PiPfq/view?usp=drive_link)
+- [Presentation Video](https://drive.google.com/file/d/1rCQD-FLG8RNpqSPlJDvGeZCaVhfCN_2y/view?usp=drive_link)
+- [Rescue Line Rules 2025](https://github.com/JamesBond6873/Airborne_Rescue_Line_2025/blob/main/Documents/Rules/000_RoboCup_Junior_Rescue_Line_Rules_2025.pdf)
+- [Airborne Instagram Account](https://www.instagram.com/airborne_2023/)
 
-
----
+<br/>
+<br/>
 
 # 🤝 Sponsors
 
