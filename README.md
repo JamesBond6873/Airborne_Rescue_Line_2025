@@ -54,12 +54,23 @@
 
 ## 📂 Components
 
-Text
-
-Text
-
-Text
-
+- Raspberry Pi 5 8GB Ram
+- Raspberry Pi Pico
+- Google Coral USB Accelerator
+- Raspberry Pi Camera Module V3 Wide
+- 5x VL53L0X ToF
+- ICM-20948 9DOF IMU
+- TCA9458 Multiplexer
+- 4x Home-made Silicone Wheels
+- 4x 12V 77RPM DC Geared Motors
+- 4x 3S ESCs
+- 6x SG90 MicroServos
+- PCA9685 Servo Driver
+- 2x Custom Led Bar PCB
+- DRV8833 Power Driver
+- Gens Ace 3S 2700mAh Lipo Battery
+- D24V50F5 Step Down
+- D36V28F5 Step Down
 
 
 ## 🧠 Repository Structure
