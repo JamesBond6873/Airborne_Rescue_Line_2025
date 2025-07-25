@@ -27,82 +27,64 @@
 
 # About the Robot
 
-<!-- First Row: Image Left, Text Right -->
-<div align="center">
-  <table border="0" cellspacing="0" cellpadding="0" style="border-collapse: collapse;">
-    <tr>
-      <td width="30%">
-        <img src="https://github.com/user-attachments/assets/5c4a26ea-17aa-4a19-ac9c-8d6283dc80b1" width="100%" alt="Robot Front View">
-      </td>
-      <td width="70%" align="justify">
-        <p>
-          Our robot was built to reliably complete all challenges of the RoboCup Junior Rescue Line competition through a combination of computation, custom electronics, and mechanical design. It uses a dual-processor architecture: a Raspberry Pi 5 for high-level logic and AI, and a Raspberry Pi Pico for real-time control of motors and sensors. A Google Coral USB Accelerator enables onboard execution of two YOLOv8 models — one for victim detection and another for identifying the silver evacuation zone — which provide fast and accurate results compared to traditional computer vision.
-        </p>
-      </td>
-    </tr>
-  </table>
-</div>
+<!-- First block: Image on the left -->
+<img src="https://github.com/user-attachments/assets/5c4a26ea-17aa-4a19-ac9c-8d6283dc80b1" align="left" style="width:20%; margin-left:20px; margin-bottom:10px;" />
 
-<!-- Second Row: Text Left, Image Right -->
-<div align="center">
-  <table border="0" cellspacing="0" cellpadding="0" style="border-collapse: collapse;">
-    <tr>
-      <td width="70%" align="justify">
-        <p>
-          The chassis was entirely designed in SolidWorks and 3D printed, with over 70 custom parts and a modular structure that simplifies maintenance. A tilt-mounted wide-angle camera, passive suspension system, and dual-servo rescue arm ensure strong performance across rough terrain. Internally, custom PCBs manage power distribution and sensor integration, keeping the system reliable and clean. Software processes run in parallel for sensing, image processing, and decision-making, supported by a custom HTML interface for real-time monitoring and debugging.
-        </p>
-      </td>
-      <td width="30%">
-        <img src="https://github.com/user-attachments/assets/c16464ac-676e-4733-b6ec-849fd3f1d2f7" width="100%" alt="Robot Side View">
-      </td>
-    </tr>
-  </table>
-</div>
-
-<!-- Final Paragraph: Full Width -->
-<p align="center">
-  The robot won the Portuguese National Championship and earned the Best Presentation Award, securing our place in the RoboCup 2025 World Finals.
+<p align="justify">
+  Our robot was built to reliably complete all challenges of the RoboCup Junior Rescue Line competition through a combination of computation, custom electronics, and mechanical design. It uses a dual-processor architecture: a Raspberry Pi 5 for high-level logic and AI, and a Raspberry Pi Pico for real-time control of motors and sensors. A Google Coral USB Accelerator enables onboard execution of two YOLOv8 models, one for victim detection and another for identifying the silver evacuation zone, which provide fast and accurate results compared to traditional computer vision.
 </p>
 
----
+<br/>
+<br/>
+<br/>
 
-## 📂 Repository Structure
+<!-- Second block: Image on the right -->
+<img src="https://github.com/user-attachments/assets/c16464ac-676e-4733-b6ec-849fd3f1d2f7" align="right" style="width:20%; margin-right:20px; margin-bottom:10px;" />
 
-- `/hardware/` - CAD, schematics, and PCB files
-- `/software/` - Source code for the robot
-- `/docs/` - Additional documentation
+<p align="justify">
+  The chassis was entirely designed in SolidWorks and 3D printed, with over 70 custom parts and a modular structure that simplifies maintenance. A tilt-mounted wide-angle camera, passive suspension system, and dual-servo rescue arm ensure strong performance across rough terrain. Internally, custom PCBs manage power distribution and sensor integration, keeping the system reliable and clean, with a much lower risk of lose wires. Software processes run in parallel for serial communication between boards, image processing, and control/decision-making, supported by a custom HTML/Websocket interface for real-time monitoring and debugging.
+</p>
 
----
+<br/>
+<br/>
+<br/>
 
-## 🧠 Features
+<p align="center">
+  As required by the competition <a href="https://junior.robocup.org/wp-content/uploads/2024/04/RCJRescueLine2024-final-1.pdf">rules</a>, in addition to this GitHub Repository, we created detailed documentation of the robot and our development process in the form of a <a href="documents/documentation/Engineering Journal.pdf">Technical Description Paper</a>, a <a href="documents/documentation/Team Description Paper.pdf">Technical Poster</a>, and a <a href="documents/documentation/Poster.pdf">Presentation Video</a>.
+</p>
 
-- Line following using PID
-- Intersection handling
-- Ramp detection and compensation
-- Victim identification and pickup
-- ... (Add your highlights)
 
----
 
-## 📸 Images
 
-(Add more images below with captions. Example:)
+## 📂 Components
 
-<div align="center">
-  <img src="images/line_following.jpg" width="60%" alt="Robot line following demo">
-  <p><i>Robot in action during line-following test.</i></p>
-</div>
+Text
 
----
+Text
 
-## 🤝 Sponsors
+Text
 
-(List your sponsors here or link to your sponsorship PDF)
 
----
 
-## 🔗 Useful Links
+## 🧠 Repository Structure
+
+Text
+
+Text
+
+Text
+
+
+# 🔗 Useful Links
 
 - [Official Rescue Line Rules](https://junior.robocup.org/rcj-rescue-line/)
 - [Airborne Team Instagram](https://instagram.com/yourteam)
 - [Documentation PDF](docs/Airborne_RescueRobot_2025.pdf)
+
+
+---
+
+# 🤝 Sponsors
+
+(List your sponsors here or link to your sponsorship PDF)
+
