@@ -25,8 +25,7 @@
 
 # About the Competition
 <p align="center"><i>
-  "The land is too dangerous for humans to reach the victims. Your team has been given a challenging task...
-  [Same description or your own twist!]"
+  "The land is too dangerous for humans to reach the victims. Your team has been given a challenging task. The robot must be able to carry out a rescue mission in a fully autonomous mode with no human assistance. The robot must be durable and intelligent enough to navigate treacherous terrain with hills, uneven land, and rubble without getting stuck. When the robot reaches the victims, it has to gently and carefully transport each one to the safe evacuation point where humans can take over the rescue. The robot should exit the evacuation zone after a successful rescue to continue its mission throughout the disaster scene until it leaves the site. Time and technical skills are essential!"
 </i></p>
 
 <div align="center">
