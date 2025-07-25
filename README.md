@@ -6,13 +6,6 @@
   <a href="https://github.com/eumesmodefacto">
     <img src="https://img.shields.io/badge/Contributor-eumesmodefacto-blue" alt="eumesmodefacto">
   </a>
-  
-  <!-- Optional: YouTube or Website badge -->
-  <!--
-  <a href="https://your-youtube-link.com">
-    <img src="https://img.shields.io/badge/YouTube-YourChannelName-red?logo=youtube" alt="YouTube">
-  </a>
-  -->
 </div>
 
 <br/>
@@ -29,12 +22,16 @@
 </i></p>
 
 <div align="center">
-  <img src="images/robot_overview.jpg" width="70%" alt="Airborne Robot Overview">
+  <img src="https://github.com/user-attachments/assets/a0c5800d-fcd0-47f1-990c-3d6951691d1c" style="width:70%;"/>
 </div>
 
 # About the Robot
 
-(Add a short paragraph or sections like: "Hardware Overview", "Sensors", "Chassis Design", "Software Flowchart", etc.)
+Our robot was built to reliably complete all challenges of the RoboCup Junior Rescue Line competition through a combination of computation, custom electronics, and mechanical design. It uses a dual-processor architecture: a Raspberry Pi 5 for high-level logic and AI, and a Raspberry Pi Pico for real-time control of motors and sensors. A Google Coral USB Accelerator enables onboard execution of two YOLOv8 models — one for victim detection and another for identifying the silver evacuation zone — which provide fast and accurate results compared to traditional computer vision.
+
+The chassis was entirely designed in SolidWorks and 3D printed, with over 70 custom parts and a modular structure that simplifies maintenance. A tilt-mounted wide-angle camera, passive suspension system, and dual-servo rescue arm ensure strong performance across rough terrain. Internally, custom PCBs manage power distribution and sensor integration, keeping the system reliable and clean. Software processes run in parallel for sensing, image processing, and decision-making, supported by a custom HTML interface for real-time monitoring and debugging.
+
+The robot won the Portuguese National Championship and earned the Best Presentation Award, securing our place in the RoboCup 2025 World Finals.
 
 ---
 
