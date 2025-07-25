@@ -101,5 +101,5 @@
 
 # 🤝 Sponsors
 
-(List your sponsors here or link to your sponsorship PDF)
+<img width="3393" height="1279" alt="Image" src="https://github.com/user-attachments/assets/2489f875-60cc-487d-83a0-b7bb6d93aac8" />
 
