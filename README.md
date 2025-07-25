@@ -35,7 +35,6 @@
 </p>
 
 <br/>
-<br/>
 
 <!-- Second block: Image on the right -->
 <img src="https://github.com/user-attachments/assets/c16464ac-676e-4733-b6ec-849fd3f1d2f7" align="right" style="width:25%; margin-right:20px; margin-bottom:10px;" />
@@ -45,8 +44,6 @@
 </p>
 
 <br/>
-<br/>
-
 
 <p align="center">
   As required by the competition <a href="https://junior.robocup.org/wp-content/uploads/2024/04/RCJRescueLine2024-final-1.pdf">rules</a>, in addition to this GitHub Repository, we created detailed documentation of the robot and our development process in the form of a <a href="documents/documentation/Engineering Journal.pdf">Technical Description Paper</a>, a <a href="documents/documentation/Team Description Paper.pdf">Technical Poster</a>, and a <a href="documents/documentation/Poster.pdf">Presentation Video</a>.
