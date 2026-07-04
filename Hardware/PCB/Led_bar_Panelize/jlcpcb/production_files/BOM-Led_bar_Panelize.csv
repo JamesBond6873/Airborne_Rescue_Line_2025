@@ -1,0 +1,15 @@
+Comment,Designator,Footprint,LCSC,Quantity
+220Ω,R1,R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical,,1
+220Ω,R5,R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical,,1
+LED,D3,LED_D5.0mm,,1
+220Ω,R3,R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical,,1
+220Ω,R4,R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical,,1
+220Ω,R6,R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical,,1
+LED,D4,LED_D5.0mm,,1
+220Ω,R2,R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical,,1
+LED,D2,LED_D5.0mm,,1
+Conn_01x02,J2,PinHeader_1x02_P2.54mm_Vertical,,1
+LED,D6,LED_D5.0mm,,1
+LED,D1,LED_D5.0mm,,1
+LED,D5,LED_D5.0mm,,1
+Conn_01x02,J1,PinHeader_1x02_P2.54mm_Vertical,,1

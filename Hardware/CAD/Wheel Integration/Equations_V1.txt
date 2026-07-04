@@ -1,0 +1,9 @@
+﻿"M3 Nut Diameter" = 5.50mm
+"Clearance Diameter 3D Printing" = .20mm
+"D-Shaft"= 4mm'D-Shaft diameter
+"Wheel Axle Diameter"= 6.8mm'Axle to Connect to Wheel
+"Wheel Thickness"= 10mm'Wheel Thickness
+"M3 Screw Diameter"= 3.20mm'M3 Screw Diameter already with 3D printing Clearance
+"Wheel Diameter"= 60mm
+"Silicone Tire Width"= 7mm
+"Logo Diameter"= 36mm

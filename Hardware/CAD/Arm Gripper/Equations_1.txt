@@ -1,0 +1,8 @@
+﻿"Main Plate Height"= 70mm
+"M3 Screw Diameter"= 3.2mm
+"C-Sink Angle"= 90.5deg
+"C-Sink Diameter"= 6.8mm
+"Grip Width"= 120mm
+"Servo Width" = 32.30mm
+"Servo Height"= 12.40mm
+"Grip Height"= 30mm
